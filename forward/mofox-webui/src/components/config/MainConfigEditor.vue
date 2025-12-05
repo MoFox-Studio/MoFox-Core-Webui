@@ -13,216 +13,200 @@
       </div>
     </div>
 
+    <!-- 搜索和筛选 -->
+    <div class="config-toolbar">
+      <div class="search-box">
+        <Icon icon="lucide:search" />
+        <input 
+          v-model="searchQuery" 
+          type="text" 
+          placeholder="搜索配置项..." 
+          class="search-input"
+        />
+      </div>
+      <div class="filter-buttons">
+        <button 
+          class="filter-btn" 
+          :class="{ active: showAdvanced }"
+          @click="showAdvanced = !showAdvanced"
+        >
+          <Icon icon="lucide:settings-2" />
+          {{ showAdvanced ? '隐藏高级选项' : '显示高级选项' }}
+        </button>
+      </div>
+    </div>
+
     <!-- 配置分组 -->
     <div class="config-groups">
-      <!-- 基础信息 -->
-      <div class="config-group">
-        <div class="group-header">
+      <div 
+        v-for="group in filteredGroups" 
+        :key="group.key" 
+        class="config-group"
+        :class="{ collapsed: collapsedGroups[group.key] }"
+      >
+        <div class="group-header" @click="toggleGroup(group.key)">
           <div class="group-title">
-            <Icon icon="lucide:info" />
-            <h3>基础信息</h3>
+            <Icon :icon="group.icon" />
+            <h3>{{ group.name }}</h3>
           </div>
-          <span class="group-hint">配置机器人的名称和基本标识</span>
+          <div class="group-meta">
+            <span class="group-hint">{{ group.description }}</span>
+            <Icon :icon="collapsedGroups[group.key] ? 'lucide:chevron-down' : 'lucide:chevron-up'" />
+          </div>
         </div>
-        <div class="group-content">
-          <div class="field-card">
-            <div class="field-header">
-              <span class="field-name">机器人名称</span>
-              <span class="field-key">bot.name</span>
+        
+        <div v-show="!collapsedGroups[group.key]" class="group-content">
+          <template v-for="field in getVisibleFields(group)" :key="field.key">
+            <div 
+              class="field-card"
+              :class="{ 
+                inline: field.type === 'boolean',
+                advanced: field.advanced
+              }"
+            >
+              <!-- Boolean 类型 -->
+              <template v-if="field.type === 'boolean'">
+                <div class="field-left">
+                  <div class="field-header">
+                    <span class="field-name">{{ field.name }}</span>
+                    <span v-if="field.advanced" class="advanced-badge">高级</span>
+                  </div>
+                  <div class="field-description">{{ field.description }}</div>
+                </div>
+                <label class="toggle-switch">
+                  <input 
+                    type="checkbox" 
+                    :checked="Boolean(getFieldValue(field.key))"
+                    @change="emit('update', field.key, ($event.target as HTMLInputElement).checked)"
+                  />
+                  <span class="toggle-slider"></span>
+                </label>
+              </template>
+
+              <!-- 其他类型 -->
+              <template v-else>
+                <div class="field-header">
+                  <span class="field-name">{{ field.name }}</span>
+                  <span class="field-key">{{ field.key }}</span>
+                  <span v-if="field.advanced" class="advanced-badge">高级</span>
+                </div>
+                <div class="field-description">{{ field.description }}</div>
+                
+                <div class="field-input">
+                  <!-- Select 类型 -->
+                  <select 
+                    v-if="field.type === 'select'"
+                    class="input"
+                    :value="getFieldValue(field.key) ?? field.default"
+                    @change="emit('update', field.key, ($event.target as HTMLSelectElement).value)"
+                  >
+                    <option 
+                      v-for="opt in field.options" 
+                      :key="opt.value" 
+                      :value="opt.value"
+                    >
+                      {{ opt.label }}
+                    </option>
+                  </select>
+
+                  <!-- Textarea 类型 -->
+                  <textarea 
+                    v-else-if="field.type === 'textarea'"
+                    class="input textarea"
+                    :value="String(getFieldValue(field.key) ?? field.default ?? '')"
+                    :placeholder="field.placeholder"
+                    @input="emit('update', field.key, ($event.target as HTMLTextAreaElement).value)"
+                    rows="3"
+                  ></textarea>
+
+                  <!-- Password 类型 -->
+                  <div v-else-if="field.type === 'password'" class="password-input">
+                    <input 
+                      :type="showPasswords[field.key] ? 'text' : 'password'"
+                      class="input"
+                      :value="getFieldValue(field.key) ?? ''"
+                      :placeholder="field.placeholder"
+                      @input="emit('update', field.key, ($event.target as HTMLInputElement).value)"
+                    />
+                    <button 
+                      class="toggle-visibility" 
+                      type="button"
+                      @click="showPasswords[field.key] = !showPasswords[field.key]"
+                    >
+                      <Icon :icon="showPasswords[field.key] ? 'lucide:eye-off' : 'lucide:eye'" />
+                    </button>
+                  </div>
+
+                  <!-- Number 类型 -->
+                  <template v-else-if="field.type === 'number'">
+                    <div v-if="field.min !== undefined && field.max !== undefined && (field.max - field.min) <= 100" class="slider-input">
+                      <input 
+                        type="range" 
+                        :min="field.min"
+                        :max="field.max"
+                        :step="field.step ?? 1"
+                        :value="getFieldValue(field.key) ?? field.default ?? field.min"
+                        @input="emit('update', field.key, parseFloat(($event.target as HTMLInputElement).value))"
+                      />
+                      <span class="slider-value">{{ getFieldValue(field.key) ?? field.default ?? field.min }}</span>
+                    </div>
+                    <input 
+                      v-else
+                      type="number" 
+                      class="input"
+                      :min="field.min"
+                      :max="field.max"
+                      :step="field.step"
+                      :value="getFieldValue(field.key) ?? field.default ?? ''"
+                      :placeholder="field.placeholder"
+                      @input="emit('update', field.key, parseFloat(($event.target as HTMLInputElement).value) || 0)"
+                    />
+                  </template>
+
+                  <!-- Array 类型 -->
+                  <div v-else-if="field.type === 'array'" class="array-input">
+                    <input 
+                      type="text" 
+                      class="input"
+                      :value="formatArrayValue(getFieldValue(field.key))"
+                      :placeholder="field.placeholder"
+                      @input="emit('update', field.key, parseArrayValue(($event.target as HTMLInputElement).value))"
+                    />
+                    <span class="input-hint">多个值用逗号分隔</span>
+                  </div>
+
+                  <!-- String 类型 (默认) -->
+                  <input 
+                    v-else
+                    type="text" 
+                    class="input"
+                    :value="getFieldValue(field.key) ?? field.default ?? ''"
+                    :placeholder="field.placeholder"
+                    @input="emit('update', field.key, ($event.target as HTMLInputElement).value)"
+                  />
+                </div>
+              </template>
             </div>
-            <div class="field-description">
-              机器人在对话中使用的名称，用户可以通过这个名字称呼机器人
-            </div>
-            <input 
-              type="text" 
-              class="input"
-              :value="getFieldValue('bot.name')"
-              @input="emit('update', 'bot.name', ($event.target as HTMLInputElement).value)"
-              placeholder="例如: 小助手"
-            />
-          </div>
-          
-          <div class="field-card">
-            <div class="field-header">
-              <span class="field-name">机器人 QQ 号</span>
-              <span class="field-key">bot.qq</span>
-            </div>
-            <div class="field-description">
-              机器人登录使用的 QQ 账号，用于消息收发
-            </div>
-            <input 
-              type="text" 
-              class="input"
-              :value="getFieldValue('bot.qq')"
-              @input="emit('update', 'bot.qq', ($event.target as HTMLInputElement).value)"
-              placeholder="QQ 号码"
-            />
-          </div>
+          </template>
         </div>
       </div>
+    </div>
 
-      <!-- 行为设置 -->
-      <div class="config-group">
-        <div class="group-header">
-          <div class="group-title">
-            <Icon icon="lucide:activity" />
-            <h3>行为设置</h3>
-          </div>
-          <span class="group-hint">控制机器人的响应行为和触发条件</span>
+    <!-- 自定义配置区域（显示未在描述文件中定义的配置） -->
+    <div v-if="customSections.length > 0" class="config-group custom-section">
+      <div class="group-header" @click="toggleGroup('__custom__')">
+        <div class="group-title">
+          <Icon icon="lucide:file-json" />
+          <h3>其他配置</h3>
         </div>
-        <div class="group-content">
-          <div class="field-card inline">
-            <div class="field-left">
-              <div class="field-header">
-                <span class="field-name">启用机器人</span>
-              </div>
-              <div class="field-description">
-                控制机器人是否响应消息
-              </div>
-            </div>
-            <label class="toggle-switch">
-              <input 
-                type="checkbox" 
-                :checked="Boolean(getFieldValue('bot.enabled'))"
-                @change="emit('update', 'bot.enabled', ($event.target as HTMLInputElement).checked)"
-              />
-              <span class="toggle-slider"></span>
-            </label>
-          </div>
-          
-          <div class="field-card inline">
-            <div class="field-left">
-              <div class="field-header">
-                <span class="field-name">私聊响应</span>
-              </div>
-              <div class="field-description">
-                是否响应私聊消息
-              </div>
-            </div>
-            <label class="toggle-switch">
-              <input 
-                type="checkbox" 
-                :checked="Boolean(getFieldValue('bot.private_chat'))"
-                @change="emit('update', 'bot.private_chat', ($event.target as HTMLInputElement).checked)"
-              />
-              <span class="toggle-slider"></span>
-            </label>
-          </div>
-          
-          <div class="field-card inline">
-            <div class="field-header">
-              <div class="field-left">
-                <span class="field-name">群聊响应</span>
-              </div>
-              <div class="field-description">
-                是否响应群聊消息
-              </div>
-            </div>
-            <label class="toggle-switch">
-              <input 
-                type="checkbox" 
-                :checked="Boolean(getFieldValue('bot.group_chat'))"
-                @change="emit('update', 'bot.group_chat', ($event.target as HTMLInputElement).checked)"
-              />
-              <span class="toggle-slider"></span>
-            </label>
-          </div>
-          
-          <div class="field-card">
-            <div class="field-header">
-              <span class="field-name">触发词</span>
-              <span class="field-key">bot.trigger_words</span>
-            </div>
-            <div class="field-description">
-              用户发送这些词语时会触发机器人响应，多个词语用逗号分隔
-            </div>
-            <input 
-              type="text" 
-              class="input"
-              :value="formatArrayValue(getFieldValue('bot.trigger_words'))"
-              @input="emit('update', 'bot.trigger_words', parseArrayValue(($event.target as HTMLInputElement).value))"
-              placeholder="例如: 小助手, @机器人"
-            />
-          </div>
-          
-          <div class="field-card">
-            <div class="field-header">
-              <span class="field-name">响应概率</span>
-              <span class="field-key">bot.response_probability</span>
-            </div>
-            <div class="field-description">
-              机器人响应普通消息的概率 (0-100%)，设置为 100 表示总是响应
-            </div>
-            <div class="slider-input">
-              <input 
-                type="range" 
-                min="0" 
-                max="100"
-                :value="getFieldValue('bot.response_probability') || 0"
-                @input="emit('update', 'bot.response_probability', parseInt(($event.target as HTMLInputElement).value))"
-              />
-              <span class="slider-value">{{ getFieldValue('bot.response_probability') || 0 }}%</span>
-            </div>
-          </div>
+        <div class="group-meta">
+          <span class="group-hint">未分类的配置项</span>
+          <Icon :icon="collapsedGroups['__custom__'] ? 'lucide:chevron-down' : 'lucide:chevron-up'" />
         </div>
       </div>
-
-      <!-- 消息设置 -->
-      <div class="config-group">
-        <div class="group-header">
-          <div class="group-title">
-            <Icon icon="lucide:message-square" />
-            <h3>消息设置</h3>
-          </div>
-          <span class="group-hint">配置消息处理和发送相关参数</span>
-        </div>
-        <div class="group-content">
-          <div class="field-card">
-            <div class="field-header">
-              <span class="field-name">消息长度限制</span>
-              <span class="field-key">message.max_length</span>
-            </div>
-            <div class="field-description">
-              单条消息的最大字符数，超出部分会被截断或分段发送
-            </div>
-            <input 
-              type="number" 
-              class="input"
-              :value="getFieldValue('message.max_length')"
-              @input="emit('update', 'message.max_length', parseInt(($event.target as HTMLInputElement).value))"
-              placeholder="默认: 4000"
-            />
-          </div>
-          
-          <div class="field-card">
-            <div class="field-header">
-              <span class="field-name">消息发送延迟</span>
-              <span class="field-key">message.send_delay</span>
-            </div>
-            <div class="field-description">
-              连续发送多条消息时的间隔时间（毫秒），避免消息过于密集
-            </div>
-            <input 
-              type="number" 
-              class="input"
-              :value="getFieldValue('message.send_delay')"
-              @input="emit('update', 'message.send_delay', parseInt(($event.target as HTMLInputElement).value))"
-              placeholder="默认: 1000"
-            />
-          </div>
-        </div>
-      </div>
-
-      <!-- 通用配置区域（显示其他未分类的配置） -->
-      <div v-for="section in configSchema" :key="section.name" class="config-group">
-        <div class="group-header">
-          <div class="group-title">
-            <Icon icon="lucide:settings" />
-            <h3>{{ section.display_name }}</h3>
-          </div>
-          <span class="group-hint">{{ section.fields.length }} 项配置</span>
-        </div>
-        <div class="group-content">
+      <div v-show="!collapsedGroups['__custom__']" class="group-content">
+        <div v-for="section in customSections" :key="section.name" class="custom-subsection">
+          <h4 class="subsection-title">{{ section.display_name }}</h4>
           <div 
             v-for="field in section.fields" 
             :key="field.full_key" 
@@ -270,9 +254,11 @@
 </template>
 
 <script setup lang="ts">
+import { ref, computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import type { ConfigSection } from '@/api'
 import FieldEditor from './FieldEditor.vue'
+import { botConfigGroups, type ConfigGroupDef, type ConfigFieldDef } from '@/config/configDescriptions'
 
 const props = defineProps<{
   parsedData: Record<string, unknown>
@@ -284,6 +270,78 @@ const emit = defineEmits<{
   (e: 'update', key: string, value: unknown): void
 }>()
 
+// 状态
+const searchQuery = ref('')
+const showAdvanced = ref(false)
+const showPasswords = ref<Record<string, boolean>>({})
+const collapsedGroups = ref<Record<string, boolean>>({})
+
+// 过滤后的配置分组
+const filteredGroups = computed(() => {
+  if (!searchQuery.value) {
+    return botConfigGroups
+  }
+  
+  const query = searchQuery.value.toLowerCase()
+  return botConfigGroups.filter(group => {
+    // 检查分组名称
+    if (group.name.toLowerCase().includes(query)) return true
+    // 检查字段
+    return group.fields.some(field => 
+      field.name.toLowerCase().includes(query) ||
+      field.description.toLowerCase().includes(query) ||
+      field.key.toLowerCase().includes(query)
+    )
+  })
+})
+
+// 获取可见字段（考虑高级选项过滤）
+function getVisibleFields(group: ConfigGroupDef): ConfigFieldDef[] {
+  let fields = group.fields
+  
+  // 搜索过滤
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase()
+    fields = fields.filter(field =>
+      field.name.toLowerCase().includes(query) ||
+      field.description.toLowerCase().includes(query) ||
+      field.key.toLowerCase().includes(query)
+    )
+  }
+  
+  // 高级选项过滤
+  if (!showAdvanced.value) {
+    fields = fields.filter(field => !field.advanced)
+  }
+  
+  return fields
+}
+
+// 自定义配置（未在描述中定义的）
+const customSections = computed(() => {
+  const definedKeys = new Set<string>()
+  botConfigGroups.forEach(group => {
+    group.fields.forEach(field => {
+      definedKeys.add(field.key)
+    })
+  })
+  
+  // 过滤出未定义的配置节
+  return props.configSchema.filter(section => {
+    // 检查是否有任何字段不在定义中
+    return section.fields.some(field => !definedKeys.has(field.full_key))
+  }).map(section => ({
+    ...section,
+    fields: section.fields.filter(field => !definedKeys.has(field.full_key))
+  }))
+})
+
+// 切换分组展开/折叠
+function toggleGroup(key: string) {
+  collapsedGroups.value[key] = !collapsedGroups.value[key]
+}
+
+// 获取字段值
 function getFieldValue(fullKey: string): unknown {
   // 优先返回编辑后的值
   if (fullKey in props.editedValues) {
@@ -303,6 +361,7 @@ function getFieldValue(fullKey: string): unknown {
   return current
 }
 
+// 格式化数组值
 function formatArrayValue(value: unknown): string {
   if (Array.isArray(value)) {
     return value.join(', ')
@@ -310,6 +369,7 @@ function formatArrayValue(value: unknown): string {
   return ''
 }
 
+// 解析数组值
 function parseArrayValue(value: string): string[] {
   return value.split(',').map(s => s.trim()).filter(s => s)
 }
@@ -367,6 +427,76 @@ function parseArrayValue(value: string): string[] {
   margin: 0;
 }
 
+/* 工具栏 */
+.config-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: var(--bg-primary);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+}
+
+.search-box {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius);
+  border: 1px solid var(--border-color);
+}
+
+.search-box svg {
+  color: var(--text-tertiary);
+  font-size: 18px;
+}
+
+.search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 14px;
+  outline: none;
+}
+
+.search-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.filter-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.filter-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.filter-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.filter-btn.active {
+  background: var(--primary-bg);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
 /* 配置分组 */
 .config-groups {
   display: flex;
@@ -388,6 +518,16 @@ function parseArrayValue(value: string): string[] {
   padding: 16px 20px;
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border-color);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.group-header:hover {
+  background: var(--bg-hover);
+}
+
+.config-group.collapsed .group-header {
+  border-bottom: none;
 }
 
 .group-title {
@@ -408,9 +548,20 @@ function parseArrayValue(value: string): string[] {
   margin: 0;
 }
 
+.group-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .group-hint {
   font-size: 12px;
   color: var(--text-tertiary);
+}
+
+.group-meta svg {
+  color: var(--text-tertiary);
+  font-size: 16px;
 }
 
 .group-content {
@@ -441,6 +592,10 @@ function parseArrayValue(value: string): string[] {
   justify-content: space-between;
 }
 
+.field-card.advanced {
+  border-left: 3px solid var(--warning);
+}
+
 .field-left {
   flex: 1;
   display: flex;
@@ -452,6 +607,7 @@ function parseArrayValue(value: string): string[] {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .field-name {
@@ -469,6 +625,14 @@ function parseArrayValue(value: string): string[] {
   border-radius: var(--radius-sm);
 }
 
+.advanced-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  background: var(--warning);
+  color: white;
+  border-radius: var(--radius-sm);
+}
+
 .field-description {
   font-size: 12px;
   color: var(--text-tertiary);
@@ -479,6 +643,7 @@ function parseArrayValue(value: string): string[] {
   margin-top: 4px;
 }
 
+/* 输入框 */
 .input {
   width: 100%;
   padding: 10px 14px;
@@ -494,6 +659,49 @@ function parseArrayValue(value: string): string[] {
 .input:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px var(--primary-bg);
+}
+
+.input.textarea {
+  resize: vertical;
+  min-height: 80px;
+  line-height: 1.5;
+}
+
+select.input {
+  cursor: pointer;
+}
+
+/* 密码输入 */
+.password-input {
+  position: relative;
+  display: flex;
+}
+
+.password-input .input {
+  padding-right: 44px;
+}
+
+.toggle-visibility {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.toggle-visibility:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
 }
 
 /* Toggle 开关 */
@@ -582,5 +790,39 @@ function parseArrayValue(value: string): string[] {
   font-size: 14px;
   font-weight: 500;
   color: var(--primary);
+}
+
+/* 数组输入 */
+.array-input {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.input-hint {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+/* 自定义配置区域 */
+.custom-section {
+  border-color: var(--border-color);
+}
+
+.custom-subsection {
+  margin-bottom: 16px;
+}
+
+.custom-subsection:last-child {
+  margin-bottom: 0;
+}
+
+.subsection-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 0 0 12px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-color);
 }
 </style>

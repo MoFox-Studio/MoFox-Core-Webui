@@ -15,22 +15,22 @@
         <button class="action-btn" @click="showAddModelModal = true">
           <Icon icon="lucide:bot" />
           <span>添加模型</span>
-          <small>为现有提供商添加模型</small>
+          <small>配置新的 AI 模型</small>
         </button>
       </div>
     </div>
 
-    <!-- 提供商列表 -->
+    <!-- API 提供商列表 -->
     <div class="providers-section">
       <div class="section-header">
         <h3>
           <Icon icon="lucide:cloud" />
-          AI 服务提供商
+          API 服务提供商
         </h3>
-        <span class="provider-count">{{ providers.length }} 个提供商</span>
+        <span class="provider-count">{{ apiProviders.length }} 个提供商</span>
       </div>
       
-      <div v-if="providers.length === 0" class="empty-state">
+      <div v-if="apiProviders.length === 0" class="empty-state">
         <Icon icon="lucide:cloud-off" />
         <p>暂无配置的提供商</p>
         <button class="btn btn-primary" @click="showAddProviderModal = true">
@@ -41,7 +41,7 @@
       
       <div v-else class="providers-grid">
         <div 
-          v-for="(provider, index) in providers" 
+          v-for="(provider, index) in apiProviders" 
           :key="index" 
           class="provider-card"
           :class="{ expanded: expandedProvider === index }"
@@ -52,10 +52,10 @@
             </div>
             <div class="provider-info">
               <h4>{{ provider.name || '未命名提供商' }}</h4>
-              <span class="provider-type">{{ provider.type || 'OpenAI 兼容' }}</span>
+              <span class="provider-type">{{ getClientTypeLabel(provider.client_type) }}</span>
             </div>
             <div class="provider-meta">
-              <span class="model-count">{{ getModelCount(provider) }} 个模型</span>
+              <span class="model-count">{{ getProviderModelCount(provider.name) }} 个模型</span>
               <Icon :icon="expandedProvider === index ? 'lucide:chevron-up' : 'lucide:chevron-down'" />
             </div>
           </div>
@@ -71,84 +71,60 @@
                 <div class="config-field">
                   <label>
                     提供商名称
-                    <span class="field-hint">用于标识此提供商的唯一名称</span>
+                    <span class="field-hint">API 服务商名称，用于在模型配置中引用</span>
                   </label>
                   <input 
                     type="text" 
                     class="input" 
                     :value="provider.name"
                     @input="updateProvider(index, 'name', ($event.target as HTMLInputElement).value)"
-                    placeholder="例如: OpenAI, Claude, 通义千问"
+                    placeholder="例如: DeepSeek, OpenAI, SiliconFlow"
                   />
                 </div>
                 <div class="config-field">
                   <label>
-                    API 地址
-                    <span class="field-hint">提供商的 API 端点地址</span>
+                    API 地址 (Base URL)
+                    <span class="field-hint">API 服务商的 BaseURL</span>
                   </label>
                   <input 
                     type="text" 
                     class="input" 
                     :value="provider.base_url"
                     @input="updateProvider(index, 'base_url', ($event.target as HTMLInputElement).value)"
-                    placeholder="例如: https://api.openai.com/v1"
+                    placeholder="例如: https://api.deepseek.com/v1"
                   />
                 </div>
                 <div class="config-field">
                   <label>
                     API 密钥
-                    <span class="field-hint">访问此提供商服务所需的密钥</span>
+                    <span class="field-hint">支持单个密钥或密钥列表轮询（用逗号分隔）</span>
                   </label>
                   <div class="password-input">
                     <input 
                       :type="showApiKey[index] ? 'text' : 'password'" 
                       class="input" 
-                      :value="provider.api_key"
-                      @input="updateProvider(index, 'api_key', ($event.target as HTMLInputElement).value)"
-                      placeholder="sk-..."
+                      :value="formatApiKey(provider.api_key)"
+                      @input="updateProvider(index, 'api_key', parseApiKey(($event.target as HTMLInputElement).value))"
+                      placeholder="sk-xxx 或 key1, key2, key3"
                     />
                     <button class="toggle-visibility" @click="toggleApiKeyVisibility(index)">
                       <Icon :icon="showApiKey[index] ? 'lucide:eye-off' : 'lucide:eye'" />
                     </button>
                   </div>
                 </div>
-              </div>
-            </div>
-            
-            <!-- 模型列表 -->
-            <div class="config-group">
-              <div class="group-header">
-                <h5>
-                  <Icon icon="lucide:brain" />
-                  可用模型
-                </h5>
-                <button class="btn btn-sm btn-ghost" @click="addModelToProvider(index)">
-                  <Icon icon="lucide:plus" />
-                  添加模型
-                </button>
-              </div>
-              <div class="models-list">
-                <div 
-                  v-for="(model, modelIndex) in getProviderModels(provider)" 
-                  :key="modelIndex" 
-                  class="model-item"
-                >
-                  <div class="model-info">
-                    <span class="model-name">{{ model.model_identifier || model }}</span>
-                    <span v-if="model.display_name" class="model-display-name">{{ model.display_name }}</span>
-                  </div>
-                  <div class="model-actions">
-                    <button class="btn-icon" @click="editModel(index, modelIndex, model)">
-                      <Icon icon="lucide:edit-2" />
-                    </button>
-                    <button class="btn-icon danger" @click="removeModel(index, modelIndex)">
-                      <Icon icon="lucide:trash-2" />
-                    </button>
-                  </div>
-                </div>
-                <div v-if="getProviderModels(provider).length === 0" class="empty-models">
-                  <Icon icon="lucide:bot" />
-                  <span>暂无模型配置</span>
+                <div class="config-field">
+                  <label>
+                    客户端类型
+                    <span class="field-hint">API 请求客户端，Gemini 需要选择专用客户端</span>
+                  </label>
+                  <select 
+                    class="input"
+                    :value="provider.client_type || 'openai'"
+                    @change="updateProvider(index, 'client_type', ($event.target as HTMLSelectElement).value)"
+                  >
+                    <option value="openai">OpenAI 兼容</option>
+                    <option value="aiohttp_gemini">Gemini（Google）</option>
+                  </select>
                 </div>
               </div>
             </div>
@@ -165,26 +141,44 @@
               <div v-show="showAdvanced[index]" class="advanced-fields">
                 <div class="config-field">
                   <label>
-                    请求超时（秒）
-                    <span class="field-hint">API 请求的最大等待时间</span>
+                    最大重试次数
+                    <span class="field-hint">单个模型 API 调用失败时的最大重试次数</span>
                   </label>
                   <input 
                     type="number" 
                     class="input" 
-                    :value="provider.timeout || 60"
-                    @input="updateProvider(index, 'timeout', parseInt(($event.target as HTMLInputElement).value))"
+                    :value="provider.max_retry ?? 2"
+                    @input="updateProvider(index, 'max_retry', parseInt(($event.target as HTMLInputElement).value))"
+                    min="0"
+                    max="10"
                   />
                 </div>
                 <div class="config-field">
                   <label>
-                    最大重试次数
-                    <span class="field-hint">请求失败时的重试次数</span>
+                    请求超时（秒）
+                    <span class="field-hint">API 请求超时时间</span>
                   </label>
                   <input 
                     type="number" 
                     class="input" 
-                    :value="provider.max_retries || 3"
-                    @input="updateProvider(index, 'max_retries', parseInt(($event.target as HTMLInputElement).value))"
+                    :value="provider.timeout ?? 30"
+                    @input="updateProvider(index, 'timeout', parseInt(($event.target as HTMLInputElement).value))"
+                    min="5"
+                    max="300"
+                  />
+                </div>
+                <div class="config-field">
+                  <label>
+                    重试间隔（秒）
+                    <span class="field-hint">重试间隔时间</span>
+                  </label>
+                  <input 
+                    type="number" 
+                    class="input" 
+                    :value="provider.retry_interval ?? 10"
+                    @input="updateProvider(index, 'retry_interval', parseInt(($event.target as HTMLInputElement).value))"
+                    min="1"
+                    max="60"
                   />
                 </div>
               </div>
@@ -202,13 +196,234 @@
       </div>
     </div>
 
+    <!-- 模型列表 -->
+    <div class="models-section">
+      <div class="section-header">
+        <h3>
+          <Icon icon="lucide:cpu" />
+          模型配置
+        </h3>
+        <span class="model-count">{{ models.length }} 个模型</span>
+      </div>
+      
+      <div v-if="models.length === 0" class="empty-state">
+        <Icon icon="lucide:bot" />
+        <p>暂无配置的模型</p>
+        <button class="btn btn-primary" @click="showAddModelModal = true">
+          <Icon icon="lucide:plus" />
+          添加第一个模型
+        </button>
+      </div>
+      
+      <div v-else class="models-grid">
+        <div 
+          v-for="(model, index) in models" 
+          :key="index" 
+          class="model-card"
+          :class="{ expanded: expandedModel === index }"
+        >
+          <div class="model-header" @click="toggleModel(index)">
+            <div class="model-icon">
+              <Icon :icon="getProviderIcon(model.api_provider || '')" />
+            </div>
+            <div class="model-info">
+              <h4>{{ model.name || model.model_identifier || '未命名模型' }}</h4>
+              <span class="model-provider">{{ model.api_provider || '未指定提供商' }}</span>
+            </div>
+            <div class="model-meta">
+              <span v-if="model.price_in || model.price_out" class="model-price">
+                ¥{{ model.price_in ?? 0 }}/{{ model.price_out ?? 0 }} /M
+              </span>
+              <Icon :icon="expandedModel === index ? 'lucide:chevron-up' : 'lucide:chevron-down'" />
+            </div>
+          </div>
+          
+          <div v-show="expandedModel === index" class="model-content">
+            <div class="config-fields">
+              <div class="config-field">
+                <label>
+                  模型标识符
+                  <span class="field-hint">API 服务商提供的模型标识符</span>
+                </label>
+                <input 
+                  type="text" 
+                  class="input" 
+                  :value="model.model_identifier"
+                  @input="updateModel(index, 'model_identifier', ($event.target as HTMLInputElement).value)"
+                  placeholder="例如: deepseek-chat, gpt-4"
+                />
+              </div>
+              <div class="config-field">
+                <label>
+                  模型名称
+                  <span class="field-hint">模型的自定义名称，在任务配置中使用</span>
+                </label>
+                <input 
+                  type="text" 
+                  class="input" 
+                  :value="model.name"
+                  @input="updateModel(index, 'name', ($event.target as HTMLInputElement).value)"
+                  placeholder="例如: deepseek-v3"
+                />
+              </div>
+              <div class="config-field">
+                <label>
+                  API 提供商
+                  <span class="field-hint">对应在 api_providers 中配置的服务商名称</span>
+                </label>
+                <select 
+                  class="input"
+                  :value="model.api_provider"
+                  @change="updateModel(index, 'api_provider', ($event.target as HTMLSelectElement).value)"
+                >
+                  <option value="">请选择提供商</option>
+                  <option v-for="provider in apiProviders" :key="provider.name" :value="provider.name">
+                    {{ provider.name }}
+                  </option>
+                </select>
+              </div>
+              <div class="config-field-row">
+                <div class="config-field">
+                  <label>
+                    输入价格
+                    <span class="field-hint">元/M token</span>
+                  </label>
+                  <input 
+                    type="number" 
+                    class="input" 
+                    :value="model.price_in ?? 0"
+                    @input="updateModel(index, 'price_in', parseFloat(($event.target as HTMLInputElement).value))"
+                    step="0.1"
+                    min="0"
+                  />
+                </div>
+                <div class="config-field">
+                  <label>
+                    输出价格
+                    <span class="field-hint">元/M token</span>
+                  </label>
+                  <input 
+                    type="number" 
+                    class="input" 
+                    :value="model.price_out ?? 0"
+                    @input="updateModel(index, 'price_out', parseFloat(($event.target as HTMLInputElement).value))"
+                    step="0.1"
+                    min="0"
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <!-- 模型高级选项 -->
+            <div class="config-group collapsible">
+              <div class="group-header clickable" @click="toggleModelAdvanced(index)">
+                <h5>
+                  <Icon icon="lucide:sliders" />
+                  高级选项
+                </h5>
+                <Icon :icon="showModelAdvanced[index] ? 'lucide:chevron-up' : 'lucide:chevron-down'" />
+              </div>
+              <div v-show="showModelAdvanced[index]" class="advanced-fields">
+                <div class="config-field inline">
+                  <div class="field-left">
+                    <label>强制流式输出</label>
+                    <span class="field-hint">如果模型不支持非流式输出，请启用此选项</span>
+                  </div>
+                  <label class="toggle-switch">
+                    <input 
+                      type="checkbox" 
+                      :checked="Boolean(model.force_stream_mode)"
+                      @change="updateModel(index, 'force_stream_mode', ($event.target as HTMLInputElement).checked)"
+                    />
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+                <div class="config-field inline">
+                  <div class="field-left">
+                    <label>防截断</label>
+                    <span class="field-hint">当模型输出不完整时，系统会自动重试</span>
+                  </div>
+                  <label class="toggle-switch">
+                    <input 
+                      type="checkbox" 
+                      :checked="Boolean(model.anti_truncation)"
+                      @change="updateModel(index, 'anti_truncation', ($event.target as HTMLInputElement).checked)"
+                    />
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+                <div class="config-field inline">
+                  <div class="field-left">
+                    <label>提示词扰动</label>
+                    <span class="field-hint">启用提示词扰动，整合内容混淆和注意力优化</span>
+                  </div>
+                  <label class="toggle-switch">
+                    <input 
+                      type="checkbox" 
+                      :checked="Boolean(model.enable_prompt_perturbation)"
+                      @change="updateModel(index, 'enable_prompt_perturbation', ($event.target as HTMLInputElement).checked)"
+                    />
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 操作按钮 -->
+            <div class="model-actions">
+              <button class="btn btn-danger" @click="removeModel(index)">
+                <Icon icon="lucide:trash-2" />
+                删除此模型
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 模型任务配置 -->
+    <div class="task-config-section">
+      <div class="section-header">
+        <h3>
+          <Icon icon="lucide:list-checks" />
+          模型任务配置
+        </h3>
+        <span class="task-count">配置各功能使用的模型</span>
+      </div>
+      
+      <div class="task-configs">
+        <div 
+          v-for="(task, taskKey) in modelTaskConfigs" 
+          :key="taskKey" 
+          class="task-card"
+        >
+          <div class="task-info">
+            <h4>{{ task.name }}</h4>
+            <p>{{ task.description }}</p>
+          </div>
+          <div class="task-config">
+            <select 
+              class="input"
+              :value="getTaskModel(taskKey)"
+              @change="updateTaskModel(taskKey, ($event.target as HTMLSelectElement).value)"
+            >
+              <option value="">未配置</option>
+              <option v-for="model in models" :key="model.name" :value="model.name">
+                {{ model.name }}
+              </option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- 添加提供商弹窗 -->
     <div v-if="showAddProviderModal" class="modal-overlay" @click.self="showAddProviderModal = false">
       <div class="modal-content">
         <div class="modal-header">
           <h3>
             <Icon icon="lucide:plus-circle" />
-            添加 AI 提供商
+            添加 API 提供商
           </h3>
           <button class="close-btn" @click="showAddProviderModal = false">
             <Icon icon="lucide:x" />
@@ -223,22 +438,24 @@
                 v-for="preset in providerPresets" 
                 :key="preset.name"
                 class="preset-btn"
+                :class="{ active: newProvider.name === preset.name }"
                 @click="selectPreset(preset)"
               >
                 <Icon :icon="preset.icon" />
                 <span>{{ preset.name }}</span>
+                <small>{{ preset.description }}</small>
               </button>
             </div>
           </div>
           
           <div class="divider">
-            <span>或手动配置</span>
+            <span>配置详情</span>
           </div>
           
           <div class="manual-config">
             <div class="config-field">
               <label>提供商名称</label>
-              <input v-model="newProvider.name" type="text" class="input" placeholder="自定义名称" />
+              <input v-model="newProvider.name" type="text" class="input" placeholder="例如: DeepSeek" />
             </div>
             <div class="config-field">
               <label>API 地址</label>
@@ -248,11 +465,18 @@
               <label>API 密钥</label>
               <input v-model="newProvider.api_key" type="password" class="input" placeholder="你的 API 密钥" />
             </div>
+            <div class="config-field">
+              <label>客户端类型</label>
+              <select v-model="newProvider.client_type" class="input">
+                <option value="openai">OpenAI 兼容</option>
+                <option value="aiohttp_gemini">Gemini（Google）</option>
+              </select>
+            </div>
           </div>
         </div>
         <div class="modal-footer">
           <button class="btn btn-secondary" @click="showAddProviderModal = false">取消</button>
-          <button class="btn btn-primary" @click="confirmAddProvider" :disabled="!newProvider.name">
+          <button class="btn btn-primary" @click="confirmAddProvider" :disabled="!newProvider.name || !newProvider.base_url">
             <Icon icon="lucide:check" />
             添加
           </button>
@@ -274,31 +498,42 @@
         </div>
         <div class="modal-body">
           <div class="config-field">
-            <label>选择提供商</label>
-            <select v-model="newModel.providerIndex" class="input">
-              <option v-for="(provider, index) in providers" :key="index" :value="index">
-                {{ provider.name || `提供商 ${index + 1}` }}
+            <label>
+              模型标识符
+              <span class="field-hint">API 服务商提供的模型标识符</span>
+            </label>
+            <input v-model="newModel.model_identifier" type="text" class="input" placeholder="例如: deepseek-chat, gpt-4" />
+          </div>
+          <div class="config-field">
+            <label>
+              模型名称
+              <span class="field-hint">模型的自定义名称，在任务配置中使用</span>
+            </label>
+            <input v-model="newModel.name" type="text" class="input" placeholder="例如: deepseek-v3" />
+          </div>
+          <div class="config-field">
+            <label>API 提供商</label>
+            <select v-model="newModel.api_provider" class="input">
+              <option value="">请选择提供商</option>
+              <option v-for="provider in apiProviders" :key="provider.name" :value="provider.name">
+                {{ provider.name }}
               </option>
             </select>
           </div>
-          <div class="config-field">
-            <label>
-              模型标识符
-              <span class="field-hint">API 调用时使用的模型名称</span>
-            </label>
-            <input v-model="newModel.model_identifier" type="text" class="input" placeholder="例如: gpt-4, claude-3-opus" />
-          </div>
-          <div class="config-field">
-            <label>
-              显示名称
-              <span class="field-hint">在界面中显示的友好名称（可选）</span>
-            </label>
-            <input v-model="newModel.display_name" type="text" class="input" placeholder="例如: GPT-4 Turbo" />
+          <div class="config-field-row">
+            <div class="config-field">
+              <label>输入价格 (元/M token)</label>
+              <input v-model.number="newModel.price_in" type="number" class="input" step="0.1" min="0" />
+            </div>
+            <div class="config-field">
+              <label>输出价格 (元/M token)</label>
+              <input v-model.number="newModel.price_out" type="number" class="input" step="0.1" min="0" />
+            </div>
           </div>
         </div>
         <div class="modal-footer">
           <button class="btn btn-secondary" @click="showAddModelModal = false">取消</button>
-          <button class="btn btn-primary" @click="confirmAddModel" :disabled="!newModel.model_identifier">
+          <button class="btn btn-primary" @click="confirmAddModel" :disabled="!newModel.model_identifier || !newModel.name">
             <Icon icon="lucide:check" />
             添加
           </button>
@@ -311,21 +546,31 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { Icon } from '@iconify/vue'
+import { providerPresets, modelTaskConfigs } from '@/config/configDescriptions'
 
-interface Provider {
+// API 提供商接口
+interface ApiProvider {
   name?: string
   base_url?: string
-  api_key?: string
-  type?: string
+  api_key?: string | string[]
+  client_type?: string
+  max_retry?: number
   timeout?: number
-  max_retries?: number
-  models?: unknown[]
+  retry_interval?: number
   [key: string]: unknown
 }
 
-interface ModelInfo {
+// 模型接口
+interface Model {
   model_identifier?: string
-  display_name?: string
+  name?: string
+  api_provider?: string
+  price_in?: number
+  price_out?: number
+  force_stream_mode?: boolean
+  anti_truncation?: boolean
+  enable_prompt_perturbation?: boolean
+  extra_params?: Record<string, unknown>
   [key: string]: unknown
 }
 
@@ -340,8 +585,10 @@ const emit = defineEmits<{
 
 // 状态
 const expandedProvider = ref<number | null>(0)
+const expandedModel = ref<number | null>(null)
 const showApiKey = ref<Record<number, boolean>>({})
 const showAdvanced = ref<Record<number, boolean>>({})
+const showModelAdvanced = ref<Record<number, boolean>>({})
 const showAddProviderModal = ref(false)
 const showAddModelModal = ref(false)
 
@@ -350,46 +597,33 @@ const newProvider = ref({
   name: '',
   base_url: '',
   api_key: '',
-  type: 'openai_compatible'
+  client_type: 'openai'
 })
 
 // 新模型表单
 const newModel = ref({
-  providerIndex: 0,
   model_identifier: '',
-  display_name: ''
+  name: '',
+  api_provider: '',
+  price_in: 0,
+  price_out: 0
 })
 
-// 预设提供商模板
-const providerPresets = [
-  { name: 'OpenAI', icon: 'simple-icons:openai', base_url: 'https://api.openai.com/v1', type: 'openai' },
-  { name: 'Claude', icon: 'simple-icons:anthropic', base_url: 'https://api.anthropic.com', type: 'anthropic' },
-  { name: '通义千问', icon: 'lucide:brain', base_url: 'https://dashscope.aliyuncs.com/api/v1', type: 'qwen' },
-  { name: 'Gemini', icon: 'simple-icons:google', base_url: 'https://generativelanguage.googleapis.com', type: 'gemini' },
-  { name: 'DeepSeek', icon: 'lucide:brain-circuit', base_url: 'https://api.deepseek.com/v1', type: 'deepseek' },
-  { name: '自定义', icon: 'lucide:settings', base_url: '', type: 'openai_compatible' },
-]
-
-// 计算提供商列表
-const providers = computed(() => {
-  // 尝试从不同的数据结构中获取提供商列表
+// 计算 API 提供商列表
+const apiProviders = computed(() => {
   const data = props.parsedData
-  
-  // 检查 providers 数组
-  if (Array.isArray(data.providers)) {
-    return data.providers as Provider[]
+  if (Array.isArray(data.api_providers)) {
+    return data.api_providers as ApiProvider[]
   }
-  
-  // 检查 llm_providers 数组
-  if (Array.isArray(data.llm_providers)) {
-    return data.llm_providers as Provider[]
+  return []
+})
+
+// 计算模型列表
+const models = computed(() => {
+  const data = props.parsedData
+  if (Array.isArray(data.models)) {
+    return data.models as Model[]
   }
-  
-  // 检查 model 下的 providers
-  if (data.model && Array.isArray((data.model as Record<string, unknown>).providers)) {
-    return (data.model as Record<string, unknown>).providers as Provider[]
-  }
-  
   return []
 })
 
@@ -398,12 +632,20 @@ function toggleProvider(index: number) {
   expandedProvider.value = expandedProvider.value === index ? null : index
 }
 
+function toggleModel(index: number) {
+  expandedModel.value = expandedModel.value === index ? null : index
+}
+
 function toggleApiKeyVisibility(index: number) {
   showApiKey.value[index] = !showApiKey.value[index]
 }
 
 function toggleAdvanced(index: number) {
   showAdvanced.value[index] = !showAdvanced.value[index]
+}
+
+function toggleModelAdvanced(index: number) {
+  showModelAdvanced.value[index] = !showModelAdvanced.value[index]
 }
 
 function getProviderIcon(name: string): string {
@@ -416,6 +658,8 @@ function getProviderIcon(name: string): string {
     'qwen': 'lucide:brain',
     '通义': 'lucide:brain',
     'deepseek': 'lucide:brain-circuit',
+    'siliconflow': 'lucide:cpu',
+    '硅基': 'lucide:cpu',
   }
   
   const lowerName = name.toLowerCase()
@@ -427,43 +671,39 @@ function getProviderIcon(name: string): string {
   return 'lucide:cloud'
 }
 
-function getModelCount(provider: Provider): number {
-  if (Array.isArray(provider.models)) {
-    return provider.models.length
+function getClientTypeLabel(clientType?: string): string {
+  const labels: Record<string, string> = {
+    'openai': 'OpenAI 兼容',
+    'aiohttp_gemini': 'Gemini（Google）'
   }
-  return 0
+  return labels[clientType || 'openai'] || 'OpenAI 兼容'
 }
 
-function getProviderModels(provider: Provider): ModelInfo[] {
-  if (Array.isArray(provider.models)) {
-    return provider.models.map(m => {
-      if (typeof m === 'string') {
-        return { model_identifier: m }
-      }
-      return m as ModelInfo
-    })
+function getProviderModelCount(providerName?: string): number {
+  if (!providerName) return 0
+  return models.value.filter(m => m.api_provider === providerName).length
+}
+
+function formatApiKey(apiKey: unknown): string {
+  if (Array.isArray(apiKey)) {
+    return apiKey.join(', ')
   }
-  return []
+  return String(apiKey || '')
+}
+
+function parseApiKey(value: string): string | string[] {
+  if (value.includes(',')) {
+    return value.split(',').map(s => s.trim()).filter(s => s)
+  }
+  return value
 }
 
 function updateProvider(index: number, key: string, value: unknown) {
-  // 构建更新路径
-  const basePath = getProvidersPath()
-  emit('update', `${basePath}.${index}.${key}`, value)
+  emit('update', `api_providers.${index}.${key}`, value)
 }
 
-function getProvidersPath(): string {
-  const data = props.parsedData
-  if (Array.isArray(data.providers)) {
-    return 'providers'
-  }
-  if (Array.isArray(data.llm_providers)) {
-    return 'llm_providers'
-  }
-  if (data.model && Array.isArray((data.model as Record<string, unknown>).providers)) {
-    return 'model.providers'
-  }
-  return 'providers'
+function updateModel(index: number, key: string, value: unknown) {
+  emit('update', `models.${index}.${key}`, value)
 }
 
 function selectPreset(preset: typeof providerPresets[0]) {
@@ -471,104 +711,92 @@ function selectPreset(preset: typeof providerPresets[0]) {
     name: preset.name === '自定义' ? '' : preset.name,
     base_url: preset.base_url,
     api_key: '',
-    type: preset.type
+    client_type: preset.client_type
   }
 }
 
 function confirmAddProvider() {
-  if (!newProvider.value.name) return
+  if (!newProvider.value.name || !newProvider.value.base_url) return
   
-  const basePath = getProvidersPath()
-  const newProviders = [...providers.value, {
+  const newProviders = [...apiProviders.value, {
     name: newProvider.value.name,
     base_url: newProvider.value.base_url,
     api_key: newProvider.value.api_key,
-    type: newProvider.value.type,
-    models: []
+    client_type: newProvider.value.client_type,
+    max_retry: 2,
+    timeout: 30,
+    retry_interval: 10
   }]
   
-  emit('update', basePath, newProviders)
+  emit('update', 'api_providers', newProviders)
   
   showAddProviderModal.value = false
-  newProvider.value = { name: '', base_url: '', api_key: '', type: 'openai_compatible' }
+  newProvider.value = { name: '', base_url: '', api_key: '', client_type: 'openai' }
   
   // 展开新添加的提供商
   expandedProvider.value = newProviders.length - 1
 }
 
 function removeProvider(index: number) {
-  if (!confirm('确定要删除此提供商吗？这将同时删除所有关联的模型配置。')) {
-    return
-  }
+  if (!confirm('确定要删除此提供商吗？')) return
   
-  const basePath = getProvidersPath()
-  const newProviders = providers.value.filter((_, i) => i !== index)
-  emit('update', basePath, newProviders)
+  const newProviders = apiProviders.value.filter((_, i) => i !== index)
+  emit('update', 'api_providers', newProviders)
   
   if (expandedProvider.value === index) {
     expandedProvider.value = null
   }
 }
 
-function addModelToProvider(providerIndex: number) {
-  newModel.value.providerIndex = providerIndex
-  showAddModelModal.value = true
-}
-
 function confirmAddModel() {
-  if (!newModel.value.model_identifier) return
+  if (!newModel.value.model_identifier || !newModel.value.name) return
   
-  const provider = providers.value[newModel.value.providerIndex]
-  if (!provider) return
-  
-  const models = Array.isArray(provider.models) ? [...provider.models] : []
-  models.push({
+  const newModels = [...models.value, {
     model_identifier: newModel.value.model_identifier,
-    display_name: newModel.value.display_name || newModel.value.model_identifier
-  })
+    name: newModel.value.name,
+    api_provider: newModel.value.api_provider,
+    price_in: newModel.value.price_in,
+    price_out: newModel.value.price_out
+  }]
   
-  const basePath = getProvidersPath()
-  emit('update', `${basePath}.${newModel.value.providerIndex}.models`, models)
+  emit('update', 'models', newModels)
   
   showAddModelModal.value = false
-  newModel.value = { providerIndex: 0, model_identifier: '', display_name: '' }
+  newModel.value = { model_identifier: '', name: '', api_provider: '', price_in: 0, price_out: 0 }
+  
+  // 展开新添加的模型
+  expandedModel.value = newModels.length - 1
 }
 
-function editModel(providerIndex: number, modelIndex: number, model: ModelInfo) {
-  // 简单的编辑实现 - 可以扩展为弹窗
-  const newIdentifier = prompt('模型标识符:', model.model_identifier || '')
-  if (newIdentifier === null) return
-  
-  const provider = providers.value[providerIndex]
-  if (!provider || !Array.isArray(provider.models)) return
-  
-  const models = [...provider.models]
-  if (typeof models[modelIndex] === 'object') {
-    models[modelIndex] = { ...models[modelIndex] as object, model_identifier: newIdentifier }
-  } else {
-    models[modelIndex] = { model_identifier: newIdentifier }
-  }
-  
-  const basePath = getProvidersPath()
-  emit('update', `${basePath}.${providerIndex}.models`, models)
-}
-
-function removeModel(providerIndex: number, modelIndex: number) {
+function removeModel(index: number) {
   if (!confirm('确定要删除此模型吗？')) return
   
-  const provider = providers.value[providerIndex]
-  if (!provider || !Array.isArray(provider.models)) return
+  const newModels = models.value.filter((_, i) => i !== index)
+  emit('update', 'models', newModels)
   
-  const models = provider.models.filter((_, i) => i !== modelIndex)
+  if (expandedModel.value === index) {
+    expandedModel.value = null
+  }
+}
+
+// 任务模型配置
+function getTaskModel(taskKey: string): string {
+  const data = props.parsedData
+  const taskConfig = data.model_task_config as Record<string, Record<string, unknown>> | undefined
+  if (!taskConfig || !taskConfig[taskKey]) return ''
   
-  const basePath = getProvidersPath()
-  emit('update', `${basePath}.${providerIndex}.models`, models)
+  const modelList = taskConfig[taskKey].model_list as string[] | undefined
+  return modelList?.[0] || ''
+}
+
+function updateTaskModel(taskKey: string, modelName: string) {
+  emit('update', `model_task_config.${taskKey}.model_list`, modelName ? [modelName] : [])
 }
 
 // 初始化
 watch(() => props.parsedData, () => {
   // 如果有提供商，默认展开第一个
-  if (providers.value.length > 0 && expandedProvider.value === null) {
+  if (apiProviders.value.length > 0 && expandedProvider.value === null) {
     expandedProvider.value = 0
   }
 }, { immediate: true })
@@ -1195,5 +1423,241 @@ select.input {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+/* 模型区域 */
+.models-section {
+  background: var(--bg-primary);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+.models-grid {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 模型卡片 */
+.model-card {
+  border-bottom: 1px solid var(--border-color);
+}
+
+.model-card:last-child {
+  border-bottom: none;
+}
+
+.model-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.model-header:hover {
+  background: var(--bg-secondary);
+}
+
+.model-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #10b981, #059669);
+  border-radius: var(--radius);
+  color: white;
+  font-size: 18px;
+}
+
+.model-info {
+  flex: 1;
+}
+
+.model-info h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 4px 0;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.model-provider {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.model-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-secondary);
+}
+
+.model-price {
+  font-size: 12px;
+  padding: 4px 10px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-full);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.model-content {
+  padding: 0 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.config-field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.config-field.inline {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.config-field.inline .field-left {
+  flex: 1;
+}
+
+.config-field.inline label {
+  margin-bottom: 0;
+}
+
+/* Toggle 开关 */
+.toggle-switch {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.toggle-switch input {
+  display: none;
+}
+
+.toggle-slider {
+  width: 44px;
+  height: 24px;
+  background: var(--bg-hover);
+  border-radius: 12px;
+  position: relative;
+  transition: background var(--transition-fast);
+}
+
+.toggle-slider::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background: white;
+  border-radius: 50%;
+  transition: transform var(--transition-fast);
+  box-shadow: var(--shadow-sm);
+}
+
+.toggle-switch input:checked + .toggle-slider {
+  background: var(--primary);
+}
+
+.toggle-switch input:checked + .toggle-slider::after {
+  transform: translateX(20px);
+}
+
+.model-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-color);
+}
+
+/* 任务配置区域 */
+.task-config-section {
+  background: var(--bg-primary);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+.task-count {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.task-configs {
+  display: grid;
+  gap: 1px;
+  background: var(--border-color);
+}
+
+.task-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  background: var(--bg-primary);
+}
+
+.task-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.task-info h4 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 4px 0;
+}
+
+.task-info p {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.task-config {
+  flex-shrink: 0;
+  width: 200px;
+}
+
+.task-config .input {
+  font-size: 13px;
+  padding: 8px 12px;
+}
+
+/* 预设按钮激活状态 */
+.preset-btn.active {
+  border-color: var(--primary);
+  background: var(--primary-bg);
+}
+
+.preset-btn.active svg {
+  color: var(--primary);
+}
+
+.preset-btn small {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+.field-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 </style>
