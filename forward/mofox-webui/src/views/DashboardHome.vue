@@ -1,5 +1,13 @@
 <template>
   <div class="dashboard-home">
+    <!-- 连接错误弹窗 -->
+    <ConnectionError 
+      :visible="showConnectionError"
+      :message="connectionErrorMsg"
+      @close="showConnectionError = false"
+      @retry="fetchAllData"
+    />
+
     <!-- 统计卡片 -->
     <section class="stats-section">
       <div class="stats-grid">
@@ -21,75 +29,123 @@
     <!-- 主要内容区 -->
     <section class="main-section">
       <div class="content-grid">
-        <!-- 插件统计 -->
-        <div class="card chart-card">
+        <!-- 今日日程 -->
+        <div class="card schedule-card">
           <div class="card-header">
             <h3 class="card-title">
-              <Icon icon="lucide:puzzle" />
-              插件统计
+              <Icon icon="lucide:calendar" />
+              今日日程
             </h3>
-            <button class="refresh-btn" @click="fetchData" :disabled="loading">
-              <Icon :icon="loading ? 'lucide:loader-2' : 'lucide:refresh-cw'" :class="{ spinning: loading }" />
-            </button>
+            <span class="date-badge">{{ schedule?.date || '加载中...' }}</span>
           </div>
           <div class="card-body">
-            <div class="stats-detail-grid">
-              <div class="stats-detail-item">
-                <div class="detail-icon" style="background: rgba(16, 185, 129, 0.1)">
-                  <Icon icon="lucide:check-circle" style="color: #10b981" />
-                </div>
-                <div class="detail-info">
-                  <span class="detail-value">{{ overview?.plugins.loaded ?? '-' }}</span>
-                  <span class="detail-label">已加载</span>
-                </div>
+            <!-- 当前活动 -->
+            <div v-if="schedule?.current_activity" class="current-activity">
+              <div class="current-label">
+                <Icon icon="lucide:play-circle" />
+                当前活动
               </div>
-              <div class="stats-detail-item">
-                <div class="detail-icon" style="background: rgba(59, 130, 246, 0.1)">
-                  <Icon icon="lucide:circle-dot" style="color: #3b82f6" />
-                </div>
-                <div class="detail-info">
-                  <span class="detail-value">{{ overview?.plugins.enabled ?? '-' }}</span>
-                  <span class="detail-label">已启用</span>
-                </div>
+              <div class="current-content">
+                <span class="current-time">{{ schedule.current_activity.time_range }}</span>
+                <span class="current-text">{{ schedule.current_activity.activity }}</span>
               </div>
-              <div class="stats-detail-item">
-                <div class="detail-icon" style="background: rgba(245, 158, 11, 0.1)">
-                  <Icon icon="lucide:circle-pause" style="color: #f59e0b" />
-                </div>
-                <div class="detail-info">
-                  <span class="detail-value">{{ overview?.plugins.disabled ?? '-' }}</span>
-                  <span class="detail-label">已禁用</span>
-                </div>
+            </div>
+            
+            <!-- 日程列表 -->
+            <div v-if="schedule?.activities?.length" class="schedule-list">
+              <div 
+                class="schedule-item" 
+                v-for="(item, index) in schedule.activities" 
+                :key="index"
+                :class="{ 'is-current': isCurrentActivity(item) }"
+              >
+                <div class="schedule-time">{{ item.time_range }}</div>
+                <div class="schedule-activity">{{ item.activity }}</div>
               </div>
-              <div class="stats-detail-item">
-                <div class="detail-icon" style="background: rgba(239, 68, 68, 0.1)">
-                  <Icon icon="lucide:alert-circle" style="color: #ef4444" />
-                </div>
-                <div class="detail-info">
-                  <span class="detail-value">{{ overview?.plugins.failed ?? '-' }}</span>
-                  <span class="detail-label">加载失败</span>
-                </div>
-              </div>
+            </div>
+            <div v-else class="empty-state small">
+              <Icon icon="lucide:calendar-off" class="empty-icon" />
+              <p>暂无日程安排</p>
             </div>
           </div>
         </div>
 
-        <!-- 快捷操作 -->
-        <div class="card quick-actions-card">
+        <!-- 月度计划 -->
+        <div class="card plans-card">
           <div class="card-header">
             <h3 class="card-title">
-              <Icon icon="lucide:zap" />
-              快捷操作
+              <Icon icon="lucide:target" />
+              月度计划
             </h3>
+            <span class="total-badge" v-if="monthlyPlans">
+              共 {{ monthlyPlans.total }} 项
+            </span>
           </div>
           <div class="card-body">
-            <div class="quick-actions">
-              <button class="action-btn" v-for="action in quickActions" :key="action.label">
-                <div class="action-icon" :style="{ background: action.bgColor }">
-                  <Icon :icon="action.icon" :style="{ color: action.color }" />
-                </div>
-                <span class="action-label">{{ action.label }}</span>
-              </button>
+            <div v-if="monthlyPlans?.plans?.length" class="plans-list">
+              <div class="plan-item" v-for="(plan, index) in monthlyPlans.plans" :key="index">
+                <Icon icon="lucide:check-square" class="plan-icon" />
+                <span class="plan-text">{{ plan }}</span>
+              </div>
+            </div>
+            <div v-else class="empty-state small">
+              <Icon icon="lucide:clipboard-list" class="empty-icon" />
+              <p>暂无月度计划</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 插件统计 -->
+    <section class="plugins-section">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">
+            <Icon icon="lucide:puzzle" />
+            插件统计
+          </h3>
+          <button class="refresh-btn" @click="fetchAllData" :disabled="loading">
+            <Icon :icon="loading ? 'lucide:loader-2' : 'lucide:refresh-cw'" :class="{ spinning: loading }" />
+          </button>
+        </div>
+        <div class="card-body">
+          <div class="stats-detail-grid">
+            <div class="stats-detail-item">
+              <div class="detail-icon" style="background: rgba(16, 185, 129, 0.1)">
+                <Icon icon="lucide:check-circle" style="color: #10b981" />
+              </div>
+              <div class="detail-info">
+                <span class="detail-value">{{ overview?.plugins.loaded ?? '-' }}</span>
+                <span class="detail-label">已加载</span>
+              </div>
+            </div>
+            <div class="stats-detail-item">
+              <div class="detail-icon" style="background: rgba(59, 130, 246, 0.1)">
+                <Icon icon="lucide:circle-dot" style="color: #3b82f6" />
+              </div>
+              <div class="detail-info">
+                <span class="detail-value">{{ overview?.plugins.enabled ?? '-' }}</span>
+                <span class="detail-label">已启用</span>
+              </div>
+            </div>
+            <div class="stats-detail-item">
+              <div class="detail-icon" style="background: rgba(245, 158, 11, 0.1)">
+                <Icon icon="lucide:circle-pause" style="color: #f59e0b" />
+              </div>
+              <div class="detail-info">
+                <span class="detail-value">{{ overview?.plugins.disabled ?? '-' }}</span>
+                <span class="detail-label">已禁用</span>
+              </div>
+            </div>
+            <div class="stats-detail-item">
+              <div class="detail-icon" style="background: rgba(239, 68, 68, 0.1)">
+                <Icon icon="lucide:alert-circle" style="color: #ef4444" />
+              </div>
+              <div class="detail-info">
+                <span class="detail-value">{{ overview?.plugins.failed ?? '-' }}</span>
+                <span class="detail-label">加载失败</span>
+              </div>
             </div>
           </div>
         </div>
@@ -109,7 +165,7 @@
           </span>
         </div>
         <div class="card-body">
-          <div class="component-stats-grid" v-if="overview?.components.by_type">
+          <div class="component-stats-grid" v-if="overview?.components.by_type && Object.keys(overview.components.by_type).length">
             <div 
               class="component-type-card" 
               v-for="(stats, type) in overview.components.by_type" 
@@ -148,24 +204,70 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
-import { getDashboardOverview, type DashboardOverview } from '@/api'
+import { 
+  getDashboardOverview, 
+  getTodaySchedule, 
+  getMonthlyPlans,
+  type DashboardOverview,
+  type ScheduleResponse,
+  type MonthlyPlanResponse,
+  type ScheduleActivity
+} from '@/api'
+import ConnectionError from '@/components/ConnectionError.vue'
 
 const loading = ref(false)
 const overview = ref<DashboardOverview | null>(null)
+const schedule = ref<ScheduleResponse | null>(null)
+const monthlyPlans = ref<MonthlyPlanResponse | null>(null)
 
-// 获取数据
-async function fetchData() {
+// 连接错误状态
+const showConnectionError = ref(false)
+const connectionErrorMsg = ref('')
+
+// 获取所有数据
+async function fetchAllData() {
   loading.value = true
+  showConnectionError.value = false
+  
   try {
-    const response = await getDashboardOverview()
-    if (response.success && response.data) {
-      overview.value = response.data
+    // 并行获取所有数据
+    const [overviewRes, scheduleRes, plansRes] = await Promise.all([
+      getDashboardOverview(),
+      getTodaySchedule(),
+      getMonthlyPlans()
+    ])
+    
+    // 检查是否全部失败（连接问题）
+    if (!overviewRes.success && overviewRes.status === 0) {
+      connectionErrorMsg.value = overviewRes.error || '无法连接到后端服务'
+      showConnectionError.value = true
+      return
+    }
+    
+    if (overviewRes.success && overviewRes.data) {
+      overview.value = overviewRes.data
+    }
+    
+    if (scheduleRes.success && scheduleRes.data) {
+      schedule.value = scheduleRes.data
+    }
+    
+    if (plansRes.success && plansRes.data) {
+      monthlyPlans.value = plansRes.data
     }
   } catch (error) {
-    console.error('获取仪表盘数据失败:', error)
+    console.error('获取数据失败:', error)
+    connectionErrorMsg.value = '请求发生错误，请检查网络连接'
+    showConnectionError.value = true
   } finally {
     loading.value = false
   }
+}
+
+// 判断是否为当前活动
+function isCurrentActivity(item: ScheduleActivity): boolean {
+  if (!schedule.value?.current_activity) return false
+  return item.time_range === schedule.value.current_activity.time_range
 }
 
 // 格式化运行时间
@@ -222,43 +324,59 @@ const statsData = computed(() => [
   },
 ])
 
-const quickActions = [
-  { label: '重启服务', icon: 'lucide:refresh-cw', color: '#3b82f6', bgColor: 'rgba(59, 130, 246, 0.1)' },
-  { label: '查看日志', icon: 'lucide:file-text', color: '#10b981', bgColor: 'rgba(16, 185, 129, 0.1)' },
-  { label: '配置管理', icon: 'lucide:settings', color: '#f59e0b', bgColor: 'rgba(245, 158, 11, 0.1)' },
-  { label: '数据备份', icon: 'lucide:database', color: '#8b5cf6', bgColor: 'rgba(139, 92, 246, 0.1)' },
-]
-
 // 组件类型图标映射
 function getComponentTypeIcon(type: string): string {
   const iconMap: Record<string, string> = {
     'handler': 'lucide:zap',
+    'event_handler': 'lucide:zap',
     'tool': 'lucide:wrench',
     'generator': 'lucide:sparkles',
+    'text_generator': 'lucide:sparkles',
     'chatter': 'lucide:message-circle',
     'router': 'lucide:route',
+    'http_router': 'lucide:route',
     'scheduler': 'lucide:calendar-clock',
+    'scheduled_task': 'lucide:calendar-clock',
     'middleware': 'lucide:layers',
+    'willing_modifier': 'lucide:sliders-horizontal',
+    'prompt_builder': 'lucide:file-text',
+    'thought_chain': 'lucide:git-branch',
   }
   return iconMap[type.toLowerCase()] || 'lucide:box'
 }
 
-// 格式化组件类型名称
+// 格式化组件类型名称 - 完整中文译名
 function formatComponentType(type: string): string {
   const nameMap: Record<string, string> = {
     'handler': '事件处理器',
+    'event_handler': '事件处理器',
     'tool': '工具',
     'generator': '生成器',
+    'text_generator': '文本生成器',
     'chatter': '聊天器',
     'router': '路由',
+    'http_router': 'HTTP路由',
     'scheduler': '定时任务',
+    'scheduled_task': '定时任务',
     'middleware': '中间件',
+    'willing_modifier': '意愿修改器',
+    'prompt_builder': '提示词构建器',
+    'thought_chain': '思维链',
+    'action': '动作',
+    'action_handler': '动作处理器',
+    'message_processor': '消息处理器',
+    'response_generator': '响应生成器',
+    'context_provider': '上下文提供器',
+    'memory_provider': '记忆提供器',
+    'emotion_analyzer': '情感分析器',
+    'interest_matcher': '兴趣匹配器',
+    'relationship_tracker': '关系追踪器',
   }
   return nameMap[type.toLowerCase()] || type
 }
 
 onMounted(() => {
-  fetchData()
+  fetchAllData()
 })
 </script>
 
@@ -591,9 +709,141 @@ onMounted(() => {
   gap: 12px;
 }
 
+.empty-state.small {
+  padding: 24px;
+}
+
+.empty-state.small .empty-icon {
+  font-size: 32px;
+}
+
 .empty-icon {
   font-size: 48px;
   opacity: 0.5;
+}
+
+/* 日程卡片 */
+.date-badge {
+  font-size: 13px;
+  color: var(--primary);
+  padding: 4px 12px;
+  background: var(--primary-bg);
+  border-radius: var(--radius-full);
+  font-weight: 500;
+}
+
+.current-activity {
+  background: linear-gradient(135deg, var(--primary-bg), rgba(59, 130, 246, 0.05));
+  border: 1px solid var(--primary);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.current-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.current-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.current-time {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  font-weight: 500;
+}
+
+.current-text {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.schedule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.schedule-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius);
+  transition: all var(--transition-fast);
+}
+
+.schedule-item:hover {
+  background: var(--bg-hover);
+}
+
+.schedule-item.is-current {
+  background: var(--primary-bg);
+  border-left: 3px solid var(--primary);
+}
+
+.schedule-time {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  min-width: 100px;
+}
+
+.schedule-activity {
+  font-size: 14px;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+/* 月度计划卡片 */
+.plans-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.plan-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius);
+  transition: all var(--transition-fast);
+}
+
+.plan-item:hover {
+  background: var(--bg-hover);
+}
+
+.plan-icon {
+  font-size: 16px;
+  color: var(--success);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.plan-text {
+  font-size: 14px;
+  color: var(--text-primary);
+  line-height: 1.5;
 }
 
 /* 响应式 */

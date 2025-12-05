@@ -161,7 +161,9 @@ export const API_ENDPOINTS = {
     OVERVIEW: 'stats/overview',
     PLUGINS: 'stats/plugins',
     PLUGIN_DETAIL: (name: string) => `stats/plugins/${name}`,
-    SYSTEM: 'stats/system'
+    SYSTEM: 'stats/system',
+    SCHEDULE: 'stats/schedule',
+    MONTHLY_PLANS: 'stats/monthly-plans'
   }
 } as const
 
@@ -233,6 +235,26 @@ export interface SystemStatusResponse {
   threads: number
 }
 
+/** 日程活动 */
+export interface ScheduleActivity {
+  time_range: string
+  activity: string
+}
+
+/** 日程响应 */
+export interface ScheduleResponse {
+  date: string
+  activities: ScheduleActivity[]
+  current_activity: ScheduleActivity | null
+}
+
+/** 月度计划响应 */
+export interface MonthlyPlanResponse {
+  plans: string[]
+  total: number
+  month: string
+}
+
 // ==================== API 便捷方法 ====================
 
 /**
@@ -263,4 +285,27 @@ export async function getPluginDetail(pluginName: string) {
  */
 export async function getSystemStatus() {
   return api.get<SystemStatusResponse>(API_ENDPOINTS.STATS.SYSTEM)
+}
+
+/**
+ * 获取今日日程
+ */
+export async function getTodaySchedule(date?: string) {
+  const endpoint = date 
+    ? `${API_ENDPOINTS.STATS.SCHEDULE}?date=${date}` 
+    : API_ENDPOINTS.STATS.SCHEDULE
+  return api.get<ScheduleResponse>(endpoint)
+}
+
+/**
+ * 获取月度计划
+ */
+export async function getMonthlyPlans(month?: string, limit: number = 10) {
+  let endpoint = API_ENDPOINTS.STATS.MONTHLY_PLANS
+  const params = new URLSearchParams()
+  if (month) params.append('month', month)
+  if (limit) params.append('limit', limit.toString())
+  const queryString = params.toString()
+  if (queryString) endpoint += `?${queryString}`
+  return api.get<MonthlyPlanResponse>(endpoint)
 }
