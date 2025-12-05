@@ -19,7 +19,7 @@ from src.plugin_system import BasePlugin, ComponentInfo, register_plugin
 from src.plugin_system.base.config_types import ConfigField
 
 from .handlers import WebUIStartupHandler, WebUIShutdownHandler
-from .routers import WebUIAuthRouter
+from .routers import WebUIAuthRouter, WebUIStatsRouter
 
 logger = get_logger("WebUIAuth.Plugin")
 
@@ -27,15 +27,15 @@ logger = get_logger("WebUIAuth.Plugin")
 @register_plugin
 class WebUIAuthPlugin(BasePlugin):
     """
-    WebUI认证插件
+    WebUI插件
     
     提供:
     1. 固定端口的发现服务器 (端口12138)
-    2. 带API Key验证的HTTP接口
+    2. HTTP接口
     """
     
     # 插件基本信息
-    plugin_name: str = "webui_auth"
+    plugin_name: str = "webui_backend"
     plugin_version: str = "1.0.0"
     plugin_author: str = "MoFox Team"
     plugin_description: str = "WebUI前端认证插件，提供发现服务和验证接口"
@@ -111,6 +111,7 @@ class WebUIAuthPlugin(BasePlugin):
         - WebUIStartupHandler: 启动时启动发现服务器
         - WebUIShutdownHandler: 关闭时停止发现服务器
         - WebUIAuthRouter: HTTP认证接口
+        - WebUIStatsRouter: HTTP统计数据接口
         """
         return [
             # 事件处理器
@@ -118,4 +119,5 @@ class WebUIAuthPlugin(BasePlugin):
             (WebUIShutdownHandler.get_handler_info(), WebUIShutdownHandler),
             # HTTP路由组件
             (WebUIAuthRouter.get_router_info(), WebUIAuthRouter),
+            (WebUIStatsRouter.get_router_info(), WebUIStatsRouter),
         ]

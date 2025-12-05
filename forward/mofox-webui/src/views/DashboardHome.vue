@@ -11,9 +11,8 @@
             <span class="stat-value">{{ stat.value }}</span>
             <span class="stat-label">{{ stat.label }}</span>
           </div>
-          <div class="stat-trend" :class="stat.trend > 0 ? 'positive' : 'negative'">
-            <Icon :icon="stat.trend > 0 ? 'lucide:trending-up' : 'lucide:trending-down'" />
-            <span>{{ Math.abs(stat.trend) }}%</span>
+          <div v-if="stat.subValue" class="stat-sub">
+            <span>{{ stat.subValue }}</span>
           </div>
         </div>
       </div>
@@ -22,29 +21,55 @@
     <!-- 主要内容区 -->
     <section class="main-section">
       <div class="content-grid">
-        <!-- 活动图表 -->
+        <!-- 插件统计 -->
         <div class="card chart-card">
           <div class="card-header">
             <h3 class="card-title">
-              <Icon icon="lucide:activity" />
-              活动概览
+              <Icon icon="lucide:puzzle" />
+              插件统计
             </h3>
-            <div class="card-actions">
-              <button 
-                v-for="period in ['日', '周', '月']" 
-                :key="period"
-                class="period-btn"
-                :class="{ active: activePeriod === period }"
-                @click="activePeriod = period"
-              >
-                {{ period }}
-              </button>
-            </div>
+            <button class="refresh-btn" @click="fetchData" :disabled="loading">
+              <Icon :icon="loading ? 'lucide:loader-2' : 'lucide:refresh-cw'" :class="{ spinning: loading }" />
+            </button>
           </div>
           <div class="card-body">
-            <div class="chart-placeholder">
-              <Icon icon="lucide:bar-chart-3" class="chart-icon" />
-              <p>图表数据加载中...</p>
+            <div class="stats-detail-grid">
+              <div class="stats-detail-item">
+                <div class="detail-icon" style="background: rgba(16, 185, 129, 0.1)">
+                  <Icon icon="lucide:check-circle" style="color: #10b981" />
+                </div>
+                <div class="detail-info">
+                  <span class="detail-value">{{ overview?.plugins.loaded ?? '-' }}</span>
+                  <span class="detail-label">已加载</span>
+                </div>
+              </div>
+              <div class="stats-detail-item">
+                <div class="detail-icon" style="background: rgba(59, 130, 246, 0.1)">
+                  <Icon icon="lucide:circle-dot" style="color: #3b82f6" />
+                </div>
+                <div class="detail-info">
+                  <span class="detail-value">{{ overview?.plugins.enabled ?? '-' }}</span>
+                  <span class="detail-label">已启用</span>
+                </div>
+              </div>
+              <div class="stats-detail-item">
+                <div class="detail-icon" style="background: rgba(245, 158, 11, 0.1)">
+                  <Icon icon="lucide:circle-pause" style="color: #f59e0b" />
+                </div>
+                <div class="detail-info">
+                  <span class="detail-value">{{ overview?.plugins.disabled ?? '-' }}</span>
+                  <span class="detail-label">已禁用</span>
+                </div>
+              </div>
+              <div class="stats-detail-item">
+                <div class="detail-icon" style="background: rgba(239, 68, 68, 0.1)">
+                  <Icon icon="lucide:alert-circle" style="color: #ef4444" />
+                </div>
+                <div class="detail-info">
+                  <span class="detail-value">{{ overview?.plugins.failed ?? '-' }}</span>
+                  <span class="detail-label">加载失败</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -71,27 +96,48 @@
       </div>
     </section>
 
-    <!-- 最近活动 -->
+    <!-- 组件统计 -->
     <section class="activity-section">
       <div class="card">
         <div class="card-header">
           <h3 class="card-title">
-            <Icon icon="lucide:clock" />
-            最近活动
+            <Icon icon="lucide:boxes" />
+            组件统计
           </h3>
-          <a href="#" class="view-all">查看全部</a>
+          <span class="total-badge">
+            共 {{ overview?.components.total ?? 0 }} 个组件
+          </span>
         </div>
         <div class="card-body">
-          <div class="activity-list">
-            <div class="activity-item" v-for="activity in recentActivities" :key="activity.id">
-              <div class="activity-icon" :style="{ background: activity.bgColor }">
-                <Icon :icon="activity.icon" :style="{ color: activity.color }" />
+          <div class="component-stats-grid" v-if="overview?.components.by_type">
+            <div 
+              class="component-type-card" 
+              v-for="(stats, type) in overview.components.by_type" 
+              :key="type"
+            >
+              <div class="type-header">
+                <Icon :icon="getComponentTypeIcon(type)" class="type-icon" />
+                <span class="type-name">{{ formatComponentType(type) }}</span>
               </div>
-              <div class="activity-content">
-                <p class="activity-text">{{ activity.text }}</p>
-                <span class="activity-time">{{ activity.time }}</span>
+              <div class="type-stats">
+                <div class="type-stat">
+                  <span class="type-stat-value">{{ stats.total }}</span>
+                  <span class="type-stat-label">总数</span>
+                </div>
+                <div class="type-stat enabled">
+                  <span class="type-stat-value">{{ stats.enabled }}</span>
+                  <span class="type-stat-label">启用</span>
+                </div>
+                <div class="type-stat disabled">
+                  <span class="type-stat-value">{{ stats.disabled }}</span>
+                  <span class="type-stat-label">禁用</span>
+                </div>
               </div>
             </div>
+          </div>
+          <div v-else class="empty-state">
+            <Icon icon="lucide:inbox" class="empty-icon" />
+            <p>暂无组件数据</p>
           </div>
         </div>
       </div>
@@ -100,45 +146,81 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
+import { getDashboardOverview, type DashboardOverview } from '@/api'
 
-const activePeriod = ref('日')
+const loading = ref(false)
+const overview = ref<DashboardOverview | null>(null)
 
-const statsData = [
+// 获取数据
+async function fetchData() {
+  loading.value = true
+  try {
+    const response = await getDashboardOverview()
+    if (response.success && response.data) {
+      overview.value = response.data
+    }
+  } catch (error) {
+    console.error('获取仪表盘数据失败:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+// 格式化运行时间
+function formatUptime(seconds: number): string {
+  if (!seconds) return '-'
+  const days = Math.floor(seconds / 86400)
+  const hours = Math.floor((seconds % 86400) / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  
+  if (days > 0) return `${days}天${hours}时`
+  if (hours > 0) return `${hours}时${minutes}分`
+  return `${minutes}分钟`
+}
+
+// 格式化内存
+function formatMemory(mb: number): string {
+  if (!mb) return '-'
+  if (mb >= 1024) return `${(mb / 1024).toFixed(1)}GB`
+  return `${mb.toFixed(0)}MB`
+}
+
+// 顶部统计卡片数据
+const statsData = computed(() => [
   { 
-    label: '今日消息', 
-    value: '1,234', 
-    icon: 'lucide:message-circle', 
+    label: '活跃插件', 
+    value: overview.value?.plugins.enabled ?? '-', 
+    subValue: `共 ${overview.value?.plugins.loaded ?? 0} 个`,
+    icon: 'lucide:puzzle', 
     color: '#3b82f6', 
     bgColor: 'rgba(59, 130, 246, 0.1)',
-    trend: 12
   },
   { 
-    label: '活跃用户', 
-    value: '256', 
-    icon: 'lucide:users', 
+    label: '聊天会话', 
+    value: overview.value?.chats.total_streams ?? '-', 
+    subValue: `群聊 ${overview.value?.chats.group_streams ?? 0} / 私聊 ${overview.value?.chats.private_streams ?? 0}`,
+    icon: 'lucide:messages-square', 
     color: '#10b981', 
     bgColor: 'rgba(16, 185, 129, 0.1)',
-    trend: 8
   },
   { 
-    label: '响应时间', 
-    value: '23ms', 
-    icon: 'lucide:timer', 
+    label: '内存占用', 
+    value: formatMemory(overview.value?.system.memory_usage_mb ?? 0), 
+    subValue: `CPU ${overview.value?.system.cpu_percent?.toFixed(1) ?? 0}%`,
+    icon: 'lucide:cpu', 
     color: '#f59e0b', 
     bgColor: 'rgba(245, 158, 11, 0.1)',
-    trend: -5
   },
   { 
     label: '运行时长', 
-    value: '72h', 
+    value: formatUptime(overview.value?.system.uptime_seconds ?? 0), 
     icon: 'lucide:clock', 
     color: '#8b5cf6', 
     bgColor: 'rgba(139, 92, 246, 0.1)',
-    trend: 0
   },
-]
+])
 
 const quickActions = [
   { label: '重启服务', icon: 'lucide:refresh-cw', color: '#3b82f6', bgColor: 'rgba(59, 130, 246, 0.1)' },
@@ -147,12 +229,37 @@ const quickActions = [
   { label: '数据备份', icon: 'lucide:database', color: '#8b5cf6', bgColor: 'rgba(139, 92, 246, 0.1)' },
 ]
 
-const recentActivities = [
-  { id: 1, text: '用户 Alice 发送了一条消息', time: '2分钟前', icon: 'lucide:message-circle', color: '#3b82f6', bgColor: 'rgba(59, 130, 246, 0.1)' },
-  { id: 2, text: '系统配置已更新', time: '15分钟前', icon: 'lucide:settings', color: '#10b981', bgColor: 'rgba(16, 185, 129, 0.1)' },
-  { id: 3, text: '新用户 Bob 加入了群组', time: '1小时前', icon: 'lucide:user-plus', color: '#f59e0b', bgColor: 'rgba(245, 158, 11, 0.1)' },
-  { id: 4, text: '插件 weather 已启用', time: '3小时前', icon: 'lucide:puzzle', color: '#8b5cf6', bgColor: 'rgba(139, 92, 246, 0.1)' },
-]
+// 组件类型图标映射
+function getComponentTypeIcon(type: string): string {
+  const iconMap: Record<string, string> = {
+    'handler': 'lucide:zap',
+    'tool': 'lucide:wrench',
+    'generator': 'lucide:sparkles',
+    'chatter': 'lucide:message-circle',
+    'router': 'lucide:route',
+    'scheduler': 'lucide:calendar-clock',
+    'middleware': 'lucide:layers',
+  }
+  return iconMap[type.toLowerCase()] || 'lucide:box'
+}
+
+// 格式化组件类型名称
+function formatComponentType(type: string): string {
+  const nameMap: Record<string, string> = {
+    'handler': '事件处理器',
+    'tool': '工具',
+    'generator': '生成器',
+    'chatter': '聊天器',
+    'router': '路由',
+    'scheduler': '定时任务',
+    'middleware': '中间件',
+  }
+  return nameMap[type.toLowerCase()] || type
+}
+
+onMounted(() => {
+  fetchData()
+})
 </script>
 
 <style scoped>
@@ -172,6 +279,15 @@ const recentActivities = [
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
 }
 
 /* 统计卡片区 */
@@ -226,24 +342,12 @@ const recentActivities = [
   color: var(--text-tertiary);
 }
 
-.stat-trend {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 13px;
-  font-weight: 500;
+.stat-sub {
+  font-size: 12px;
+  color: var(--text-tertiary);
   padding: 4px 8px;
-  border-radius: var(--radius-full);
-}
-
-.stat-trend.positive {
-  color: var(--success);
-  background: var(--success-bg);
-}
-
-.stat-trend.negative {
-  color: var(--danger);
-  background: var(--danger-bg);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
 }
 
 /* 卡片通用样式 */
@@ -277,45 +381,40 @@ const recentActivities = [
   color: var(--primary);
 }
 
-.card-actions {
-  display: flex;
-  gap: 4px;
-}
-
-.period-btn {
-  padding: 6px 12px;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  border: none;
-  color: var(--text-tertiary);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.period-btn:hover {
-  background: var(--bg-hover);
-  color: var(--text-secondary);
-}
-
-.period-btn.active {
-  background: var(--primary-bg);
-  color: var(--primary);
-}
-
 .card-body {
   padding: 20px;
 }
 
-.view-all {
-  font-size: 14px;
-  color: var(--primary);
-  font-weight: 500;
+.refresh-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: var(--bg-secondary);
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
 }
 
-.view-all:hover {
-  text-decoration: underline;
+.refresh-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--primary);
+}
+
+.refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.total-badge {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  padding: 4px 12px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-full);
 }
 
 /* 主内容区网格 */
@@ -325,20 +424,52 @@ const recentActivities = [
   gap: 20px;
 }
 
-/* 图表区占位 */
-.chart-placeholder {
-  height: 300px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-tertiary);
-  gap: 12px;
+/* 插件统计详情 */
+.stats-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
 }
 
-.chart-icon {
-  font-size: 48px;
-  opacity: 0.5;
+.stats-detail-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius);
+  transition: all var(--transition-fast);
+}
+
+.stats-detail-item:hover {
+  background: var(--bg-hover);
+}
+
+.detail-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.detail-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.detail-value {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.detail-label {
+  font-size: 12px;
+  color: var(--text-tertiary);
 }
 
 /* 快捷操作 */
@@ -382,53 +513,87 @@ const recentActivities = [
   color: var(--text-secondary);
 }
 
-/* 活动列表 */
-.activity-list {
-  display: flex;
-  flex-direction: column;
+/* 组件统计 */
+.component-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 16px;
 }
 
-.activity-item {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 12px;
-  border-radius: var(--radius);
-  transition: background var(--transition-fast);
-}
-
-.activity-item:hover {
+.component-type-card {
   background: var(--bg-secondary);
+  border-radius: var(--radius);
+  padding: 16px;
+  transition: all var(--transition-fast);
 }
 
-.activity-icon {
-  width: 40px;
-  height: 40px;
-  min-width: 40px;
-  border-radius: var(--radius);
+.component-type-card:hover {
+  background: var(--bg-hover);
+}
+
+.type-header {
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: 18px;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 
-.activity-content {
-  flex: 1;
+.type-icon {
+  font-size: 18px;
+  color: var(--primary);
+}
+
+.type-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.type-stats {
+  display: flex;
+  gap: 16px;
+}
+
+.type-stat {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  align-items: center;
+  gap: 2px;
 }
 
-.activity-text {
-  font-size: 14px;
+.type-stat-value {
+  font-size: 18px;
+  font-weight: 600;
   color: var(--text-primary);
-  margin: 0;
 }
 
-.activity-time {
-  font-size: 12px;
+.type-stat-label {
+  font-size: 11px;
   color: var(--text-tertiary);
+}
+
+.type-stat.enabled .type-stat-value {
+  color: var(--success);
+}
+
+.type-stat.disabled .type-stat-value {
+  color: var(--text-tertiary);
+}
+
+/* 空状态 */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  color: var(--text-tertiary);
+  gap: 12px;
+}
+
+.empty-icon {
+  font-size: 48px;
+  opacity: 0.5;
 }
 
 /* 响应式 */
@@ -444,6 +609,14 @@ const recentActivities = [
   }
   
   .quick-actions {
+    grid-template-columns: 1fr;
+  }
+  
+  .stats-detail-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .component-stats-grid {
     grid-template-columns: 1fr;
   }
 }

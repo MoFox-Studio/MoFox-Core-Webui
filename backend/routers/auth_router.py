@@ -41,20 +41,6 @@ class VerifyTokenResponse(BaseModel):
     message: str
 
 
-class DashboardStatsResponse(BaseModel):
-    """仪表盘统计数据响应"""
-    total_messages: int
-    active_plugins: int
-    uptime_seconds: float
-    memory_usage_mb: float
-
-
-class PluginListResponse(BaseModel):
-    """插件列表响应"""
-    plugins: list[dict]
-    total: int
-
-
 # ==================== HTTP路由组件 ====================
 
 class WebUIAuthRouter(BaseRouterComponent):
@@ -62,19 +48,15 @@ class WebUIAuthRouter(BaseRouterComponent):
     WebUI认证路由组件
     
     提供以下API端点：
-    - GET /user-info: 获取当前用户信息（需要认证）
-    - POST /verify-token: 验证Token是否有效
-    - GET /dashboard/stats: 获取仪表盘统计数据（需要认证）
-    - GET /plugins: 获取插件列表（需要认证）
+    - GET /health: 健康检查
+    - GET /login: 登录验证
     """
     
     component_name = "auth"
-    component_description = "WebUI认证和数据接口"
+    component_description = "WebUI认证接口"
     
     def register_endpoints(self) -> None:
         """注册所有HTTP端点"""
-        
-        # ==================== 公开端点 ====================
         
         @self.router.get("/health", summary="健康检查")
         def health_check():

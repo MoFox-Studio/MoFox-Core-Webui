@@ -5,7 +5,7 @@
 
 // API 基础配置
 const API_BASE_URL = `http://${window.location.hostname}:3001`
-const PLUGIN_BASE_PATH = '/plugins/webui_auth'
+const PLUGIN_BASE_PATH = '/plugins/webui_backend'
 
 /**
  * API 请求类
@@ -154,6 +154,113 @@ export const API_ENDPOINTS = {
   AUTH: {
     LOGIN: 'auth/login',
     LOGOUT: 'auth/logout',
-    VERIFY: 'auth/verify'
+    VERIFY: 'auth/verify',
+    HEALTH: 'auth/health'
+  },
+  STATS: {
+    OVERVIEW: 'stats/overview',
+    PLUGINS: 'stats/plugins',
+    PLUGIN_DETAIL: (name: string) => `stats/plugins/${name}`,
+    SYSTEM: 'stats/system'
   }
 } as const
+
+// ==================== 类型定义 ====================
+
+/** 插件统计 */
+export interface PluginStats {
+  loaded: number
+  registered: number
+  failed: number
+  enabled: number
+  disabled: number
+}
+
+/** 组件统计 */
+export interface ComponentStats {
+  total: number
+  enabled: number
+  disabled: number
+  by_type: Record<string, { total: number; enabled: number; disabled: number }>
+}
+
+/** 聊天流统计 */
+export interface ChatStats {
+  total_streams: number
+  group_streams: number
+  private_streams: number
+  qq_streams: number
+}
+
+/** 系统统计 */
+export interface SystemStats {
+  uptime_seconds: number
+  memory_usage_mb: number
+  cpu_percent: number
+}
+
+/** 仪表盘总览数据 */
+export interface DashboardOverview {
+  plugins: PluginStats
+  components: ComponentStats
+  chats: ChatStats
+  system: SystemStats
+}
+
+/** 插件详情 */
+export interface PluginDetail {
+  name: string
+  display_name: string
+  version: string
+  author: string
+  enabled: boolean
+  components_count: number
+}
+
+/** 插件列表响应 */
+export interface PluginListResponse {
+  plugins: PluginDetail[]
+  total: number
+}
+
+/** 系统状态响应 */
+export interface SystemStatusResponse {
+  uptime_seconds: number
+  uptime_formatted: string
+  memory_usage_mb: number
+  memory_usage_formatted: string
+  cpu_percent: number
+  threads: number
+}
+
+// ==================== API 便捷方法 ====================
+
+/**
+ * 获取仪表盘总览数据
+ */
+export async function getDashboardOverview() {
+  return api.get<DashboardOverview>(API_ENDPOINTS.STATS.OVERVIEW)
+}
+
+/**
+ * 获取插件列表
+ */
+export async function getPluginList() {
+  return api.get<PluginListResponse>(API_ENDPOINTS.STATS.PLUGINS)
+}
+
+/**
+ * 获取插件详情
+ */
+export async function getPluginDetail(pluginName: string) {
+  return api.get<{ success: boolean; plugin?: Record<string, unknown>; error?: string }>(
+    API_ENDPOINTS.STATS.PLUGIN_DETAIL(pluginName)
+  )
+}
+
+/**
+ * 获取系统状态
+ */
+export async function getSystemStatus() {
+  return api.get<SystemStatusResponse>(API_ENDPOINTS.STATS.SYSTEM)
+}
