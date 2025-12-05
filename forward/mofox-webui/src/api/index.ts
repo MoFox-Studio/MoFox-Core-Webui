@@ -160,7 +160,9 @@ export const API_ENDPOINTS = {
   STATS: {
     OVERVIEW: 'stats/overview',
     PLUGINS: 'stats/plugins',
+    PLUGINS_BY_STATUS: 'stats/plugins-by-status',
     PLUGIN_DETAIL: (name: string) => `stats/plugins/${name}`,
+    COMPONENTS_BY_TYPE: (type: string) => `stats/components-by-type/${type}`,
     SYSTEM: 'stats/system',
     SCHEDULE: 'stats/schedule',
     MONTHLY_PLANS: 'stats/monthly-plans',
@@ -281,6 +283,40 @@ export interface MessageStatsResponse {
   period: string
 }
 
+/** 插件列表项（带错误信息） */
+export interface PluginListItem {
+  name: string
+  display_name: string
+  version: string
+  author: string
+  enabled: boolean
+  components_count: number
+  error?: string
+}
+
+/** 按状态分组的插件列表 */
+export interface PluginsByStatusResponse {
+  loaded: PluginListItem[]
+  failed: PluginListItem[]
+}
+
+/** 组件项 */
+export interface ComponentItem {
+  name: string
+  plugin_name: string
+  description: string
+  enabled: boolean
+}
+
+/** 按类型分组的组件列表 */
+export interface ComponentsByTypeResponse {
+  component_type: string
+  components: ComponentItem[]
+  total: number
+  enabled: number
+  disabled: number
+}
+
 // ==================== API 便捷方法 ====================
 
 /**
@@ -350,4 +386,19 @@ export async function getLLMStats(period: 'last_hour' | 'last_24_hours' | 'last_
 export async function getMessageStats(period: 'last_hour' | 'last_24_hours' | 'last_7_days' | 'last_30_days' = 'last_24_hours') {
   const endpoint = `${API_ENDPOINTS.STATS.MESSAGE_STATS}?period=${period}`
   return api.get<MessageStatsResponse>(endpoint)
+}
+
+/**
+ * 获取按状态分组的插件列表
+ */
+export async function getPluginsByStatus() {
+  return api.get<PluginsByStatusResponse>(API_ENDPOINTS.STATS.PLUGINS_BY_STATUS)
+}
+
+/**
+ * 获取按类型分组的组件列表
+ */
+export async function getComponentsByType(componentType: string, enabledOnly: boolean = false) {
+  const endpoint = `${API_ENDPOINTS.STATS.COMPONENTS_BY_TYPE(componentType)}?enabled_only=${enabledOnly}`
+  return api.get<ComponentsByTypeResponse>(endpoint)
 }

@@ -126,28 +126,157 @@
           </div>
         </div>
 
-        <!-- 组件类型卡片 -->
+        <!-- 动作组件卡片 -->
         <div 
           class="mini-card component-card" 
-          v-for="(stats, type) in displayedComponentTypes" 
-          :key="String(type)"
-          @click="showComponentDetail(String(type))"
+          v-if="overview?.components.by_type?.['action']"
+          @click="showComponentDetailModal('action')"
         >
           <div class="mini-card-header">
-            <Icon :icon="getComponentTypeIcon(String(type))" class="mini-card-icon" style="color: #8b5cf6" />
-            <span class="mini-card-title">{{ formatComponentType(String(type)) }}</span>
+            <Icon icon="lucide:play" class="mini-card-icon" style="color: #10b981" />
+            <span class="mini-card-title">动作</span>
           </div>
           <div class="mini-card-stats">
             <div class="mini-stat">
-              <span class="mini-stat-value">{{ stats.total }}</span>
+              <span class="mini-stat-value">{{ overview?.components.by_type?.['action']?.total ?? 0 }}</span>
               <span class="mini-stat-label">总数</span>
             </div>
             <div class="mini-stat">
-              <span class="mini-stat-value success">{{ stats.enabled }}</span>
+              <span class="mini-stat-value success">{{ overview?.components.by_type?.['action']?.enabled ?? 0 }}</span>
               <span class="mini-stat-label">启用</span>
             </div>
             <div class="mini-stat">
-              <span class="mini-stat-value warning">{{ stats.disabled }}</span>
+              <span class="mini-stat-value warning">{{ overview?.components.by_type?.['action']?.disabled ?? 0 }}</span>
+              <span class="mini-stat-label">禁用</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 扩展命令卡片 -->
+        <div 
+          class="mini-card component-card" 
+          v-if="overview?.components.by_type?.['plus_command']"
+          @click="showComponentDetailModal('plus_command')"
+        >
+          <div class="mini-card-header">
+            <Icon icon="lucide:plus-square" class="mini-card-icon" style="color: #f59e0b" />
+            <span class="mini-card-title">扩展命令</span>
+          </div>
+          <div class="mini-card-stats">
+            <div class="mini-stat">
+              <span class="mini-stat-value">{{ overview?.components.by_type?.['plus_command']?.total ?? 0 }}</span>
+              <span class="mini-stat-label">总数</span>
+            </div>
+            <div class="mini-stat">
+              <span class="mini-stat-value success">{{ overview?.components.by_type?.['plus_command']?.enabled ?? 0 }}</span>
+              <span class="mini-stat-label">启用</span>
+            </div>
+            <div class="mini-stat">
+              <span class="mini-stat-value warning">{{ overview?.components.by_type?.['plus_command']?.disabled ?? 0 }}</span>
+              <span class="mini-stat-label">禁用</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 适配器卡片 -->
+        <div 
+          class="mini-card component-card" 
+          v-if="overview?.components.by_type?.['adapter']"
+          @click="showComponentDetailModal('adapter')"
+        >
+          <div class="mini-card-header">
+            <Icon icon="lucide:plug" class="mini-card-icon" style="color: #8b5cf6" />
+            <span class="mini-card-title">适配器</span>
+          </div>
+          <div class="mini-card-stats">
+            <div class="mini-stat">
+              <span class="mini-stat-value">{{ overview?.components.by_type?.['adapter']?.total ?? 0 }}</span>
+              <span class="mini-stat-label">总数</span>
+            </div>
+            <div class="mini-stat">
+              <span class="mini-stat-value success">{{ overview?.components.by_type?.['adapter']?.enabled ?? 0 }}</span>
+              <span class="mini-stat-label">启用</span>
+            </div>
+            <div class="mini-stat">
+              <span class="mini-stat-value warning">{{ overview?.components.by_type?.['adapter']?.disabled ?? 0 }}</span>
+              <span class="mini-stat-label">禁用</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 工具卡片 -->
+        <div 
+          class="mini-card component-card" 
+          v-if="overview?.components.by_type?.['tool']"
+          @click="showComponentDetailModal('tool')"
+        >
+          <div class="mini-card-header">
+            <Icon icon="lucide:wrench" class="mini-card-icon" style="color: #ec4899" />
+            <span class="mini-card-title">工具</span>
+          </div>
+          <div class="mini-card-stats">
+            <div class="mini-stat">
+              <span class="mini-stat-value">{{ overview?.components.by_type?.['tool']?.total ?? 0 }}</span>
+              <span class="mini-stat-label">总数</span>
+            </div>
+            <div class="mini-stat">
+              <span class="mini-stat-value success">{{ overview?.components.by_type?.['tool']?.enabled ?? 0 }}</span>
+              <span class="mini-stat-label">启用</span>
+            </div>
+            <div class="mini-stat">
+              <span class="mini-stat-value warning">{{ overview?.components.by_type?.['tool']?.disabled ?? 0 }}</span>
+              <span class="mini-stat-label">禁用</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 定时任务卡片 -->
+        <div 
+          class="mini-card component-card" 
+          v-if="overview?.components.by_type?.['scheduled_task']"
+          @click="showComponentDetailModal('scheduled_task')"
+        >
+          <div class="mini-card-header">
+            <Icon icon="lucide:calendar-clock" class="mini-card-icon" style="color: #06b6d4" />
+            <span class="mini-card-title">定时任务</span>
+          </div>
+          <div class="mini-card-stats">
+            <div class="mini-stat">
+              <span class="mini-stat-value">{{ overview?.components.by_type?.['scheduled_task']?.total ?? 0 }}</span>
+              <span class="mini-stat-label">总数</span>
+            </div>
+            <div class="mini-stat">
+              <span class="mini-stat-value success">{{ overview?.components.by_type?.['scheduled_task']?.enabled ?? 0 }}</span>
+              <span class="mini-stat-label">启用</span>
+            </div>
+            <div class="mini-stat">
+              <span class="mini-stat-value warning">{{ overview?.components.by_type?.['scheduled_task']?.disabled ?? 0 }}</span>
+              <span class="mini-stat-label">禁用</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- HTTP路由卡片 -->
+        <div 
+          class="mini-card component-card" 
+          v-if="overview?.components.by_type?.['http_router']"
+          @click="showComponentDetailModal('http_router')"
+        >
+          <div class="mini-card-header">
+            <Icon icon="lucide:route" class="mini-card-icon" style="color: #14b8a6" />
+            <span class="mini-card-title">HTTP路由</span>
+          </div>
+          <div class="mini-card-stats">
+            <div class="mini-stat">
+              <span class="mini-stat-value">{{ overview?.components.by_type?.['http_router']?.total ?? 0 }}</span>
+              <span class="mini-stat-label">总数</span>
+            </div>
+            <div class="mini-stat">
+              <span class="mini-stat-value success">{{ overview?.components.by_type?.['http_router']?.enabled ?? 0 }}</span>
+              <span class="mini-stat-label">启用</span>
+            </div>
+            <div class="mini-stat">
+              <span class="mini-stat-value warning">{{ overview?.components.by_type?.['http_router']?.disabled ?? 0 }}</span>
               <span class="mini-stat-label">禁用</span>
             </div>
           </div>
@@ -203,7 +332,7 @@
 
     <!-- 插件详情弹窗 -->
     <div v-if="showPluginDetail" class="modal-overlay" @click.self="showPluginDetail = false">
-      <div class="modal-content">
+      <div class="modal-content modal-large">
         <div class="modal-header">
           <h3>插件详情</h3>
           <button class="close-btn" @click="showPluginDetail = false">
@@ -212,7 +341,7 @@
         </div>
         <div class="modal-body">
           <div class="stats-detail-grid">
-            <div class="stats-detail-item">
+            <div class="stats-detail-item clickable" @click="showPluginListModal('loaded')">
               <div class="detail-icon" style="background: rgba(16, 185, 129, 0.1)">
                 <Icon icon="lucide:check-circle" style="color: #10b981" />
               </div>
@@ -220,8 +349,9 @@
                 <span class="detail-value">{{ overview?.plugins.loaded ?? '-' }}</span>
                 <span class="detail-label">已加载</span>
               </div>
+              <Icon icon="lucide:chevron-right" class="detail-arrow" />
             </div>
-            <div class="stats-detail-item">
+            <div class="stats-detail-item clickable" @click="showPluginListModal('enabled')">
               <div class="detail-icon" style="background: rgba(59, 130, 246, 0.1)">
                 <Icon icon="lucide:circle-dot" style="color: #3b82f6" />
               </div>
@@ -229,8 +359,9 @@
                 <span class="detail-value">{{ overview?.plugins.enabled ?? '-' }}</span>
                 <span class="detail-label">已启用</span>
               </div>
+              <Icon icon="lucide:chevron-right" class="detail-arrow" />
             </div>
-            <div class="stats-detail-item">
+            <div class="stats-detail-item clickable" @click="showPluginListModal('disabled')">
               <div class="detail-icon" style="background: rgba(245, 158, 11, 0.1)">
                 <Icon icon="lucide:circle-pause" style="color: #f59e0b" />
               </div>
@@ -238,14 +369,104 @@
                 <span class="detail-value">{{ overview?.plugins.disabled ?? '-' }}</span>
                 <span class="detail-label">已禁用</span>
               </div>
+              <Icon icon="lucide:chevron-right" class="detail-arrow" />
             </div>
-            <div class="stats-detail-item">
+            <div class="stats-detail-item clickable" @click="showPluginListModal('failed')">
               <div class="detail-icon" style="background: rgba(239, 68, 68, 0.1)">
                 <Icon icon="lucide:alert-circle" style="color: #ef4444" />
               </div>
               <div class="detail-info">
                 <span class="detail-value">{{ overview?.plugins.failed ?? '-' }}</span>
                 <span class="detail-label">加载失败</span>
+              </div>
+              <Icon icon="lucide:chevron-right" class="detail-arrow" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 插件列表弹窗 -->
+    <div v-if="showPluginList" class="modal-overlay" @click.self="showPluginList = false">
+      <div class="modal-content modal-large">
+        <div class="modal-header">
+          <h3>{{ pluginListTitle }}</h3>
+          <button class="close-btn" @click="showPluginList = false">
+            <Icon icon="lucide:x" />
+          </button>
+        </div>
+        <div class="modal-body">
+          <div v-if="pluginListLoading" class="loading-state">
+            <Icon icon="lucide:loader-2" class="spinning" />
+            <span>加载中...</span>
+          </div>
+          <div v-else-if="filteredPluginList.length === 0" class="empty-state small">
+            <Icon icon="lucide:inbox" class="empty-icon" />
+            <p>暂无插件</p>
+          </div>
+          <div v-else class="plugin-list">
+            <div class="plugin-item" v-for="plugin in filteredPluginList" :key="plugin.name">
+              <div class="plugin-item-header">
+                <Icon 
+                  :icon="plugin.enabled ? 'lucide:check-circle' : (plugin.error ? 'lucide:alert-circle' : 'lucide:circle-pause')" 
+                  :style="{ color: plugin.enabled ? '#10b981' : (plugin.error ? '#ef4444' : '#f59e0b') }"
+                />
+                <span class="plugin-name">{{ plugin.display_name }}</span>
+                <span class="plugin-version">v{{ plugin.version }}</span>
+              </div>
+              <div class="plugin-item-info">
+                <span class="plugin-author">作者: {{ plugin.author }}</span>
+                <span class="plugin-components">组件: {{ plugin.components_count }}</span>
+              </div>
+              <div v-if="plugin.error" class="plugin-error">
+                <Icon icon="lucide:alert-triangle" />
+                <span>{{ plugin.error }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 组件详情弹窗 -->
+    <div v-if="showComponentDetail" class="modal-overlay" @click.self="showComponentDetail = false">
+      <div class="modal-content modal-large">
+        <div class="modal-header">
+          <h3>
+            <Icon :icon="getComponentTypeIcon(currentComponentType)" style="margin-right: 8px" />
+            {{ formatComponentType(currentComponentType) }}组件列表
+          </h3>
+          <button class="close-btn" @click="showComponentDetail = false">
+            <Icon icon="lucide:x" />
+          </button>
+        </div>
+        <div class="modal-body">
+          <div v-if="componentListLoading" class="loading-state">
+            <Icon icon="lucide:loader-2" class="spinning" />
+            <span>加载中...</span>
+          </div>
+          <div v-else-if="componentList.length === 0" class="empty-state small">
+            <Icon icon="lucide:inbox" class="empty-icon" />
+            <p>暂无组件</p>
+          </div>
+          <div v-else class="component-list">
+            <div class="component-item" v-for="comp in componentList" :key="comp.name">
+              <div class="component-item-header">
+                <Icon 
+                  :icon="comp.enabled ? 'lucide:check-circle' : 'lucide:circle-pause'" 
+                  :style="{ color: comp.enabled ? '#10b981' : '#f59e0b' }"
+                />
+                <span class="component-name">{{ comp.name }}</span>
+                <span :class="['component-status', comp.enabled ? 'enabled' : 'disabled']">
+                  {{ comp.enabled ? '启用' : '禁用' }}
+                </span>
+              </div>
+              <div class="component-item-desc" v-if="comp.description">
+                {{ comp.description }}
+              </div>
+              <div class="component-item-plugin">
+                <Icon icon="lucide:puzzle" />
+                <span>来自插件: {{ comp.plugin_name }}</span>
               </div>
             </div>
           </div>
@@ -269,12 +490,16 @@ import {
   getMonthlyPlans,
   getLLMStats,
   getMessageStats,
+  getPluginsByStatus,
+  getComponentsByType,
   type DashboardOverview,
   type ScheduleResponse,
   type MonthlyPlanResponse,
   type ScheduleActivity,
   type LLMStatsResponse,
-  type MessageStatsResponse
+  type MessageStatsResponse,
+  type PluginListItem,
+  type ComponentItem
 } from '@/api'
 import ConnectionError from '@/components/ConnectionError.vue'
 
@@ -292,6 +517,18 @@ const messageStatsPeriod = ref<'last_hour' | 'last_24_hours' | 'last_7_days' | '
 
 // 弹窗状态
 const showPluginDetail = ref(false)
+const showPluginList = ref(false)
+const showComponentDetail = ref(false)
+
+// 插件列表相关
+const pluginListLoading = ref(false)
+const pluginListType = ref<'loaded' | 'enabled' | 'disabled' | 'failed'>('loaded')
+const pluginListData = ref<{ loaded: PluginListItem[], failed: PluginListItem[] }>({ loaded: [], failed: [] })
+
+// 组件列表相关
+const componentListLoading = ref(false)
+const currentComponentType = ref('')
+const componentList = ref<ComponentItem[]>([])
 
 // 连接错误状态
 const showConnectionError = ref(false)
@@ -428,18 +665,68 @@ const statsData = computed(() => [
   },
 ])
 
-// 显示的组件类型（限制数量）
-const displayedComponentTypes = computed(() => {
-  const byType = overview.value?.components.by_type || {}
-  const entries = Object.entries(byType)
-  // 最多显示5个组件类型
-  return Object.fromEntries(entries.slice(0, 5))
+// 插件列表标题
+const pluginListTitle = computed(() => {
+  const titles: Record<string, string> = {
+    'loaded': '已加载的插件',
+    'enabled': '已启用的插件',
+    'disabled': '已禁用的插件',
+    'failed': '加载失败的插件'
+  }
+  return titles[pluginListType.value] || '插件列表'
 })
 
-// 显示组件详情
-function showComponentDetail(type: string) {
-  // 可以扩展为弹窗显示详情
-  console.log('Show component detail:', type)
+// 筛选后的插件列表
+const filteredPluginList = computed(() => {
+  const { loaded, failed } = pluginListData.value
+  switch (pluginListType.value) {
+    case 'loaded':
+      return loaded
+    case 'enabled':
+      return loaded.filter(p => p.enabled)
+    case 'disabled':
+      return loaded.filter(p => !p.enabled)
+    case 'failed':
+      return failed
+    default:
+      return []
+  }
+})
+
+// 显示插件列表弹窗
+async function showPluginListModal(type: 'loaded' | 'enabled' | 'disabled' | 'failed') {
+  pluginListType.value = type
+  showPluginList.value = true
+  pluginListLoading.value = true
+  
+  try {
+    const res = await getPluginsByStatus()
+    if (res.success && res.data) {
+      pluginListData.value = res.data
+    }
+  } catch (error) {
+    console.error('获取插件列表失败:', error)
+  } finally {
+    pluginListLoading.value = false
+  }
+}
+
+// 显示组件详情弹窗
+async function showComponentDetailModal(type: string) {
+  currentComponentType.value = type
+  showComponentDetail.value = true
+  componentListLoading.value = true
+  
+  try {
+    const res = await getComponentsByType(type, false)
+    if (res.success && res.data) {
+      componentList.value = res.data.components
+    }
+  } catch (error) {
+    console.error('获取组件列表失败:', error)
+  } finally {
+    componentListLoading.value = false
+  }
 }
 
 // 组件类型图标映射
@@ -794,15 +1081,6 @@ onMounted(() => {
   gap: 16px;
 }
 
-.mini-card {
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius);
-  padding: 16px;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
 .mini-card:hover {
   background: var(--bg-hover);
   transform: translateY(-2px);
@@ -818,30 +1096,6 @@ onMounted(() => {
 
 .mini-card-icon {
   font-size: 18px;
-}
-
-.mini-card-title {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
-.mini-card-stats {
-  display: flex;
-  gap: 12px;
-}
-
-.mini-stat {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-}
-
-.mini-stat-value {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
 }
 
 .mini-stat-value.success {
@@ -1217,6 +1471,219 @@ onMounted(() => {
   font-size: 14px;
   color: var(--text-primary);
   line-height: 1.5;
+}
+
+/* 加大弹窗 */
+.modal-large {
+  max-width: 700px;
+}
+
+/* 可点击的详情项 */
+.stats-detail-item.clickable {
+  cursor: pointer;
+}
+
+.stats-detail-item.clickable:hover {
+  background: var(--bg-hover);
+  transform: translateX(4px);
+}
+
+.detail-arrow {
+  color: var(--text-tertiary);
+  font-size: 16px;
+  margin-left: auto;
+}
+
+/* 加载状态 */
+.loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 40px;
+  color: var(--text-tertiary);
+}
+
+/* 插件列表 */
+.plugin-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.plugin-item {
+  background: var(--bg-secondary);
+  border-radius: var(--radius);
+  padding: 16px;
+  transition: all var(--transition-fast);
+}
+
+.plugin-item:hover {
+  background: var(--bg-hover);
+}
+
+.plugin-item-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.plugin-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.plugin-version {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  padding: 2px 8px;
+  background: var(--bg-primary);
+  border-radius: var(--radius-sm);
+}
+
+.plugin-item-info {
+  display: flex;
+  gap: 16px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.plugin-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 12px;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  margin-top: 8px;
+}
+
+.plugin-error span {
+  word-break: break-all;
+}
+
+/* 组件列表 */
+.component-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.component-item {
+  background: var(--bg-secondary);
+  border-radius: var(--radius);
+  padding: 16px;
+  transition: all var(--transition-fast);
+}
+
+.component-item:hover {
+  background: var(--bg-hover);
+}
+
+.component-item-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.component-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.component-status {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.component-status.enabled {
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.component-status.disabled {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.component-item-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+.component-item-plugin {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.component-item-plugin svg {
+  font-size: 14px;
+}
+
+/* 小卡片文字自适应 */
+.mini-card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 16px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  min-width: 0;
+}
+
+.mini-card-title {
+  font-size: clamp(12px, 2vw, 14px);
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mini-stat-value {
+  font-size: clamp(14px, 2.5vw, 18px);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.mini-stat-label {
+  font-size: clamp(10px, 1.5vw, 11px);
+  color: var(--text-tertiary);
+}
+
+.mini-card-stats {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.mini-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+  min-width: 40px;
 }
 
 /* 响应式 */
