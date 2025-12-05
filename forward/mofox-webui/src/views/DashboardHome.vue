@@ -81,7 +81,7 @@
               共 {{ monthlyPlans.total }} 项
             </span>
           </div>
-          <div class="card-body">
+          <div class="card-body plans-body">
             <div v-if="monthlyPlans?.plans?.length" class="plans-list">
               <div class="plan-item" v-for="(plan, index) in monthlyPlans.plans" :key="index">
                 <Icon icon="lucide:check-square" class="plan-icon" />
@@ -97,19 +97,120 @@
       </div>
     </section>
 
-    <!-- 插件统计 -->
-    <section class="plugins-section">
+    <!-- 插件和组件统计（合并为一行） -->
+    <section class="combined-stats-section">
+      <div class="combined-stats-grid">
+        <!-- 插件统计卡片 -->
+        <div class="mini-card" @click="showPluginDetail = true">
+          <div class="mini-card-header">
+            <Icon icon="lucide:puzzle" class="mini-card-icon" style="color: #3b82f6" />
+            <span class="mini-card-title">插件统计</span>
+          </div>
+          <div class="mini-card-stats">
+            <div class="mini-stat">
+              <span class="mini-stat-value success">{{ overview?.plugins.enabled ?? 0 }}</span>
+              <span class="mini-stat-label">启用</span>
+            </div>
+            <div class="mini-stat">
+              <span class="mini-stat-value">{{ overview?.plugins.loaded ?? 0 }}</span>
+              <span class="mini-stat-label">已加载</span>
+            </div>
+            <div class="mini-stat">
+              <span class="mini-stat-value warning">{{ overview?.plugins.disabled ?? 0 }}</span>
+              <span class="mini-stat-label">禁用</span>
+            </div>
+            <div class="mini-stat">
+              <span class="mini-stat-value danger">{{ overview?.plugins.failed ?? 0 }}</span>
+              <span class="mini-stat-label">失败</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 组件类型卡片 -->
+        <div 
+          class="mini-card component-card" 
+          v-for="(stats, type) in displayedComponentTypes" 
+          :key="String(type)"
+          @click="showComponentDetail(String(type))"
+        >
+          <div class="mini-card-header">
+            <Icon :icon="getComponentTypeIcon(String(type))" class="mini-card-icon" style="color: #8b5cf6" />
+            <span class="mini-card-title">{{ formatComponentType(String(type)) }}</span>
+          </div>
+          <div class="mini-card-stats">
+            <div class="mini-stat">
+              <span class="mini-stat-value">{{ stats.total }}</span>
+              <span class="mini-stat-label">总数</span>
+            </div>
+            <div class="mini-stat">
+              <span class="mini-stat-value success">{{ stats.enabled }}</span>
+              <span class="mini-stat-label">启用</span>
+            </div>
+            <div class="mini-stat">
+              <span class="mini-stat-value warning">{{ stats.disabled }}</span>
+              <span class="mini-stat-label">禁用</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 消息统计图表 -->
+    <section class="chart-section">
       <div class="card">
         <div class="card-header">
           <h3 class="card-title">
-            <Icon icon="lucide:puzzle" />
-            插件统计
+            <Icon icon="lucide:bar-chart-2" />
+            消息收发统计
           </h3>
-          <button class="refresh-btn" @click="fetchAllData" :disabled="loading">
-            <Icon :icon="loading ? 'lucide:loader-2' : 'lucide:refresh-cw'" :class="{ spinning: loading }" />
+          <div class="chart-controls">
+            <select v-model="messageStatsPeriod" @change="fetchMessageStats" class="period-select">
+              <option value="last_hour">最近1小时</option>
+              <option value="last_24_hours">最近24小时</option>
+              <option value="last_7_days">最近7天</option>
+              <option value="last_30_days">最近30天</option>
+            </select>
+            <button class="refresh-btn" @click="fetchMessageStats" :disabled="chartLoading">
+              <Icon :icon="chartLoading ? 'lucide:loader-2' : 'lucide:refresh-cw'" :class="{ spinning: chartLoading }" />
+            </button>
+          </div>
+        </div>
+        <div class="card-body chart-body">
+          <div v-if="chartLoading" class="chart-loading">
+            <Icon icon="lucide:loader-2" class="spinning" />
+            <span>加载中...</span>
+          </div>
+          <div v-else-if="!messageStats?.data_points?.length" class="empty-state small">
+            <Icon icon="lucide:line-chart" class="empty-icon" />
+            <p>暂无消息数据</p>
+          </div>
+          <div v-else class="chart-container">
+            <v-chart class="chart" :option="messageChartOption" autoresize />
+          </div>
+          <div class="chart-summary" v-if="messageStats">
+            <div class="summary-item">
+              <span class="summary-label">收到消息</span>
+              <span class="summary-value received">{{ messageStats.total_received }}</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">发送消息</span>
+              <span class="summary-value sent">{{ messageStats.total_sent }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 插件详情弹窗 -->
+    <div v-if="showPluginDetail" class="modal-overlay" @click.self="showPluginDetail = false">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>插件详情</h3>
+          <button class="close-btn" @click="showPluginDetail = false">
+            <Icon icon="lucide:x" />
           </button>
         </div>
-        <div class="card-body">
+        <div class="modal-body">
           <div class="stats-detail-grid">
             <div class="stats-detail-item">
               <div class="detail-icon" style="background: rgba(16, 185, 129, 0.1)">
@@ -150,75 +251,47 @@
           </div>
         </div>
       </div>
-    </section>
-
-    <!-- 组件统计 -->
-    <section class="activity-section">
-      <div class="card">
-        <div class="card-header">
-          <h3 class="card-title">
-            <Icon icon="lucide:boxes" />
-            组件统计
-          </h3>
-          <span class="total-badge">
-            共 {{ overview?.components.total ?? 0 }} 个组件
-          </span>
-        </div>
-        <div class="card-body">
-          <div class="component-stats-grid" v-if="overview?.components.by_type && Object.keys(overview.components.by_type).length">
-            <div 
-              class="component-type-card" 
-              v-for="(stats, type) in overview.components.by_type" 
-              :key="type"
-            >
-              <div class="type-header">
-                <Icon :icon="getComponentTypeIcon(type)" class="type-icon" />
-                <span class="type-name">{{ formatComponentType(type) }}</span>
-              </div>
-              <div class="type-stats">
-                <div class="type-stat">
-                  <span class="type-stat-value">{{ stats.total }}</span>
-                  <span class="type-stat-label">总数</span>
-                </div>
-                <div class="type-stat enabled">
-                  <span class="type-stat-value">{{ stats.enabled }}</span>
-                  <span class="type-stat-label">启用</span>
-                </div>
-                <div class="type-stat disabled">
-                  <span class="type-stat-value">{{ stats.disabled }}</span>
-                  <span class="type-stat-label">禁用</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div v-else class="empty-state">
-            <Icon icon="lucide:inbox" class="empty-icon" />
-            <p>暂无组件数据</p>
-          </div>
-        </div>
-      </div>
-    </section>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
+import VChart from 'vue-echarts'
+import { use } from 'echarts/core'
+import { CanvasRenderer } from 'echarts/renderers'
+import { LineChart } from 'echarts/charts'
+import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components'
 import { 
   getDashboardOverview, 
   getTodaySchedule, 
   getMonthlyPlans,
+  getLLMStats,
+  getMessageStats,
   type DashboardOverview,
   type ScheduleResponse,
   type MonthlyPlanResponse,
-  type ScheduleActivity
+  type ScheduleActivity,
+  type LLMStatsResponse,
+  type MessageStatsResponse
 } from '@/api'
 import ConnectionError from '@/components/ConnectionError.vue'
 
+// 注册 ECharts 组件
+use([CanvasRenderer, LineChart, GridComponent, TooltipComponent, LegendComponent])
+
 const loading = ref(false)
+const chartLoading = ref(false)
 const overview = ref<DashboardOverview | null>(null)
 const schedule = ref<ScheduleResponse | null>(null)
 const monthlyPlans = ref<MonthlyPlanResponse | null>(null)
+const llmStats = ref<LLMStatsResponse | null>(null)
+const messageStats = ref<MessageStatsResponse | null>(null)
+const messageStatsPeriod = ref<'last_hour' | 'last_24_hours' | 'last_7_days' | 'last_30_days'>('last_24_hours')
+
+// 弹窗状态
+const showPluginDetail = ref(false)
 
 // 连接错误状态
 const showConnectionError = ref(false)
@@ -231,10 +304,11 @@ async function fetchAllData() {
   
   try {
     // 并行获取所有数据
-    const [overviewRes, scheduleRes, plansRes] = await Promise.all([
+    const [overviewRes, scheduleRes, plansRes, llmRes] = await Promise.all([
       getDashboardOverview(),
       getTodaySchedule(),
-      getMonthlyPlans()
+      getMonthlyPlans(),
+      getLLMStats('last_24_hours')
     ])
     
     // 检查是否全部失败（连接问题）
@@ -255,12 +329,34 @@ async function fetchAllData() {
     if (plansRes.success && plansRes.data) {
       monthlyPlans.value = plansRes.data
     }
+    
+    if (llmRes.success && llmRes.data) {
+      llmStats.value = llmRes.data
+    }
+    
+    // 获取消息统计
+    await fetchMessageStats()
   } catch (error) {
     console.error('获取数据失败:', error)
     connectionErrorMsg.value = '请求发生错误，请检查网络连接'
     showConnectionError.value = true
   } finally {
     loading.value = false
+  }
+}
+
+// 获取消息统计
+async function fetchMessageStats() {
+  chartLoading.value = true
+  try {
+    const res = await getMessageStats(messageStatsPeriod.value)
+    if (res.success && res.data) {
+      messageStats.value = res.data
+    }
+  } catch (error) {
+    console.error('获取消息统计失败:', error)
+  } finally {
+    chartLoading.value = false
   }
 }
 
@@ -289,13 +385,21 @@ function formatMemory(mb: number): string {
   return `${mb.toFixed(0)}MB`
 }
 
-// 顶部统计卡片数据
+// 格式化 Token 数量
+function formatTokens(tokens: number): string {
+  if (!tokens) return '0'
+  if (tokens >= 1000000) return `${(tokens / 1000000).toFixed(1)}M`
+  if (tokens >= 1000) return `${(tokens / 1000).toFixed(1)}K`
+  return tokens.toString()
+}
+
+// 顶部统计卡片数据 - 将插件数量改为 LLM 用量
 const statsData = computed(() => [
   { 
-    label: '活跃插件', 
-    value: overview.value?.plugins.enabled ?? '-', 
-    subValue: `共 ${overview.value?.plugins.loaded ?? 0} 个`,
-    icon: 'lucide:puzzle', 
+    label: 'LLM调用', 
+    value: llmStats.value?.total_requests ?? '-', 
+    subValue: `${formatTokens(llmStats.value?.total_tokens ?? 0)} tokens`,
+    icon: 'lucide:brain', 
     color: '#3b82f6', 
     bgColor: 'rgba(59, 130, 246, 0.1)',
   },
@@ -324,6 +428,20 @@ const statsData = computed(() => [
   },
 ])
 
+// 显示的组件类型（限制数量）
+const displayedComponentTypes = computed(() => {
+  const byType = overview.value?.components.by_type || {}
+  const entries = Object.entries(byType)
+  // 最多显示5个组件类型
+  return Object.fromEntries(entries.slice(0, 5))
+})
+
+// 显示组件详情
+function showComponentDetail(type: string) {
+  // 可以扩展为弹窗显示详情
+  console.log('Show component detail:', type)
+}
+
 // 组件类型图标映射
 function getComponentTypeIcon(type: string): string {
   const iconMap: Record<string, string> = {
@@ -341,6 +459,12 @@ function getComponentTypeIcon(type: string): string {
     'willing_modifier': 'lucide:sliders-horizontal',
     'prompt_builder': 'lucide:file-text',
     'thought_chain': 'lucide:git-branch',
+    'action': 'lucide:play',
+    'command': 'lucide:terminal',
+    'plus_command': 'lucide:plus-square',
+    'interest_calculator': 'lucide:calculator',
+    'prompt': 'lucide:message-square',
+    'adapter': 'lucide:plug',
   }
   return iconMap[type.toLowerCase()] || 'lucide:box'
 }
@@ -371,9 +495,120 @@ function formatComponentType(type: string): string {
     'emotion_analyzer': '情感分析器',
     'interest_matcher': '兴趣匹配器',
     'relationship_tracker': '关系追踪器',
+    'command': '命令',
+    'plus_command': '扩展命令',
+    'interest_calculator': '兴趣计算器',
+    'prompt': '提示词',
+    'adapter': '适配器',
   }
   return nameMap[type.toLowerCase()] || type
 }
+
+// 消息统计图表配置
+const messageChartOption = computed(() => {
+  const dataPoints = messageStats.value?.data_points || []
+  
+  return {
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: 'rgba(30, 41, 59, 0.95)',
+      borderColor: 'rgba(71, 85, 105, 0.5)',
+      textStyle: {
+        color: '#e2e8f0'
+      }
+    },
+    legend: {
+      data: ['收到消息', '发送消息'],
+      textStyle: {
+        color: '#94a3b8'
+      },
+      bottom: 0
+    },
+    grid: {
+      left: '3%',
+      right: '4%',
+      bottom: '15%',
+      top: '10%',
+      containLabel: true
+    },
+    xAxis: {
+      type: 'category',
+      boundaryGap: false,
+      data: dataPoints.map(p => p.timestamp),
+      axisLine: {
+        lineStyle: {
+          color: '#475569'
+        }
+      },
+      axisLabel: {
+        color: '#94a3b8',
+        rotate: dataPoints.length > 12 ? 45 : 0
+      }
+    },
+    yAxis: {
+      type: 'value',
+      axisLine: {
+        lineStyle: {
+          color: '#475569'
+        }
+      },
+      axisLabel: {
+        color: '#94a3b8'
+      },
+      splitLine: {
+        lineStyle: {
+          color: 'rgba(71, 85, 105, 0.3)'
+        }
+      }
+    },
+    series: [
+      {
+        name: '收到消息',
+        type: 'line',
+        smooth: true,
+        data: dataPoints.map(p => p.received),
+        itemStyle: {
+          color: '#10b981'
+        },
+        areaStyle: {
+          color: {
+            type: 'linear',
+            x: 0,
+            y: 0,
+            x2: 0,
+            y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(16, 185, 129, 0.3)' },
+              { offset: 1, color: 'rgba(16, 185, 129, 0.05)' }
+            ]
+          }
+        }
+      },
+      {
+        name: '发送消息',
+        type: 'line',
+        smooth: true,
+        data: dataPoints.map(p => p.sent),
+        itemStyle: {
+          color: '#3b82f6'
+        },
+        areaStyle: {
+          color: {
+            type: 'linear',
+            x: 0,
+            y: 0,
+            x2: 0,
+            y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(59, 130, 246, 0.3)' },
+              { offset: 1, color: 'rgba(59, 130, 246, 0.05)' }
+            ]
+          }
+        }
+      }
+    ]
+  }
+})
 
 onMounted(() => {
   fetchAllData()
@@ -503,6 +738,12 @@ onMounted(() => {
   padding: 20px;
 }
 
+/* 月度计划固定高度 */
+.plans-body {
+  max-height: 280px;
+  overflow-y: auto;
+}
+
 .refresh-btn {
   display: flex;
   align-items: center;
@@ -540,6 +781,172 @@ onMounted(() => {
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: 20px;
+}
+
+/* 合并的统计卡片区 */
+.combined-stats-section {
+  margin-top: 0;
+}
+
+.combined-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.mini-card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 16px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.mini-card:hover {
+  background: var(--bg-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.mini-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.mini-card-icon {
+  font-size: 18px;
+}
+
+.mini-card-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.mini-card-stats {
+  display: flex;
+  gap: 12px;
+}
+
+.mini-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.mini-stat-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.mini-stat-value.success {
+  color: var(--success);
+}
+
+.mini-stat-value.warning {
+  color: #f59e0b;
+}
+
+.mini-stat-value.danger {
+  color: #ef4444;
+}
+
+.mini-stat-label {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+/* 图表区域 */
+.chart-section {
+  margin-top: 0;
+}
+
+.chart-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.period-select {
+  padding: 6px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 13px;
+  cursor: pointer;
+  outline: none;
+  transition: all var(--transition-fast);
+}
+
+.period-select:hover {
+  border-color: var(--primary);
+}
+
+.period-select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-bg);
+}
+
+.chart-body {
+  min-height: 300px;
+}
+
+.chart-container {
+  height: 280px;
+}
+
+.chart {
+  width: 100%;
+  height: 100%;
+}
+
+.chart-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 280px;
+  color: var(--text-tertiary);
+}
+
+.chart-summary {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+}
+
+.summary-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.summary-label {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.summary-value {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.summary-value.received {
+  color: #10b981;
+}
+
+.summary-value.sent {
+  color: #3b82f6;
 }
 
 /* 插件统计详情 */
@@ -590,112 +997,80 @@ onMounted(() => {
   color: var(--text-tertiary);
 }
 
-/* 快捷操作 */
-.quick-actions {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-}
-
-.action-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  padding: 20px 16px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius);
-  cursor: pointer;
-  transition: all var(--transition);
-}
-
-.action-btn:hover {
-  background: var(--bg-hover);
-  transform: translateY(-2px);
-}
-
-.action-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius);
+/* 弹窗样式 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
 }
 
-.action-label {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-secondary);
+.modal-content {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow: hidden;
+  animation: modalIn 0.2s ease;
 }
 
-/* 组件统计 */
-.component-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 16px;
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
-.component-type-card {
-  background: var(--bg-secondary);
-  border-radius: var(--radius);
-  padding: 16px;
-  transition: all var(--transition-fast);
-}
-
-.component-type-card:hover {
-  background: var(--bg-hover);
-}
-
-.type-header {
+.modal-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
 }
 
-.type-icon {
-  font-size: 18px;
-  color: var(--primary);
-}
-
-.type-name {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
-.type-stats {
-  display: flex;
-  gap: 16px;
-}
-
-.type-stat {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-}
-
-.type-stat-value {
-  font-size: 18px;
+.modal-header h3 {
+  margin: 0;
+  font-size: 16px;
   font-weight: 600;
   color: var(--text-primary);
 }
 
-.type-stat-label {
-  font-size: 11px;
-  color: var(--text-tertiary);
+.close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
 }
 
-.type-stat.enabled .type-stat-value {
-  color: var(--success);
+.close-btn:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
 }
 
-.type-stat.disabled .type-stat-value {
-  color: var(--text-tertiary);
+.modal-body {
+  padding: 20px;
+  overflow-y: auto;
 }
 
 /* 空状态 */
@@ -815,8 +1190,6 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-height: 300px;
-  overflow-y: auto;
 }
 
 .plan-item {
@@ -858,7 +1231,7 @@ onMounted(() => {
     grid-template-columns: 1fr;
   }
   
-  .quick-actions {
+  .combined-stats-grid {
     grid-template-columns: 1fr;
   }
   
@@ -866,8 +1239,9 @@ onMounted(() => {
     grid-template-columns: 1fr;
   }
   
-  .component-stats-grid {
-    grid-template-columns: 1fr;
+  .chart-summary {
+    flex-direction: column;
+    gap: 16px;
   }
 }
 </style>

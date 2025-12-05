@@ -163,7 +163,9 @@ export const API_ENDPOINTS = {
     PLUGIN_DETAIL: (name: string) => `stats/plugins/${name}`,
     SYSTEM: 'stats/system',
     SCHEDULE: 'stats/schedule',
-    MONTHLY_PLANS: 'stats/monthly-plans'
+    MONTHLY_PLANS: 'stats/monthly-plans',
+    LLM_STATS: 'stats/llm-stats',
+    MESSAGE_STATS: 'stats/message-stats'
   }
 } as const
 
@@ -255,6 +257,30 @@ export interface MonthlyPlanResponse {
   month: string
 }
 
+/** LLM 统计响应 */
+export interface LLMStatsResponse {
+  total_requests: number
+  total_cost: number
+  total_tokens: number
+  input_tokens: number
+  output_tokens: number
+}
+
+/** 消息统计数据点 */
+export interface MessageStatsDataPoint {
+  timestamp: string
+  received: number
+  sent: number
+}
+
+/** 消息统计响应 */
+export interface MessageStatsResponse {
+  data_points: MessageStatsDataPoint[]
+  total_received: number
+  total_sent: number
+  period: string
+}
+
 // ==================== API 便捷方法 ====================
 
 /**
@@ -308,4 +334,20 @@ export async function getMonthlyPlans(month?: string, limit: number = 10) {
   const queryString = params.toString()
   if (queryString) endpoint += `?${queryString}`
   return api.get<MonthlyPlanResponse>(endpoint)
+}
+
+/**
+ * 获取 LLM 使用统计
+ */
+export async function getLLMStats(period: 'last_hour' | 'last_24_hours' | 'last_7_days' | 'last_30_days' = 'last_24_hours') {
+  const endpoint = `${API_ENDPOINTS.STATS.LLM_STATS}?period=${period}`
+  return api.get<LLMStatsResponse>(endpoint)
+}
+
+/**
+ * 获取消息收发统计
+ */
+export async function getMessageStats(period: 'last_hour' | 'last_24_hours' | 'last_7_days' | 'last_30_days' = 'last_24_hours') {
+  const endpoint = `${API_ENDPOINTS.STATS.MESSAGE_STATS}?period=${period}`
+  return api.get<MessageStatsResponse>(endpoint)
 }
