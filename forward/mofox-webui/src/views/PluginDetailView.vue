@@ -11,7 +11,11 @@
         <p>v{{ currentPlugin.version }} • {{ currentPlugin.author }}</p>
       </div>
       <div class="header-actions">
-        <div class="toggle-switch">
+        <div v-if="isSystemPlugin" class="system-plugin-badge">
+          <Icon icon="lucide:lock" />
+          <span>系统插件 - 仅可查看</span>
+        </div>
+        <div v-if="!isSystemPlugin" class="toggle-switch">
           <input 
             type="checkbox" 
             id="plugin-enable-toggle"
@@ -24,7 +28,7 @@
           </label>
         </div>
         <button 
-          v-if="!currentPlugin?.loaded"
+          v-if="!currentPlugin?.loaded && !isSystemPlugin"
           class="btn btn-success" 
           @click="handleLoad"
         >
@@ -32,7 +36,7 @@
           加载
         </button>
         <button 
-          v-if="currentPlugin?.loaded"
+          v-if="currentPlugin?.loaded && !isSystemPlugin"
           class="btn btn-ghost" 
           @click="handleReload"
         >
@@ -40,7 +44,7 @@
           重载
         </button>
         <button 
-          v-if="currentPlugin?.loaded"
+          v-if="currentPlugin?.loaded && !isSystemPlugin"
           class="btn btn-error" 
           @click="handleUnload"
         >
@@ -155,7 +159,7 @@
                   <p class="component-type">{{ component.type }}</p>
                 </div>
                 <div class="component-actions">
-                  <div class="toggle-switch">
+                  <div v-if="!isSystemPlugin" class="toggle-switch">
                     <input 
                       type="checkbox" 
                       :id="`comp-${component.name}`"
@@ -165,6 +169,10 @@
                     <label :for="`comp-${component.name}`">
                       {{ component.enabled ? '已启用' : '已禁用' }}
                     </label>
+                  </div>
+                  <div v-else class="component-locked">
+                    <Icon icon="lucide:lock" />
+                    <span>{{ component.enabled ? '已启用' : '已禁用' }}</span>
                   </div>
                 </div>
               </div>
@@ -279,6 +287,19 @@ const confirmDialog = ref({
 // 计算属性
 const currentPlugin = computed(() => pluginStore.currentPlugin)
 const currentComponents = computed(() => pluginStore.currentComponents)
+
+// 判断是否为系统插件
+const SYSTEM_PLUGINS = [
+  'Affinity Flow Chatter',
+  'Kokoro Flow Chatter',
+  'napcat_adapter_plugin',
+  'Emoji插件 (Emoji Actions)'
+]
+
+// 判断是否为系统插件
+function isSystemPlugin(plugin: PluginItem): boolean {
+  return SYSTEM_PLUGINS.includes(plugin.display_name)
+}
 
 // 方法
 function showToast(message: string, type: 'success' | 'error' = 'success') {
@@ -523,6 +544,23 @@ onMounted(() => {
   align-items: center;
 }
 
+.system-plugin-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 11, 0.15) 100%);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: var(--radius);
+  color: rgb(251, 191, 36);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.system-plugin-badge svg {
+  font-size: 16px;
+}
+
 /* Tab 导航 */
 .tabs {
   display: flex;
@@ -734,6 +772,22 @@ onMounted(() => {
   display: flex;
   gap: 12px;
   align-items: center;
+}
+
+.component-locked {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: rgba(156, 163, 175, 0.1);
+  border-radius: var(--radius);
+  color: var(--text-tertiary);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.component-locked svg {
+  font-size: 14px;
 }
 
 .component-description {

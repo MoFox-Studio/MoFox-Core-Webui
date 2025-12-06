@@ -622,6 +622,7 @@ export interface PluginItem {
   last_updated?: string
   config_path?: string
   error?: string
+  plugin_type?: string  // 插件类型: "system" 表示系统插件
 }
 
 /** 插件管理列表响应 */

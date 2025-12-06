@@ -179,6 +179,7 @@
               <p class="plugin-version">v{{ plugin.version }} • {{ plugin.author }}</p>
             </div>
             <div class="plugin-badges">
+              <span v-if="isSystemPlugin(plugin)" class="badge badge-system">系统插件</span>
               <span v-if="plugin.loaded" class="badge badge-success">已加载</span>
               <span v-else class="badge badge-secondary">未加载</span>
               <span v-if="plugin.error" class="badge badge-error">错误</span>
@@ -206,7 +207,7 @@
 
           <!-- 操作按钮 -->
           <div class="plugin-actions" @click.stop>
-            <div class="toggle-switch" v-if="plugin.loaded">
+            <div class="toggle-switch" v-if="plugin.loaded && !isSystemPlugin(plugin)">
               <input 
                 type="checkbox" 
                 :id="`toggle-${plugin.name}`"
@@ -218,8 +219,12 @@
                 {{ plugin.enabled ? '已启用' : '已禁用' }}
               </label>
             </div>
+            <div class="system-plugin-lock" v-if="isSystemPlugin(plugin)">
+              <Icon icon="lucide:lock" />
+              <span>系统插件</span>
+            </div>
             <button 
-              v-if="!plugin.loaded"
+              v-if="!plugin.loaded && !isSystemPlugin(plugin)"
               class="btn btn-sm btn-success" 
               @click="handleLoadPlugin(plugin.name)"
               title="加载插件"
@@ -228,7 +233,7 @@
               加载
             </button>
             <button 
-              v-if="plugin.loaded"
+              v-if="plugin.loaded && !isSystemPlugin(plugin)"
               class="btn btn-sm btn-ghost" 
               @click="handleReloadPlugin(plugin.name)"
               title="重载插件"
@@ -299,6 +304,19 @@ const filters = [
 // 状态
 const loading = ref(false)
 const error = ref('')
+
+// 系统插件列表（这些插件不允许修改）
+const SYSTEM_PLUGINS = [
+  'Affinity Flow Chatter',
+  'Kokoro Flow Chatter',
+  'napcat_adapter_plugin',
+  'Emoji插件 (Emoji Actions)'
+]
+
+// 判断是否为系统插件
+function isSystemPlugin(plugin: PluginItem): boolean {
+  return SYSTEM_PLUGINS.includes(plugin.display_name)
+}
 
 // Toast 提示
 const toast = ref({
@@ -730,6 +748,12 @@ onMounted(() => {
   color: rgb(239, 68, 68);
 }
 
+.badge-system {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 11, 0.15) 100%);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  color: rgb(251, 191, 36);
+}
+
 .plugin-description {
   font-size: 14px;
   color: var(--text-secondary);
@@ -780,6 +804,23 @@ onMounted(() => {
   flex: 1;
   display: flex;
   align-items: center;
+}
+
+.system-plugin-lock {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: rgba(156, 163, 175, 0.1);
+  border-radius: var(--radius);
+  color: var(--text-tertiary);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.system-plugin-lock svg {
+  font-size: 14px;
 }
 
 .toggle-switch input[type="checkbox"] {
