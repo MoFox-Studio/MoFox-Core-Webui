@@ -197,9 +197,8 @@ function goBack() {
 }
 
 function goToConfig() {
-  if (pluginData.value) {
-    router.push(`/dashboard/plugin-config/${encodeURIComponent(pluginData.value.plugin.id)}`)
-  }
+  // 跳转到插件配置主页面
+  router.push('/dashboard/plugin-config')
 }
 
 function getPluginIcon(): string {
@@ -259,10 +258,8 @@ async function installPluginAction() {
       // 处理双重嵌套
       const responseData = res.data as any
       if (responseData.success) {
-        const message = responseData.loaded 
-          ? `插件 ${pluginData.value.plugin.manifest.name} 安装成功并已加载！` 
-          : `插件 ${pluginData.value.plugin.manifest.name} 安装成功！请手动重载插件。`
-        showToast(message, 'success')
+        // 后端已经自动加载了，直接提示成功
+        showToast(`插件 ${pluginData.value.plugin.manifest.name} 安装成功！`, 'success')
         
         // 重新加载插件详情以更新状态
         await loadPluginDetail()

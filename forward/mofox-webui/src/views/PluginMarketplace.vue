@@ -64,7 +64,7 @@
               <Icon :icon="getPluginIcon(plugin)" />
             </div>
             <div class="plugin-status">
-              <span v-if="isInstalled(plugin.id)" class="badge badge-success">
+              <span v-if="isInstalled(plugin)" class="badge badge-success">
                 <Icon icon="lucide:check-circle" />
                 已安装
               </span>
@@ -103,7 +103,7 @@
               详情
             </button>
             <button 
-              v-if="!isInstalled(plugin.id)"
+              v-if="!isInstalled(plugin)"
               class="btn btn-primary" 
               @click="installPluginAction(plugin)"
               :disabled="installingPlugins.has(plugin.id)"
@@ -115,7 +115,7 @@
             <button 
               v-else
               class="btn btn-secondary" 
-              @click="viewPluginConfig(plugin.id)"
+              @click="viewPluginConfig()"
             >
               <Icon icon="lucide:settings" />
               配置
@@ -202,8 +202,10 @@ const filteredPlugins = computed(() => {
 })
 
 // 方法
-function isInstalled(pluginId: string): boolean {
-  return installedPlugins.value.includes(pluginId)
+function isInstalled(plugin: MarketplacePlugin): boolean {
+  // 使用仓库名检查是否安装
+  const repoName = plugin.manifest.repository_url.split('/').pop() || ''
+  return installedPlugins.value.includes(repoName)
 }
 
 function getPluginIcon(plugin: MarketplacePlugin): string {
@@ -218,9 +220,9 @@ function viewPluginDetail(pluginId: string) {
   router.push(`/dashboard/marketplace/${encodeURIComponent(pluginId)}`)
 }
 
-function viewPluginConfig(pluginId: string) {
-  // 跳转到插件配置页面
-  router.push(`/dashboard/plugin-config/${encodeURIComponent(pluginId)}`)
+function viewPluginConfig() {
+  // 跳转到插件配置主页面
+  router.push('/dashboard/plugin-config')
 }
 
 async function installPluginAction(plugin: MarketplacePlugin) {
@@ -234,11 +236,11 @@ async function installPluginAction(plugin: MarketplacePlugin) {
       // 处理双重嵌套
       const responseData = res.data as any
       if (responseData.success) {
-        const message = responseData.loaded 
-          ? `插件 ${plugin.manifest.name} 安装成功并已加载！` 
-          : `插件 ${plugin.manifest.name} 安装成功！请手动重载插件。`
-        showToast(message, 'success')
-        installedPlugins.value.push(plugin.id)
+        // 后端已经自动加载了，直接提示成功
+        showToast(`插件 ${plugin.manifest.name} 安装成功！`, 'success')
+        // 使用仓库名添加到已安装列表
+        const repoName = plugin.manifest.repository_url.split('/').pop() || ''
+        installedPlugins.value.push(repoName)
       } else {
         showToast(`安装失败: ${responseData.message || '未知错误'}`, 'error')
       }
