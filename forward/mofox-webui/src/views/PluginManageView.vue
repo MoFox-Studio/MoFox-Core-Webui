@@ -527,7 +527,7 @@ onMounted(() => {
 }
 
 .stat-card {
-  background: var(--bg-secondary);
+  background: var(--bg-primary);
   border-radius: var(--radius-lg);
   padding: 24px;
   display: flex;
@@ -590,7 +590,7 @@ onMounted(() => {
   padding: 8px 16px;
   border-radius: var(--radius);
   border: 1px solid var(--border-color);
-  background: var(--bg-secondary);
+  background: var(--bg-primary);
   color: var(--text-secondary);
   font-size: 14px;
   font-weight: 500;
@@ -629,7 +629,7 @@ onMounted(() => {
   padding: 10px 12px 10px 40px;
   border-radius: var(--radius);
   border: 1px solid var(--border-color);
-  background: var(--bg-secondary);
+  background: var(--bg-primary);
   color: var(--text-primary);
   font-size: 14px;
   transition: all var(--transition);
@@ -653,7 +653,7 @@ onMounted(() => {
 }
 
 .plugin-card {
-  background: var(--bg-secondary);
+  background: var(--bg-primary);
   border-radius: var(--radius-lg);
   padding: 20px;
   border: 1px solid var(--border-color);

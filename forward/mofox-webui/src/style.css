@@ -17,17 +17,17 @@
   
   /* 浅色主题 */
   --bg-primary: #ffffff;
-  --bg-secondary: #f8fafc;
-  --bg-tertiary: #f1f5f9;
-  --bg-hover: #e2e8f0;
+  --bg-secondary: #f1f5f9;
+  --bg-tertiary: #e2e8f0;
+  --bg-hover: #cbd5e1;
   
   --text-primary: #0f172a;
   --text-secondary: #475569;
   --text-tertiary: #94a3b8;
   --text-inverse: #ffffff;
   
-  --border-color: #e2e8f0;
-  --border-light: #f1f5f9;
+  --border-color: #cbd5e1;
+  --border-light: #e2e8f0;
   
   /* 状态颜色 */
   --success: #10b981;
