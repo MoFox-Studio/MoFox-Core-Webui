@@ -162,6 +162,7 @@ const menuItems: MenuItem[] = [
     ]
   },
   { name: '插件管理', path: '/dashboard/plugin-manage', icon: 'lucide:package' },
+  { name: '插件市场', path: '/dashboard/marketplace', icon: 'lucide:store' },
 ]
 
 const toggleSidebar = () => {

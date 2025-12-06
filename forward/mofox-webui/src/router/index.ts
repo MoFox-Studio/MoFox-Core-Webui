@@ -8,6 +8,8 @@ import PluginConfigList from '@/views/PluginConfigList.vue'
 import PluginConfigView from '@/views/PluginConfigView.vue'
 import PluginManageView from '@/views/PluginManageView.vue'
 import PluginDetailView from '@/views/PluginDetailView.vue'
+import PluginMarketplace from '@/views/PluginMarketplace.vue'
+import PluginMarketplaceDetail from '@/views/PluginMarketplaceDetail.vue'
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -60,6 +62,17 @@ const routes: Array<RouteRecordRaw> = [
         path: 'plugin-manage/:pluginName',
         name: 'PluginDetail',
         component: PluginDetailView,
+        props: true
+      },
+      {
+        path: 'marketplace',
+        name: 'PluginMarketplace',
+        component: PluginMarketplace
+      },
+      {
+        path: 'marketplace/:pluginId',
+        name: 'PluginMarketplaceDetail',
+        component: PluginMarketplaceDetail,
         props: true
       }
     ]
