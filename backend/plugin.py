@@ -20,6 +20,7 @@ from src.plugin_system.base.config_types import ConfigField
 
 from .handlers import WebUIShutdownHandler, WebUIStartupHandler
 from .routers import (
+    GitUpdateRouterComponent,
     MarketplaceRouterComponent,
     WebUIAuthRouter,
     WebUIConfigRouter,
@@ -109,4 +110,5 @@ class WebUIAuthPlugin(BasePlugin):
             (WebUIPluginRouter.get_router_info(), WebUIPluginRouter),
             (WebUIStatsRouter.get_router_info(), WebUIStatsRouter),
             (MarketplaceRouterComponent.get_router_info(), MarketplaceRouterComponent),
+            (GitUpdateRouterComponent.get_router_info(), GitUpdateRouterComponent),
         ]

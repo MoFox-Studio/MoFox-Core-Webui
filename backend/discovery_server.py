@@ -78,7 +78,7 @@ def create_discovery_app(main_host: str, main_port: int) -> FastAPI:
 async def start_discovery_server(
     main_host: str,
     main_port: int,
-    discovery_host: str = "0.0.0.0"
+    discovery_host: str = "127.0.0.1"
 ) -> None:
     """
     启动发现服务器
@@ -86,7 +86,7 @@ async def start_discovery_server(
     Args:
         main_host: 主程序的主机地址
         main_port: 主程序的端口
-        discovery_host: 发现服务器绑定的主机地址，默认0.0.0.0
+        discovery_host: 发现服务器绑定的主机地址，默认127.0.0.1
     """
     global _server_instance, _server_task
     

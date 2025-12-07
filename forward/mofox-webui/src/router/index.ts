@@ -10,6 +10,7 @@ import PluginManageView from '@/views/PluginManageView.vue'
 import PluginDetailView from '@/views/PluginDetailView.vue'
 import PluginMarketplace from '@/views/PluginMarketplace.vue'
 import PluginMarketplaceDetail from '@/views/PluginMarketplaceDetail.vue'
+import GitUpdateView from '@/views/GitUpdateView.vue'
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -74,6 +75,11 @@ const routes: Array<RouteRecordRaw> = [
         name: 'PluginMarketplaceDetail',
         component: PluginMarketplaceDetail,
         props: true
+      },
+      {
+        path: 'git-update',
+        name: 'GitUpdate',
+        component: GitUpdateView
       }
     ]
   }
