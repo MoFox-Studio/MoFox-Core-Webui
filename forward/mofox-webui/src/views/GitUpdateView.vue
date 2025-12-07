@@ -252,20 +252,15 @@
         </div>
       </div>
     </transition>
-
-    <!-- Toast 提示 -->
-    <div v-if="toast.show" :class="['toast', toast.type]">
-      <Icon :icon="toast.type === 'success' ? 'lucide:check-circle' : 'lucide:alert-circle'" />
-      {{ toast.message }}
-    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { getGitStatus, installGit, checkUpdates, updateMainProgram, rollbackVersion } from '@/api/git_update'
 import type { GitStatus, UpdateCheck, UpdateResult } from '@/api/git_update'
+import { globalUpdateInfo, clearUpdateStatus } from '@/utils/updateChecker'
 
 const loading = ref(true)
 const checking = ref(false)
@@ -278,13 +273,6 @@ const updateError = ref<string | null>(null)
 const lastUpdateResult = ref<UpdateResult | null>(null)
 const showInstallGuide = ref(false)
 const showSuccessModal = ref(false)
-
-// Toast 提示
-const toast = ref({ show: false, message: '', type: 'success' as 'success' | 'error' })
-
-// 自动检查更新的定时器
-let autoCheckTimer: ReturnType<typeof setInterval> | null = null
-const AUTO_CHECK_INTERVAL = 5 * 60 * 1000 // 5分钟
 
 const updateOptions = ref({
   force: false,
@@ -424,55 +412,14 @@ async function handleRefresh() {
   }
 }
 
-// Toast 提示
-function showToast(message: string, type: 'success' | 'error') {
-  toast.value = { show: true, message, type }
-  setTimeout(() => {
-    toast.value.show = false
-  }, 3000)
-}
-
-// 自动检查更新（静默模式）
-async function autoCheckForUpdates() {
-  if (!canCheckUpdate.value || checking.value || updating.value) {
-    return
-  }
-
-  try {
-    const response = await checkUpdates()
-    if (response.success && response.data && response.data.success) {
-      // 只在有新更新时显示 Toast 通知
-      if (response.data.has_update && !updateInfo.value?.has_update) {
-        updateInfo.value = response.data
-        showToast('发现新版本，建议立即更新！', 'success')
-      } else if (response.data.has_update) {
-        updateInfo.value = response.data
-      }
-    }
-  } catch (error) {
-    console.error('自动检查更新失败:', error)
-  }
-}
-
 onMounted(async () => {
   await refreshGitStatus()
   
-  // 首次自动检查更新
-  if (canCheckUpdate.value) {
-    await autoCheckForUpdates()
-  }
-  
-  // 启动定时检查
-  autoCheckTimer = setInterval(() => {
-    autoCheckForUpdates()
-  }, AUTO_CHECK_INTERVAL)
-})
-
-onUnmounted(() => {
-  // 清理定时器
-  if (autoCheckTimer) {
-    clearInterval(autoCheckTimer)
-    autoCheckTimer = null
+  // 如果全局已经有更新信息，使用它
+  if (globalUpdateInfo.value) {
+    updateInfo.value = globalUpdateInfo.value
+    // 清除"新更新"标记（用户已进入更新页面）
+    clearUpdateStatus()
   }
 })
 </script>
@@ -1363,44 +1310,6 @@ onUnmounted(() => {
   }
 }
 
-/* Toast 提示 */
-.toast {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 20px;
-  background: var(--bg-primary);
-  border-radius: 10px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  font-size: 14px;
-  z-index: 2000;
-  animation: slideIn 0.3s ease;
-}
-
-.toast.success {
-  border-left: 4px solid #10b981;
-  color: #10b981;
-}
-
-.toast.error {
-  border-left: 4px solid #ef4444;
-  color: #ef4444;
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateX(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
 /* 响应式设计 */
 @media (max-width: 768px) {
   .git-update-view {
@@ -1437,12 +1346,6 @@ onUnmounted(() => {
   .success-modal,
   .guide-modal {
     padding: 36px 24px;
-  }
-
-  .toast {
-    bottom: 12px;
-    right: 12px;
-    left: 12px;
   }
 }
 </style>
