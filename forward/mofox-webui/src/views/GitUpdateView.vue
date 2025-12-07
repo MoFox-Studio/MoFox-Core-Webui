@@ -7,8 +7,8 @@
           <Icon icon="lucide:package" />
         </div>
         <div class="header-text">
-          <h1>主程序更新</h1>
-          <p>管理和更新您的应用程序</p>
+          <h1>MoFox-Bot主程序更新</h1>
+          <p>管理和更新您的MoFox-Bot</p>
         </div>
       </div>
       <button class="refresh-btn" @click="handleRefresh" :disabled="checking || loading">
@@ -165,7 +165,7 @@
             <Icon icon="lucide:check-circle-2" />
           </div>
           <h2>已是最新版本</h2>
-          <p>您的应用程序已经是最新版本</p>
+          <p>您的MoFox-Bot已经是最新版本</p>
           <code class="current-version">
             {{ updateInfo.update_mode === 'git' ? updateInfo.current_commit?.substring(0, 8) : updateInfo.current_version || updateInfo.latest_version }}
           </code>
@@ -212,7 +212,7 @@
             <Icon icon="lucide:check-circle-2" class="success-icon" />
           </div>
           <h2>更新成功</h2>
-          <p>{{ lastUpdateResult?.message || '应用程序已成功更新到最新版本' }}</p>
+          <p>{{ lastUpdateResult?.message || 'MoFox-Bot已成功更新到最新版本' }}</p>
           
           <div v-if="lastUpdateResult?.updated_files && lastUpdateResult.updated_files.length > 0" class="updated-summary">
             <Icon icon="lucide:file-check" />

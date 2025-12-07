@@ -26,6 +26,7 @@ from .routers import (
     WebUIConfigRouter,
     WebUIPluginRouter,
     WebUIStatsRouter,
+    LogViewerRouterComponent,
 )
 
 logger = get_logger("WebUIAuth.Plugin")
@@ -111,4 +112,5 @@ class WebUIAuthPlugin(BasePlugin):
             (WebUIStatsRouter.get_router_info(), WebUIStatsRouter),
             (MarketplaceRouterComponent.get_router_info(), MarketplaceRouterComponent),
             (GitUpdateRouterComponent.get_router_info(), GitUpdateRouterComponent),
+            (LogViewerRouterComponent.get_router_info(), LogViewerRouterComponent),
         ]
