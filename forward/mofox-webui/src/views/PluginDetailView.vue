@@ -514,7 +514,7 @@ onMounted(() => {
   gap: 8px;
   padding: 10px 16px;
   border-radius: var(--radius);
-  background: var(--bg-secondary);
+  background: var(--bg-primary);
   border: 1px solid var(--border-color);
   color: var(--text-secondary);
   font-size: 14px;
@@ -626,7 +626,7 @@ onMounted(() => {
 
 /* 信息区块 */
 .info-section {
-  background: var(--bg-secondary);
+  background: var(--bg-primary);
   border-radius: var(--radius-lg);
   padding: 24px;
   margin-bottom: 20px;
