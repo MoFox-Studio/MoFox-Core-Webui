@@ -335,7 +335,7 @@ class WebUIStatsRouter(BaseRouterComponent):
 
                 # 异步执行重启，给前端时间接收响应
                 async def do_restart():
-                    await asyncio.sleep(1)  # 给前端一点时间接收响应
+                    await asyncio.sleep(5)  # 给前端一点时间接收响应
                     logger.info("正在重启 Bot...")
                     
                     # 使用 os.execv 重启当前进程

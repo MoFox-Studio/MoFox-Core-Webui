@@ -7,6 +7,8 @@ import platform
 import subprocess
 from pathlib import Path
 from typing import Optional
+import shutil
+import sys
 
 from pydantic import BaseModel
 
@@ -14,6 +16,11 @@ from src.common.logger import get_logger
 from src.common.security import VerifiedDep
 from src.config.config import PROJECT_ROOT
 from src.plugin_system import BaseRouterComponent
+
+# 导入后端存储 API
+backend_utils_path = Path(__file__).parent.parent / "utils"
+sys.path.insert(0, str(backend_utils_path))
+from backend_storage import BackendStorage
 
 logger = get_logger("WebUI.GitUpdateRouter")
 
@@ -27,10 +34,12 @@ class GitStatusResponse(BaseModel):
     git_available: bool
     git_version: Optional[str] = None
     git_path: Optional[str] = None
+    git_source: str = "unknown"  # 'custom' | 'portable' | 'system' | 'unknown'
     is_portable: bool = False
     system_os: str
     is_git_repo: bool = False  # 是否为 Git 仓库
-    update_mode: str = "unknown"  # git 或 release
+    current_branch: Optional[str] = None  # 当前分支
+    available_branches: list[str] = []  # 可用分支列表
 
 
 class GitCheckUpdateResponse(BaseModel):
@@ -44,10 +53,6 @@ class GitCheckUpdateResponse(BaseModel):
     update_logs: list = []
     branch: Optional[str] = None
     error: Optional[str] = None
-    update_mode: str = "git"  # git 或 release
-    current_version: Optional[str] = None  # Release 模式下的当前版本
-    latest_version: Optional[str] = None  # Release 模式下的最新版本
-    download_url: Optional[str] = None  # Release 下载地址
 
 
 class GitUpdateRequest(BaseModel):
@@ -74,12 +79,43 @@ class GitRollbackRequest(BaseModel):
     commit_hash: str
 
 
+class GitSwitchBranchRequest(BaseModel):
+    """切换分支请求"""
+
+    branch: str
+
+
+class GitSwitchBranchResponse(BaseModel):
+    """切换分支响应"""
+
+    success: bool
+    message: str
+    current_branch: Optional[str] = None
+    error: Optional[str] = None
+
+
 class GitInstallResponse(BaseModel):
     """Git 安装响应"""
 
     success: bool
     message: str
     install_path: Optional[str] = None
+    error: Optional[str] = None
+
+
+class GitSetPathRequest(BaseModel):
+    """设置 Git 路径请求"""
+
+    path: str
+
+
+class GitSetPathResponse(BaseModel):
+    """设置 Git 路径响应"""
+
+    success: bool
+    message: str
+    git_path: Optional[str] = None
+    git_version: Optional[str] = None
     error: Optional[str] = None
 
 
@@ -92,34 +128,19 @@ class GitDetector:
     @staticmethod
     def is_git_available() -> bool:
         """检查系统是否安装 Git"""
-        # 先检查便携版
-        portable_git = GitDetector.find_portable_git()
-        if portable_git:
-            try:
-                subprocess.run(
-                    [str(portable_git), "--version"],
-                    capture_output=True,
-                    check=True,
-                    timeout=5,
-                )
-                return True
-            except Exception:
-                pass
-        
-        # 再检查系统 Git
+        git_path = GitDetector.get_git_executable()
+        if not git_path:
+            return False
+            
         try:
             subprocess.run(
-                ["git", "--version"],
+                [git_path, "--version"],
                 capture_output=True,
                 check=True,
                 timeout=5,
             )
             return True
-        except (
-            subprocess.CalledProcessError,
-            FileNotFoundError,
-            subprocess.TimeoutExpired,
-        ):
+        except Exception:
             return False
 
     @staticmethod
@@ -153,17 +174,40 @@ class GitDetector:
 
     @staticmethod
     def get_git_executable() -> Optional[str]:
-        """获取 Git 可执行文件路径"""
-        # 先查找便携版（优先使用后端目录下的）
+        """
+        获取 Git 可执行文件路径
+        优先级: 1. 自定义路径 2. 便携版 3. 系统 Git
+        """
+        # 1. 先检查是否有自定义路径
+        custom_path = BackendStorage.get_git_path()
+        if custom_path:
+            custom_path_obj = Path(custom_path)
+            if custom_path_obj.exists():
+                logger.debug(f"使用自定义 Git 路径: {custom_path}")
+                return str(custom_path)
+            else:
+                logger.warning(f"自定义 Git 路径无效: {custom_path}，将清除并尝试其他方式")
+                BackendStorage.clear_git_path()
+        
+        # 2. 查找便携版（优先使用后端目录下的）
         portable_git = GitDetector.find_portable_git()
         if portable_git:
+            logger.debug(f"找到便携版 Git: {portable_git}")
+            # 保存便携版路径到存储
+            BackendStorage.set_git_path(str(portable_git))
+            BackendStorage.set_git_source("portable")
             return str(portable_git)
 
-        # 查找系统 Git
-        import shutil
-
+        # 3. 查找系统 Git
         git_path = shutil.which("git")
-        return git_path
+        if git_path:
+            logger.debug(f"找到系统 Git: {git_path}")
+            # 保存系统 Git 路径到存储
+            BackendStorage.set_git_path(git_path)
+            BackendStorage.set_git_source("system")
+            return git_path
+        
+        return None
 
     @staticmethod
     def find_portable_git() -> Optional[Path]:
@@ -493,236 +537,6 @@ class GitInstaller:
             }
 
 
-class ReleaseUpdater:
-    """GitHub Release 更新管理器"""
-
-    # 配置 GitHub 仓库信息
-    GITHUB_REPO_OWNER = "ikun-11451"
-    GITHUB_REPO_NAME = "MaiMai-Core"
-    GITHUB_API_URL = f"https://api.github.com/repos/{GITHUB_REPO_OWNER}/{GITHUB_REPO_NAME}/releases/latest"
-    
-    def __init__(self, install_path: Path):
-        self.install_path = install_path
-        self.version_file = install_path / "VERSION"
-
-    def get_current_version(self) -> Optional[str]:
-        """获取当前安装的版本"""
-        if self.version_file.exists():
-            try:
-                return self.version_file.read_text(encoding="utf-8").strip()
-            except Exception as e:
-                logger.warning(f"读取版本文件失败: {e}")
-        return None
-
-    async def check_updates(self) -> dict:
-        """检查 GitHub Release 更新"""
-        try:
-            import httpx
-            
-            current_version = self.get_current_version()
-            logger.info(f"当前版本: {current_version or '未知'}")
-            
-            # 请求 GitHub API
-            async with httpx.AsyncClient() as client:
-                response = await client.get(
-                    self.GITHUB_API_URL,
-                    headers={"Accept": "application/vnd.github.v3+json"},
-                    timeout=30,
-                    follow_redirects=True
-                )
-                
-                if response.status_code != 200:
-                    return {
-                        "success": False,
-                        "error": f"无法获取 Release 信息: HTTP {response.status_code}"
-                    }
-                
-                release_data = response.json()
-                latest_version = release_data.get("tag_name", "").lstrip("v")
-                
-                # 检查是否有更新
-                has_update = False
-                if current_version is None:
-                    has_update = True  # 首次安装
-                elif current_version != latest_version:
-                    has_update = True
-                
-                # 查找下载链接
-                download_url = None
-                assets = release_data.get("assets", [])
-                for asset in assets:
-                    name = asset.get("name", "").lower()
-                    # 根据系统选择合适的资源
-                    if platform.system() == "Windows" and name.endswith(".zip"):
-                        download_url = asset.get("browser_download_url")
-                        break
-                    elif platform.system() == "Linux" and "linux" in name:
-                        download_url = asset.get("browser_download_url")
-                        break
-                
-                # 获取更新日志
-                update_logs = []
-                body = release_data.get("body", "")
-                if body:
-                    lines = body.split("\n")
-                    update_logs = [line.strip() for line in lines[:10] if line.strip()]
-                
-                return {
-                    "success": True,
-                    "has_update": has_update,
-                    "current_version": current_version or "未知",
-                    "latest_version": latest_version,
-                    "download_url": download_url,
-                    "update_logs": update_logs,
-                    "release_name": release_data.get("name", ""),
-                    "published_at": release_data.get("published_at", "")
-                }
-                
-        except Exception as e:
-            logger.error(f"检查 Release 更新失败: {e}")
-            return {"success": False, "error": str(e)}
-
-    async def download_and_install(self, download_url: str, latest_version: str) -> dict:
-        """下载并安装新版本"""
-        try:
-            import httpx
-            import zipfile
-            import shutil
-            
-            # 创建临时目录
-            temp_dir = self.install_path / "temp_update"
-            temp_dir.mkdir(parents=True, exist_ok=True)
-            
-            download_file = temp_dir / "update.zip"
-            
-            try:
-                logger.info(f"正在下载更新: {download_url}")
-                
-                # 下载文件
-                async with httpx.AsyncClient() as client:
-                    async with client.stream("GET", download_url, timeout=300, follow_redirects=True) as response:
-                        response.raise_for_status()
-                        
-                        total_size = int(response.headers.get("content-length", 0))
-                        downloaded = 0
-                        
-                        with open(download_file, "wb") as f:
-                            async for chunk in response.aiter_bytes(chunk_size=8192):
-                                f.write(chunk)
-                                downloaded += len(chunk)
-                                if total_size > 0:
-                                    progress = (downloaded / total_size) * 100
-                                    if downloaded % (1024 * 1024) == 0:  # 每 1MB 记录一次
-                                        logger.info(f"下载进度: {progress:.1f}%")
-                
-                logger.info("下载完成，正在解压...")
-                
-                # 解压文件
-                extract_dir = temp_dir / "extracted"
-                extract_dir.mkdir(parents=True, exist_ok=True)
-                
-                with zipfile.ZipFile(download_file, 'r') as zip_ref:
-                    zip_ref.extractall(extract_dir)
-                
-                logger.info("解压完成，正在更新文件...")
-                
-                # 备份旧版本
-                backup_dir = self.install_path / "backup"
-                if backup_dir.exists():
-                    shutil.rmtree(backup_dir)
-                
-                # 移动当前文件到备份
-                important_dirs = ["mmc", "config", "data", "logs"]
-                backup_dir.mkdir(parents=True, exist_ok=True)
-                
-                for item in self.install_path.iterdir():
-                    if item.name not in ["temp_update", "backup", "VERSION"] and item.name in important_dirs:
-                        continue  # 保留用户数据
-                    if item != temp_dir and item != backup_dir:
-                        try:
-                            dest = backup_dir / item.name
-                            if item.is_dir():
-                                shutil.copytree(item, dest, dirs_exist_ok=True)
-                            else:
-                                shutil.copy2(item, dest)
-                        except Exception as e:
-                            logger.warning(f"备份 {item} 失败: {e}")
-                
-                # 复制新文件
-                for item in extract_dir.iterdir():
-                    dest = self.install_path / item.name
-                    try:
-                        if item.is_dir():
-                            shutil.copytree(item, dest, dirs_exist_ok=True)
-                        else:
-                            shutil.copy2(item, dest)
-                    except Exception as e:
-                        logger.error(f"复制 {item} 失败: {e}")
-                        raise
-                
-                # 写入新版本号
-                self.version_file.write_text(latest_version, encoding="utf-8")
-                
-                logger.info("更新完成")
-                
-                return {
-                    "success": True,
-                    "message": f"成功更新到版本 {latest_version}",
-                    "version": latest_version
-                }
-                
-            finally:
-                # 清理临时文件
-                try:
-                    shutil.rmtree(temp_dir)
-                except Exception as e:
-                    logger.warning(f"清理临时文件失败: {e}")
-                    
-        except Exception as e:
-            logger.error(f"下载安装失败: {e}")
-            return {"success": False, "error": str(e)}
-
-    async def rollback(self) -> dict:
-        """回滚到备份版本"""
-        try:
-            import shutil
-            
-            backup_dir = self.install_path / "backup"
-            if not backup_dir.exists():
-                return {"success": False, "error": "没有可用的备份"}
-            
-            logger.info("正在回滚到备份版本...")
-            
-            # 复制备份文件回去
-            for item in backup_dir.iterdir():
-                dest = self.install_path / item.name
-                try:
-                    if dest.exists():
-                        if dest.is_dir():
-                            shutil.rmtree(dest)
-                        else:
-                            dest.unlink()
-                    
-                    if item.is_dir():
-                        shutil.copytree(item, dest)
-                    else:
-                        shutil.copy2(item, dest)
-                except Exception as e:
-                    logger.error(f"回滚 {item} 失败: {e}")
-                    raise
-            
-            logger.info("回滚完成")
-            
-            return {
-                "success": True,
-                "message": "已回滚到备份版本"
-            }
-            
-        except Exception as e:
-            logger.error(f"回滚失败: {e}")
-            return {"success": False, "error": str(e)}
-
-
 class GitUpdater:
     """Git 更新管理器"""
 
@@ -923,6 +737,111 @@ class GitUpdater:
             logger.error(f"回滚失败: {e}")
             return {"success": False, "error": str(e)}
 
+    def get_branches(self) -> dict:
+        """获取所有分支列表"""
+        try:
+            # 获取远程分支
+            fetch_result = self._run_git_command("fetch", "origin", timeout=30)
+            if fetch_result.returncode != 0:
+                logger.warning(f"获取远程分支失败: {fetch_result.stderr}")
+
+            # 获取本地和远程分支
+            result = self._run_git_command("branch", "-a")
+            if result.returncode != 0:
+                return {"success": False, "error": "获取分支列表失败"}
+
+            branches = []
+            current_branch = None
+            
+            for line in result.stdout.strip().split("\n"):
+                line = line.strip()
+                if not line:
+                    continue
+                
+                # 当前分支标记为 *
+                is_current = line.startswith("*")
+                if is_current:
+                    line = line[1:].strip()
+                    current_branch = line
+                
+                # 跳过远程HEAD指针
+                if "HEAD ->" in line:
+                    continue
+                
+                # 处理远程分支
+                if line.startswith("remotes/origin/"):
+                    branch_name = line.replace("remotes/origin/", "")
+                    if branch_name not in branches:
+                        branches.append(branch_name)
+                elif line not in branches:
+                    branches.append(line)
+
+            return {
+                "success": True,
+                "branches": sorted(branches),
+                "current_branch": current_branch
+            }
+
+        except Exception as e:
+            logger.error(f"获取分支列表失败: {e}")
+            return {"success": False, "error": str(e)}
+
+    async def switch_branch(self, branch: str) -> dict:
+        """切换到指定分支"""
+        try:
+            logger.info(f"正在切换到分支: {branch}")
+
+            # 检查本地是否有未提交的修改
+            status_result = self._run_git_command("status", "--porcelain")
+            has_local_changes = bool(status_result.stdout.strip())
+
+            if has_local_changes:
+                logger.info("暂存本地修改...")
+                stash_result = self._run_git_command(
+                    "stash", "push", "-m", f"Auto stash before switching to {branch}"
+                )
+                if stash_result.returncode != 0:
+                    return {
+                        "success": False,
+                        "error": f"暂存本地修改失败: {stash_result.stderr}"
+                    }
+
+            # 检查本地是否已有该分支
+            branch_result = self._run_git_command("branch", "--list", branch)
+            has_local_branch = bool(branch_result.stdout.strip())
+
+            if has_local_branch:
+                # 切换到本地分支
+                checkout_result = self._run_git_command("checkout", branch)
+            else:
+                # 从远程创建并切换
+                checkout_result = self._run_git_command(
+                    "checkout", "-b", branch, f"origin/{branch}"
+                )
+
+            if checkout_result.returncode != 0:
+                return {"success": False, "error": f"切换分支失败: {checkout_result.stderr}"}
+
+            # 更新分支引用
+            self.branch = branch
+
+            # 拉取最新代码
+            pull_result = self._run_git_command("pull", "origin", branch, timeout=60)
+            if pull_result.returncode != 0:
+                logger.warning(f"拉取最新代码失败: {pull_result.stderr}")
+
+            return {
+                "success": True,
+                "message": f"已切换到分支 {branch}",
+                "current_branch": branch
+            }
+
+        except subprocess.TimeoutExpired:
+            return {"success": False, "error": "切换分支超时"}
+        except Exception as e:
+            logger.error(f"切换分支失败: {e}")
+            return {"success": False, "error": str(e)}
+
 
 # ==================== 路由组件 ====================
 
@@ -946,21 +865,29 @@ class GitUpdateRouterComponent(BaseRouterComponent):
             repo_path = Path(PROJECT_ROOT)
             is_git_repo = detector.is_git_repo(repo_path)
             
-            # 确定更新模式
-            update_mode = "unknown"
+            # 获取分支信息（如果是 Git 仓库）
+            current_branch = None
+            available_branches = []
             if is_git_repo and git_available:
-                update_mode = "git"
-            elif not is_git_repo:
-                update_mode = "release"
+                try:
+                    updater = GitUpdater(repo_path)
+                    branch_info = updater.get_branches()
+                    if branch_info["success"]:
+                        current_branch = branch_info["current_branch"]
+                        available_branches = branch_info["branches"]
+                except Exception as e:
+                    logger.warning(f"获取分支信息失败: {e}")
 
             return GitStatusResponse(
                 git_available=git_available,
                 git_version=detector.get_git_version() if git_available else None,
                 git_path=detector.get_git_executable() if git_available else None,
+                git_source=BackendStorage.get_git_source(),
                 is_portable=detector.find_portable_git() is not None,
                 system_os=platform.system(),
                 is_git_repo=is_git_repo,
-                update_mode=update_mode,
+                current_branch=current_branch,
+                available_branches=available_branches,
             )
 
         @self.router.post("/install", response_model=GitInstallResponse)
@@ -979,48 +906,34 @@ class GitUpdateRouterComponent(BaseRouterComponent):
 
         @self.router.get("/check", response_model=GitCheckUpdateResponse)
         async def check_updates(_=VerifiedDep):
-            """检查主程序更新"""
+            """检查主程序更新（仅支持 Git 仓库）"""
             try:
                 repo_path = Path(PROJECT_ROOT)
                 detector = GitDetector()
                 is_git_repo = detector.is_git_repo(repo_path)
                 
-                # 根据是否为 Git 仓库选择不同的更新方式
-                if is_git_repo:
-                    # Git 模式
-                    updater = GitUpdater(repo_path)
-                    result = await updater.check_updates()
+                if not is_git_repo:
+                    return GitCheckUpdateResponse(
+                        success=False,
+                        error="主程序不是 Git 仓库，无法检查更新"
+                    )
+                
+                # Git 模式
+                updater = GitUpdater(repo_path)
+                result = await updater.check_updates()
 
-                    if result["success"]:
-                        return GitCheckUpdateResponse(
-                            success=True,
-                            has_update=result["has_update"],
-                            current_commit=result["current_commit"],
-                            remote_commit=result["remote_commit"],
-                            commits_behind=result["commits_behind"],
-                            update_logs=result["update_logs"],
-                            branch=updater.branch,
-                            update_mode="git",
-                        )
-                    else:
-                        return GitCheckUpdateResponse(success=False, error=result["error"], update_mode="git")
+                if result["success"]:
+                    return GitCheckUpdateResponse(
+                        success=True,
+                        has_update=result["has_update"],
+                        current_commit=result["current_commit"],
+                        remote_commit=result["remote_commit"],
+                        commits_behind=result["commits_behind"],
+                        update_logs=result["update_logs"],
+                        branch=updater.branch,
+                    )
                 else:
-                    # Release 模式
-                    release_updater = ReleaseUpdater(repo_path)
-                    result = await release_updater.check_updates()
-                    
-                    if result["success"]:
-                        return GitCheckUpdateResponse(
-                            success=True,
-                            has_update=result["has_update"],
-                            current_version=result["current_version"],
-                            latest_version=result["latest_version"],
-                            download_url=result.get("download_url"),
-                            update_logs=result.get("update_logs", []),
-                            update_mode="release",
-                        )
-                    else:
-                        return GitCheckUpdateResponse(success=False, error=result["error"], update_mode="release")
+                    return GitCheckUpdateResponse(success=False, error=result["error"])
 
             except Exception as e:
                 logger.error(f"检查更新失败: {e}")
@@ -1028,80 +941,43 @@ class GitUpdateRouterComponent(BaseRouterComponent):
 
         @self.router.post("/update", response_model=GitUpdateResponse)
         async def update_main_program(request: GitUpdateRequest, _=VerifiedDep):
-            """更新主程序"""
+            """更新主程序（仅支持 Git 仓库）"""
             try:
                 repo_path = Path(PROJECT_ROOT)
                 detector = GitDetector()
                 is_git_repo = detector.is_git_repo(repo_path)
                 
-                if is_git_repo:
-                    # Git 模式更新
-                    updater = GitUpdater(repo_path)
-
-                    # 创建备份点
-                    backup_commit = None
-                    if request.create_backup:
-                        backup_commit = updater.get_current_commit()
-
-                    # 执行更新
-                    result = await updater.pull_updates(
-                        force=request.force, stash_local=request.stash_local
+                if not is_git_repo:
+                    return GitUpdateResponse(
+                        success=False,
+                        message="主程序不是 Git 仓库，无法执行更新",
+                        error="主程序不是 Git 仓库"
                     )
+                
+                # Git 模式更新
+                updater = GitUpdater(repo_path)
 
-                    if result["success"]:
-                        return GitUpdateResponse(
-                            success=True,
-                            message=result["message"],
-                            updated_files=result.get("updated_files", []),
-                            backup_commit=backup_commit,
-                        )
-                    else:
-                        return GitUpdateResponse(
-                            success=False, message="更新失败", error=result["error"]
-                        )
+                # 创建备份点
+                backup_commit = None
+                if request.create_backup:
+                    backup_commit = updater.get_current_commit()
+
+                # 执行更新
+                result = await updater.pull_updates(
+                    force=request.force, stash_local=request.stash_local
+                )
+
+                if result["success"]:
+                    return GitUpdateResponse(
+                        success=True,
+                        message=result["message"],
+                        updated_files=result.get("updated_files", []),
+                        backup_commit=backup_commit,
+                    )
                 else:
-                    # Release 模式更新
-                    release_updater = ReleaseUpdater(repo_path)
-                    
-                    # 先检查更新获取下载链接
-                    check_result = await release_updater.check_updates()
-                    if not check_result["success"]:
-                        return GitUpdateResponse(
-                            success=False, 
-                            message="检查更新失败", 
-                            error=check_result.get("error")
-                        )
-                    
-                    if not check_result["has_update"]:
-                        return GitUpdateResponse(
-                            success=True,
-                            message="当前已是最新版本"
-                        )
-                    
-                    download_url = check_result.get("download_url")
-                    if not download_url:
-                        return GitUpdateResponse(
-                            success=False,
-                            message="未找到适合当前系统的更新包"
-                        )
-                    
-                    # 执行下载和安装
-                    result = await release_updater.download_and_install(
-                        download_url, 
-                        check_result["latest_version"]
+                    return GitUpdateResponse(
+                        success=False, message="更新失败", error=result["error"]
                     )
-                    
-                    if result["success"]:
-                        return GitUpdateResponse(
-                            success=True,
-                            message=result["message"]
-                        )
-                    else:
-                        return GitUpdateResponse(
-                            success=False,
-                            message="更新失败",
-                            error=result.get("error")
-                        )
 
             except Exception as e:
                 logger.error(f"更新失败: {e}")
@@ -1109,31 +985,142 @@ class GitUpdateRouterComponent(BaseRouterComponent):
 
         @self.router.post("/rollback", response_model=GitUpdateResponse)
         async def rollback_version(request: GitRollbackRequest, _=VerifiedDep):
-            """回滚到指定版本"""
+            """回滚到指定版本（仅支持 Git 仓库）"""
             try:
                 repo_path = Path(PROJECT_ROOT)
                 detector = GitDetector()
                 is_git_repo = detector.is_git_repo(repo_path)
                 
-                if is_git_repo:
-                    # Git 模式回滚
-                    updater = GitUpdater(repo_path)
-                    result = await updater.rollback(request.commit_hash)
+                if not is_git_repo:
+                    return GitUpdateResponse(
+                        success=False,
+                        message="主程序不是 Git 仓库，无法执行回滚",
+                        error="主程序不是 Git 仓库"
+                    )
+                
+                # Git 模式回滚
+                updater = GitUpdater(repo_path)
+                result = await updater.rollback(request.commit_hash)
 
-                    if result["success"]:
-                        return GitUpdateResponse(success=True, message=result["message"])
-                    else:
-                        return GitUpdateResponse(success=False, message="回滚失败", error=result["error"])
+                if result["success"]:
+                    return GitUpdateResponse(success=True, message=result["message"])
                 else:
-                    # Release 模式回滚
-                    release_updater = ReleaseUpdater(repo_path)
-                    result = await release_updater.rollback()
-                    
-                    if result["success"]:
-                        return GitUpdateResponse(success=True, message=result["message"])
-                    else:
-                        return GitUpdateResponse(success=False, message="回滚失败", error=result["error"])
+                    return GitUpdateResponse(success=False, message="回滚失败", error=result["error"])
 
             except Exception as e:
                 logger.error(f"回滚失败: {e}")
                 return GitUpdateResponse(success=False, message="回滚失败", error=str(e))
+
+        @self.router.post("/switch-branch", response_model=GitSwitchBranchResponse)
+        async def switch_branch(request: GitSwitchBranchRequest, _=VerifiedDep):
+            """切换主程序分支"""
+            try:
+                repo_path = Path(PROJECT_ROOT)
+                detector = GitDetector()
+                is_git_repo = detector.is_git_repo(repo_path)
+                
+                if not is_git_repo:
+                    return GitSwitchBranchResponse(
+                        success=False,
+                        message="主程序不是 Git 仓库，无法切换分支",
+                        error="主程序不是 Git 仓库"
+                    )
+                
+                # 切换分支
+                updater = GitUpdater(repo_path)
+                result = await updater.switch_branch(request.branch)
+
+                if result["success"]:
+                    return GitSwitchBranchResponse(
+                        success=True,
+                        message=result["message"],
+                        current_branch=result.get("current_branch")
+                    )
+                else:
+                    return GitSwitchBranchResponse(
+                        success=False,
+                        message="切换分支失败",
+                        error=result["error"]
+                    )
+
+            except Exception as e:
+                logger.error(f"切换分支失败: {e}")
+                return GitSwitchBranchResponse(
+                    success=False,
+                    message="切换分支失败",
+                    error=str(e)
+                )
+
+        @self.router.post("/set-path", response_model=GitSetPathResponse)
+        async def set_git_path(request: GitSetPathRequest, _=VerifiedDep):
+            """设置自定义 Git 路径"""
+            try:
+                git_path = Path(request.path)
+                
+                # 验证路径是否存在
+                if not git_path.exists():
+                    return GitSetPathResponse(
+                        success=False,
+                        message="指定的 Git 路径不存在",
+                        error=f"路径不存在: {request.path}"
+                    )
+                
+                # 验证是否为有效的 Git 可执行文件
+                try:
+                    result = subprocess.run(
+                        [str(git_path), "--version"],
+                        capture_output=True,
+                        text=True,
+                        check=True,
+                        timeout=5,
+                    )
+                    git_version = result.stdout.strip()
+                except Exception as e:
+                    return GitSetPathResponse(
+                        success=False,
+                        message="指定的路径不是有效的 Git 可执行文件",
+                        error=f"验证失败: {str(e)}"
+                    )
+                
+                # 保存自定义路径
+                BackendStorage.set_git_path(str(git_path.resolve()))
+                BackendStorage.set_git_source("custom")
+                
+                logger.info(f"已设置自定义 Git 路径: {git_path}")
+                
+                return GitSetPathResponse(
+                    success=True,
+                    message="Git 路径设置成功",
+                    git_path=str(git_path.resolve()),
+                    git_version=git_version
+                )
+                
+            except Exception as e:
+                logger.error(f"设置 Git 路径失败: {e}")
+                return GitSetPathResponse(
+                    success=False,
+                    message="设置 Git 路径失败",
+                    error=str(e)
+                )
+
+        @self.router.delete("/clear-path", response_model=GitSetPathResponse)
+        async def clear_git_path(_=VerifiedDep):
+            """清除自定义 Git 路径"""
+            try:
+                BackendStorage.clear_git_path()
+                BackendStorage.set_git_source("unknown")
+                
+                logger.info("已清除自定义 Git 路径")
+                
+                return GitSetPathResponse(
+                    success=True,
+                    message="已清除自定义 Git 路径，将重新自动检测"
+                )
+                
+            except Exception as e:
+                logger.error(f"清除 Git 路径失败: {e}")
+                return GitSetPathResponse(
+                    success=False,
+                    message="清除 Git 路径失败",
+                    error=str(e)
+                )

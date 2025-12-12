@@ -1,57 +1,128 @@
 <template>
   <div class="git-update-view">
-    <!-- 头部 -->
-    <div class="page-header">
-      <div class="header-content">
-        <div class="header-icon">
-          <Icon icon="lucide:package" />
-        </div>
-        <div class="header-text">
-          <h1>MoFox-Bot主程序更新</h1>
-          <p>管理和更新您的MoFox-Bot</p>
-        </div>
+    <!-- 非 Git 仓库错误提示 -->
+    <div v-if="gitStatus && !gitStatus.is_git_repo" class="not-git-repo-error">
+      <div class="error-icon">
+        <Icon icon="lucide:alert-circle" />
       </div>
-      <button class="refresh-btn" @click="handleRefresh" :disabled="checking || loading">
-        <Icon icon="lucide:refresh-cw" :class="{ rotating: checking || loading }" />
+      <h2>无法使用更新功能</h2>
+      <p>主程序目录不是 Git 仓库，无法使用自动更新功能。</p>
+      <p class="hint">如需使用此功能，请通过 Git 克隆项目仓库。</p>
+      <button class="btn-back" @click="$router.back()">
+        <Icon icon="lucide:arrow-left" />
+        <span>返回</span>
       </button>
     </div>
 
-    <!-- 系统信息条 -->
-    <div v-if="gitStatus" class="info-bar">
-      <div class="info-item">
-        <Icon :icon="gitStatus.update_mode === 'git' ? 'lucide:git-branch' : 'lucide:package'" />
-        <span>{{ gitStatus.update_mode === 'git' ? 'Git 模式' : 'Release 模式' }}</span>
+    <!-- Git 仓库正常界面 -->
+    <template v-else>
+      <!-- 头部 -->
+      <div class="page-header">
+        <div class="header-content">
+          <div class="header-icon">
+            <Icon icon="lucide:git-branch" />
+          </div>
+          <div class="header-text">
+            <h1>MoFox-Bot主程序更新</h1>
+            <p>管理和更新您的MoFox-Bot</p>
+          </div>
+        </div>
+        <button class="refresh-btn" @click="handleRefresh" :disabled="checking || loading">
+          <Icon icon="lucide:refresh-cw" :class="{ rotating: checking || loading }" />
+        </button>
       </div>
-      <div v-if="gitStatus.update_mode === 'git'" class="info-item">
-        <Icon :icon="gitStatus.git_available ? 'lucide:check-circle-2' : 'lucide:alert-circle'" 
-              :class="gitStatus.git_available ? 'icon-success' : 'icon-warning'" />
-        <span>{{ gitStatus.git_available ? 'Git 可用' : 'Git 未安装' }}</span>
-      </div>
-      <div class="info-item">
-        <Icon icon="lucide:monitor" />
-        <span>{{ gitStatus.system_os }}</span>
-      </div>
-    </div>
 
-    <!-- Git 未安装警告 -->
-    <div v-if="gitStatus && gitStatus.update_mode === 'git' && !gitStatus.git_available" class="alert alert-warning">
-      <Icon icon="lucide:alert-triangle" />
-      <div class="alert-content">
-        <strong>需要安装 Git</strong>
-        <p>当前为 Git 仓库模式，需要安装 Git 才能进行更新操作</p>
+      <!-- 系统信息条 -->
+      <div v-if="gitStatus" class="info-bar">
+        <div class="info-item">
+          <Icon icon="lucide:git-branch" />
+          <span>Git 仓库</span>
+        </div>
+        <div class="info-item">
+          <Icon :icon="gitStatus.git_available ? 'lucide:check-circle-2' : 'lucide:alert-circle'" 
+                :class="gitStatus.git_available ? 'icon-success' : 'icon-warning'" />
+          <span>{{ gitStatus.git_available ? 'Git 可用' : 'Git 未安装' }}</span>
+        </div>
+        <div v-if="gitStatus.current_branch" class="info-item">
+          <Icon icon="lucide:git-branch" />
+          <span>分支: {{ gitStatus.current_branch }}</span>
+        </div>
+        <div class="info-item">
+          <Icon icon="lucide:monitor" />
+          <span>{{ gitStatus.system_os }}</span>
+        </div>
       </div>
-      <button 
-        v-if="gitStatus.system_os === 'Windows'" 
-        class="btn-install"
-        @click="installGitAuto"
-        :disabled="installing"
-      >
-        {{ installing ? '安装中...' : '立即安装' }}
-      </button>
-      <button v-else class="btn-install" @click="showInstallGuide = true">
-        安装指南
-      </button>
-    </div>
+
+      <!-- 分支切换区域 -->
+      <div v-if="gitStatus && gitStatus.git_available && gitStatus.available_branches.length > 0" class="branch-section">
+        <div class="branch-header">
+          <Icon icon="lucide:git-branch" />
+          <h3>分支管理</h3>
+        </div>
+        <div class="branch-selector">
+          <label>当前分支:</label>
+          <select v-model="selectedBranch" @change="handleBranchChange" :disabled="switching">
+            <option v-for="branch in gitStatus.available_branches" :key="branch" :value="branch">
+              {{ branch }}
+            </option>
+          </select>
+          <span v-if="switching" class="switching-indicator">
+            <Icon icon="lucide:loader-2" class="rotating" />
+            切换中...
+          </span>
+        </div>
+      </div>
+
+      <!-- Git 路径管理 -->
+      <div v-if="gitStatus && gitStatus.git_available" class="git-path-info">
+        <div class="path-header">
+          <Icon icon="lucide:folder-git-2" />
+          <h3>Git 路径</h3>
+        </div>
+        <div class="path-content">
+          <div class="path-display">
+            <span class="path-label">当前路径:</span>
+            <code class="path-value">{{ gitStatus.git_path || '未知' }}</code>
+            <span class="path-source" :class="`source-${gitStatus.git_source}`">
+              {{ gitStatus.git_source === 'custom' ? '自定义' : 
+                 gitStatus.git_source === 'portable' ? '便携版' : 
+                 gitStatus.git_source === 'system' ? '系统' : '未知' }}
+            </span>
+          </div>
+          <div class="path-actions">
+            <button class="btn-path-action" @click="openSetPathModal">
+              <Icon icon="lucide:edit-3" />
+              设置路径
+            </button>
+            <button v-if="gitStatus.git_source === 'custom'" 
+                    class="btn-path-action btn-clear" 
+                    @click="handleClearGitPath">
+              <Icon icon="lucide:x" />
+              清除自定义
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Git 未安装警告 -->
+      <div v-if="gitStatus && !gitStatus.git_available" class="alert alert-warning">
+        <Icon icon="lucide:alert-triangle" />
+        <div class="alert-content">
+          <strong>需要安装 Git</strong>
+          <p>需要安装 Git 才能进行更新操作</p>
+        </div>
+        <button 
+          v-if="gitStatus.system_os === 'Windows'" 
+          class="btn-install"
+          @click="installGitAuto"
+          :disabled="installing"
+        >
+          {{ installing ? '安装中...' : '立即安装' }}
+        </button>
+        <button v-else class="btn-install" @click="showInstallGuide = true">
+          安装指南
+        </button>
+      </div>
 
     <!-- 主卡片 -->
     <div v-if="canCheckUpdate" class="main-card">
@@ -79,17 +150,17 @@
           <div class="version-compare">
             <div class="version-box version-current">
               <span class="version-tag">当前</span>
-              <code>{{ updateInfo.update_mode === 'git' ? updateInfo.current_commit?.substring(0, 8) : updateInfo.current_version || '未知' }}</code>
+              <code>{{ updateInfo.current_commit?.substring(0, 8) || '未知' }}</code>
             </div>
             <Icon icon="lucide:arrow-right" class="arrow-icon" />
             <div class="version-box version-latest">
               <span class="version-tag">最新</span>
-              <code>{{ updateInfo.update_mode === 'git' ? updateInfo.remote_commit?.substring(0, 8) : updateInfo.latest_version }}</code>
+              <code>{{ updateInfo.remote_commit?.substring(0, 8) || '未知' }}</code>
             </div>
           </div>
 
-          <!-- 提交信息 (Git模式) -->
-          <div v-if="updateInfo.update_mode === 'git' && updateInfo.commits_behind" class="commits-badge">
+          <!-- 提交信息 -->
+          <div v-if="updateInfo.commits_behind" class="commits-badge">
             <Icon icon="lucide:git-commit" />
             <span>{{ updateInfo.commits_behind }} 个新提交</span>
             <span v-if="updateInfo.branch" class="branch-badge">
@@ -114,38 +185,27 @@
 
           <!-- 更新选项 -->
           <div class="update-options">
-            <template v-if="updateInfo.update_mode === 'git'">
-              <label class="option-item">
-                <input type="checkbox" v-model="updateOptions.stashLocal" />
-                <div class="option-text">
-                  <span class="option-label">暂存本地修改</span>
-                  <span class="option-desc">保护您的本地更改</span>
-                </div>
-              </label>
-              <label class="option-item">
-                <input type="checkbox" v-model="updateOptions.createBackup" />
-                <div class="option-text">
-                  <span class="option-label">创建备份点</span>
-                  <span class="option-desc">可随时回滚</span>
-                </div>
-              </label>
-              <label class="option-item">
-                <input type="checkbox" v-model="updateOptions.force" />
-                <div class="option-text">
-                  <span class="option-label">强制更新</span>
-                  <span class="option-desc">覆盖所有本地修改</span>
-                </div>
-              </label>
-            </template>
-            <template v-else>
-              <label class="option-item">
-                <input type="checkbox" v-model="updateOptions.createBackup" />
-                <div class="option-text">
-                  <span class="option-label">创建备份</span>
-                  <span class="option-desc">建议在更新前备份</span>
-                </div>
-              </label>
-            </template>
+            <label class="option-item">
+              <input type="checkbox" v-model="updateOptions.stashLocal" />
+              <div class="option-text">
+                <span class="option-label">暂存本地修改</span>
+                <span class="option-desc">保护您的本地更改</span>
+              </div>
+            </label>
+            <label class="option-item">
+              <input type="checkbox" v-model="updateOptions.createBackup" />
+              <div class="option-text">
+                <span class="option-label">创建备份点</span>
+                <span class="option-desc">可随时回滚</span>
+              </div>
+            </label>
+            <label class="option-item">
+              <input type="checkbox" v-model="updateOptions.force" />
+              <div class="option-text">
+                <span class="option-label">强制更新</span>
+                <span class="option-desc">覆盖所有本地修改</span>
+              </div>
+            </label>
           </div>
 
           <!-- 更新按钮 -->
@@ -167,7 +227,7 @@
           <h2>已是最新版本</h2>
           <p>您的MoFox-Bot已经是最新版本</p>
           <code class="current-version">
-            {{ updateInfo.update_mode === 'git' ? updateInfo.current_commit?.substring(0, 8) : updateInfo.current_version || updateInfo.latest_version }}
+            {{ updateInfo.current_commit?.substring(0, 8) || '未知' }}
           </code>
           
           <!-- 最近更新信息 -->
@@ -252,13 +312,94 @@
         </div>
       </div>
     </transition>
+
+    <!-- 设置 Git 路径弹窗 -->
+    <transition name="modal">
+      <div v-if="showSetPathModal" class="modal-overlay" @click.self="closeSetPathModal">
+        <div class="path-modal">
+          <button class="modal-close" @click="closeSetPathModal">
+            <Icon icon="lucide:x" />
+          </button>
+          <div class="modal-icon">
+            <Icon icon="lucide:folder-git-2" />
+          </div>
+          <h2>设置 Git 路径</h2>
+          <p>请输入 Git 可执行文件的完整路径，或者选择自动下载安装</p>
+          
+          <div class="path-input-group">
+            <label for="git-path-input">Git 可执行文件路径</label>
+            <input 
+              id="git-path-input"
+              v-model="customGitPath" 
+              type="text" 
+              placeholder="例如: C:\Program Files\Git\bin\git.exe"
+              :disabled="settingPath"
+              @keyup.enter="handleSetGitPath"
+            />
+            <span class="input-hint">
+              Windows: git.exe | Linux/macOS: git
+            </span>
+          </div>
+
+          <div v-if="updateError" class="error-message">
+            <Icon icon="lucide:alert-circle" />
+            <p>{{ updateError }}</p>
+          </div>
+
+          <div class="modal-actions">
+            <button 
+              class="btn-modal-primary" 
+              @click="handleSetGitPath"
+              :disabled="!customGitPath.trim() || settingPath"
+            >
+              <Icon :icon="settingPath ? 'lucide:loader-2' : 'lucide:check'" 
+                    :class="{ rotating: settingPath }" />
+              {{ settingPath ? '验证中...' : '确认设置' }}
+            </button>
+            <button 
+              class="btn-modal-secondary" 
+              @click="handleAutoDetectGit"
+              :disabled="installing"
+            >
+              <Icon :icon="installing ? 'lucide:loader-2' : 'lucide:search'" 
+                    :class="{ rotating: installing }" />
+              {{ installing ? '处理中...' : '自动识别' }}
+            </button>
+            <button class="btn-modal-secondary" @click="closeSetPathModal">
+              取消
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
+
+    <!-- Toast 通知 -->
+    <div class="toast-container">
+      <transition-group name="toast">
+        <div 
+          v-for="toast in toasts" 
+          :key="toast.id" 
+          class="toast"
+          :class="`toast-${toast.type}`"
+        >
+          <Icon :icon="
+            toast.type === 'success' ? 'lucide:check-circle-2' :
+            toast.type === 'error' ? 'lucide:alert-circle' :
+            toast.type === 'warning' ? 'lucide:alert-triangle' :
+            'lucide:info'
+          " />
+          <span>{{ toast.message }}</span>
+        </div>
+      </transition-group>
+    </div>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { Icon } from '@iconify/vue'
-import { getGitStatus, installGit, checkUpdates, updateMainProgram, rollbackVersion } from '@/api/git_update'
+import { getGitStatus, installGit, checkUpdates, updateMainProgram, rollbackVersion, switchBranch, setGitPath, clearGitPath } from '@/api/git_update'
 import type { GitStatus, UpdateCheck, UpdateResult } from '@/api/git_update'
 import { globalUpdateInfo, clearUpdateStatus } from '@/utils/updateChecker'
 
@@ -266,6 +407,7 @@ const loading = ref(true)
 const checking = ref(false)
 const installing = ref(false)
 const updating = ref(false)
+const switching = ref(false)
 
 const gitStatus = ref<GitStatus | null>(null)
 const updateInfo = ref<UpdateCheck | null>(null)
@@ -273,6 +415,30 @@ const updateError = ref<string | null>(null)
 const lastUpdateResult = ref<UpdateResult | null>(null)
 const showInstallGuide = ref(false)
 const showSuccessModal = ref(false)
+const showSetPathModal = ref(false)
+const selectedBranch = ref<string>('')
+const customGitPath = ref<string>('')
+const settingPath = ref(false)
+
+// Toast 通知
+interface Toast {
+  id: number
+  type: 'success' | 'error' | 'info' | 'warning'
+  message: string
+  duration: number
+}
+
+const toasts = ref<Toast[]>([])
+let toastId = 0
+
+function showToast(message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info', duration = 3000) {
+  const id = toastId++
+  toasts.value.push({ id, type, message, duration })
+  
+  setTimeout(() => {
+    toasts.value = toasts.value.filter(t => t.id !== id)
+  }, duration)
+}
 
 const updateOptions = ref({
   force: false,
@@ -280,15 +446,18 @@ const updateOptions = ref({
   createBackup: true
 })
 
+// 监听 gitStatus 变化，更新选中的分支
+watch(() => gitStatus.value?.current_branch, (newBranch) => {
+  if (newBranch) {
+    selectedBranch.value = newBranch
+  }
+}, { immediate: true })
+
 // 计算属性：是否可以检查更新
 const canCheckUpdate = computed(() => {
   if (!gitStatus.value) return false
-  if (gitStatus.value.update_mode === 'git') {
-    return gitStatus.value.git_available
-  } else if (gitStatus.value.update_mode === 'release') {
-    return true
-  }
-  return false
+  // 必须是 Git 仓库且 Git 可用
+  return gitStatus.value.is_git_repo && gitStatus.value.git_available
 })
 
 async function refreshGitStatus() {
@@ -404,11 +573,151 @@ function rollbackFromModal() {
   }
 }
 
+// 切换分支
+async function handleBranchChange() {
+  if (!selectedBranch.value || selectedBranch.value === gitStatus.value?.current_branch) {
+    return
+  }
+
+  if (!confirm(`确定要切换到分支 ${selectedBranch.value} 吗？\n\n切换分支后将拉取最新代码。`)) {
+    // 用户取消，恢复选择
+    selectedBranch.value = gitStatus.value?.current_branch || ''
+    return
+  }
+
+  switching.value = true
+  updateError.value = null
+  
+  try {
+    const response = await switchBranch(selectedBranch.value)
+    if (response.success && response.data && response.data.success) {
+      showSuccessModal.value = true
+      lastUpdateResult.value = {
+        success: true,
+        message: response.data.message
+      }
+      // 刷新状态
+      await refreshGitStatus()
+      // 检查新分支的更新
+      await checkForUpdates()
+    } else {
+      updateError.value = response.error || response.data?.error || '切换分支失败'
+      // 恢复选择
+      selectedBranch.value = gitStatus.value?.current_branch || ''
+    }
+  } catch (error) {
+    updateError.value = '切换分支失败'
+    console.error(error)
+    // 恢复选择
+    selectedBranch.value = gitStatus.value?.current_branch || ''
+  } finally {
+    switching.value = false
+  }
+}
+
 // 刷新按钮 - 同时刷新状态和检查更新
 async function handleRefresh() {
   await refreshGitStatus()
   if (canCheckUpdate.value) {
     await checkForUpdates()
+  }
+}
+
+// 打开设置路径弹窗
+function openSetPathModal() {
+  showSetPathModal.value = true
+  customGitPath.value = gitStatus.value?.git_path || ''
+}
+
+// 关闭设置路径弹窗
+function closeSetPathModal() {
+  showSetPathModal.value = false
+  customGitPath.value = ''
+  updateError.value = null
+}
+
+// 设置自定义 Git 路径
+async function handleSetGitPath() {
+  if (!customGitPath.value.trim()) {
+    updateError.value = '请输入 Git 可执行文件路径'
+    return
+  }
+
+  settingPath.value = true
+  updateError.value = null
+
+  try {
+    const response = await setGitPath(customGitPath.value)
+    if (response.success && response.data) {
+      closeSetPathModal()
+      await refreshGitStatus()
+      showToast(`Git 路径设置成功！版本: ${response.data.git_version}`, 'success')
+    } else {
+      updateError.value = response.data?.error || '设置失败'
+    }
+  } catch (error: any) {
+    updateError.value = error?.message || '设置失败'
+    console.error(error)
+  } finally {
+    settingPath.value = false
+  }
+}
+
+// 清除自定义路径
+async function handleClearGitPath() {
+  if (!confirm('确定要清除自定义 Git 路径吗？\n\n系统将重新自动检测 Git。')) {
+    return
+  }
+
+  try {
+    const response = await clearGitPath()
+    if (response.success) {
+      await refreshGitStatus()
+      showToast('已清除自定义 Git 路径', 'success')
+    }
+  } catch (error: any) {
+    showToast(`清除失败: ${error?.message || '未知错误'}`, 'error')
+    console.error(error)
+  }
+}
+
+// 自动识别 Git
+async function handleAutoDetectGit() {
+  installing.value = true
+  updateError.value = null
+
+  try {
+    // 先清除现有的自定义路径
+    await clearGitPath()
+    
+    // 刷新状态，让后端重新检测
+    await refreshGitStatus()
+
+    if (gitStatus.value?.git_available) {
+      // 检测到 Git，关闭弹窗
+      closeSetPathModal()
+      const source = gitStatus.value.git_source === 'portable' ? '便携版' : 
+                     gitStatus.value.git_source === 'system' ? '系统环境变量' : '未知来源'
+      showToast(`已自动识别到 Git！来源: ${source}`, 'success', 4000)
+    } else {
+      // 没有检测到，询问是否下载
+      if (gitStatus.value?.system_os === 'Windows') {
+        if (confirm('未检测到可用的 Git。\n\n是否立即下载安装便携版 Git？')) {
+          await installGitAuto()
+          closeSetPathModal()
+        } else {
+          updateError.value = '未检测到 Git，请手动输入路径或下载安装'
+        }
+      } else {
+        updateError.value = '未检测到 Git，请手动安装或输入路径'
+        showInstallGuide.value = true
+      }
+    }
+  } catch (error: any) {
+    updateError.value = error?.message || '自动识别失败'
+    console.error(error)
+  } finally {
+    installing.value = false
   }
 }
 
@@ -420,6 +729,11 @@ onMounted(async () => {
     updateInfo.value = globalUpdateInfo.value
     // 清除"新更新"标记（用户已进入更新页面）
     clearUpdateStatus()
+  }
+  
+  // 如果 Git 不可用，自动弹出设置路径对话框
+  if (gitStatus.value && !gitStatus.value.git_available) {
+    showSetPathModal.value = true
   }
 })
 </script>
@@ -440,6 +754,137 @@ onMounted(async () => {
   flex-direction: column;
   gap: 24px;
   min-height: 100vh;
+}
+
+/* 非 Git 仓库错误页面 */
+.not-git-repo-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  text-align: center;
+  padding: 60px 40px;
+}
+
+.error-icon {
+  width: 100px;
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  border-radius: 50%;
+  color: white;
+  font-size: 48px;
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.3);
+  margin-bottom: 32px;
+}
+
+.not-git-repo-error h2 {
+  margin: 0 0 16px 0;
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.not-git-repo-error p {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.not-git-repo-error .hint {
+  font-size: 14px;
+  color: var(--text-tertiary);
+}
+
+.btn-back {
+  margin-top: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 32px;
+  border: none;
+  border-radius: 12px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-back:hover {
+  background: var(--bg-hover);
+  transform: translateY(-2px);
+}
+
+/* 分支选择区域 */
+.branch-section {
+  padding: 20px;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+}
+
+.branch-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.branch-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.branch-selector {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.branch-selector label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.branch-selector select {
+  flex: 1;
+  min-width: 200px;
+  padding: 10px 16px;
+  background: var(--bg-primary);
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.branch-selector select:hover:not(:disabled) {
+  border-color: var(--color-primary);
+}
+
+.branch-selector select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.switching-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--color-primary);
 }
 
 /* 头部 */
@@ -1146,22 +1591,25 @@ onMounted(async () => {
 .modal-actions {
   display: flex;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .btn-modal-primary,
 .btn-modal-secondary {
   flex: 1;
+  min-width: 120px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 14px 24px;
+  gap: 6px;
+  padding: 14px 20px;
   border: none;
   border-radius: 10px;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
+  white-space: nowrap;
 }
 
 .btn-modal-primary {
@@ -1185,8 +1633,124 @@ onMounted(async () => {
   background: var(--bg-hover);
 }
 
+/* Git 路径信息 */
+.git-path-info {
+  padding: 20px;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+}
+
+.path-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.path-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.path-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.path-display {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.path-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.path-value {
+  flex: 1;
+  padding: 8px 12px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 13px;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.path-source {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.source-custom {
+  background: rgba(99, 102, 241, 0.1);
+  color: var(--color-primary);
+}
+
+.source-portable {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--color-success);
+}
+
+.source-system {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--color-warning);
+}
+
+.source-unknown {
+  background: rgba(107, 114, 128, 0.1);
+  color: var(--text-tertiary);
+}
+
+.path-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-path-action {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-path-action:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.btn-path-action.btn-clear:hover {
+  border-color: var(--color-error);
+  color: var(--color-error);
+  background: rgba(239, 68, 68, 0.1);
+}
+
 /* 指南弹窗 */
-.guide-modal {
+.guide-modal,
+.path-modal {
   position: relative;
   background: var(--bg-primary);
   border-radius: 20px;
@@ -1221,7 +1785,8 @@ onMounted(async () => {
   color: var(--text-primary);
 }
 
-.guide-icon {
+.guide-icon,
+.modal-icon {
   margin: 0 auto 24px;
   width: 80px;
   height: 80px;
@@ -1235,14 +1800,21 @@ onMounted(async () => {
   box-shadow: 0 8px 24px rgba(245, 158, 11, 0.3);
 }
 
-.guide-modal h2 {
+.modal-icon {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3);
+}
+
+.guide-modal h2,
+.path-modal h2 {
   margin: 0 0 12px 0;
   font-size: 24px;
   font-weight: 700;
   color: var(--text-primary);
 }
 
-.guide-modal > p {
+.guide-modal > p,
+.path-modal > p {
   margin: 0 0 24px 0;
   font-size: 15px;
   color: var(--text-secondary);
@@ -1269,6 +1841,49 @@ onMounted(async () => {
   box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
 }
 
+/* 路径输入组 */
+.path-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.path-input-group label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.path-input-group input {
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  transition: all 0.2s ease;
+}
+
+.path-input-group input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  background: var(--bg-primary);
+}
+
+.path-input-group input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.input-hint {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
 /* 动画 */
 .modal-enter-active,
 .modal-leave-active {
@@ -1282,8 +1897,10 @@ onMounted(async () => {
 
 .modal-enter-from .success-modal,
 .modal-enter-from .guide-modal,
+.modal-enter-from .path-modal,
 .modal-leave-to .success-modal,
-.modal-leave-to .guide-modal {
+.modal-leave-to .guide-modal,
+.modal-leave-to .path-modal {
   transform: scale(0.9);
 }
 
@@ -1308,6 +1925,105 @@ onMounted(async () => {
   100% {
     transform: scale(1);
   }
+}
+
+/* Toast 通知 */
+.toast-container {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  background: var(--bg-primary);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  font-size: 14px;
+  font-weight: 500;
+  min-width: 300px;
+  max-width: 500px;
+  pointer-events: all;
+  backdrop-filter: blur(8px);
+}
+
+.toast svg {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.toast span {
+  flex: 1;
+  line-height: 1.5;
+}
+
+.toast-success {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.05) 100%);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: var(--color-success);
+}
+
+.toast-success svg {
+  color: var(--color-success);
+}
+
+.toast-error {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.05) 100%);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: var(--color-error);
+}
+
+.toast-error svg {
+  color: var(--color-error);
+}
+
+.toast-warning {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.05) 100%);
+  border-color: rgba(245, 158, 11, 0.3);
+  color: var(--color-warning);
+}
+
+.toast-warning svg {
+  color: var(--color-warning);
+}
+
+.toast-info {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%);
+  border-color: rgba(99, 102, 241, 0.3);
+  color: var(--color-primary);
+}
+
+.toast-info svg {
+  color: var(--color-primary);
+}
+
+/* Toast 动画 */
+.toast-enter-active,
+.toast-leave-active {
+  transition: all 0.3s ease;
+}
+
+.toast-enter-from {
+  opacity: 0;
+  transform: translateX(100px);
+}
+
+.toast-leave-to {
+  opacity: 0;
+  transform: translateX(100px) scale(0.8);
+}
+
+.toast-move {
+  transition: transform 0.3s ease;
 }
 
 /* 响应式设计 */
@@ -1344,8 +2060,43 @@ onMounted(async () => {
   }
 
   .success-modal,
-  .guide-modal {
+  .guide-modal,
+  .path-modal {
     padding: 36px 24px;
+  }
+
+  .git-path-info {
+    padding: 16px;
+  }
+
+  .path-display {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .path-value {
+    width: 100%;
+  }
+
+  .path-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .btn-path-action {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .toast-container {
+    top: 60px;
+    right: 10px;
+    left: 10px;
+  }
+
+  .toast {
+    min-width: auto;
+    max-width: 100%;
   }
 }
 </style>
