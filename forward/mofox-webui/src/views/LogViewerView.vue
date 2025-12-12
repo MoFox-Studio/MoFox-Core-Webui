@@ -101,6 +101,37 @@
               <button class="icon-button" @click="clearFilters" title="清除筛选">
                 <Icon icon="lucide:x" />
               </button>
+
+              <div class="separator-line"></div>
+
+              <!-- 实时日志控制按钮 -->
+              <button 
+                class="icon-button"
+                :class="{ active: realtimeEnabled }" 
+                @click="toggleRealtime" 
+                :title="realtimeEnabled ? '断开实时日志' : '连接实时日志'"
+              >
+                <Icon :icon="realtimeEnabled ? 'lucide:wifi' : 'lucide:wifi-off'" />
+              </button>
+
+              <button 
+                class="icon-button"
+                :class="{ active: autoScroll }"
+                @click="autoScroll = !autoScroll" 
+                title="自动滚动"
+                :disabled="!realtimeEnabled"
+              >
+                <Icon icon="lucide:arrow-down-to-line" />
+              </button>
+
+              <button 
+                class="icon-button" 
+                @click="clearRealtimeLogs" 
+                title="清除实时日志"
+                :disabled="!realtimeEnabled"
+              >
+                <Icon icon="lucide:trash-2" />
+              </button>
             </div>
           </div>
 
@@ -143,9 +174,41 @@
               <p>加载中...</p>
             </div>
 
+            <!-- 实时日志模式 -->
+            <div v-else-if="realtimeEnabled" class="entries-list">
+              <div v-if="realtimeLogs.length === 0" class="empty-state">
+                <Icon icon="lucide:radio" class="empty-icon" />
+                <p>等待实时日志...</p>
+              </div>
+              <div 
+                v-for="entry in realtimeLogs" 
+                :key="`${entry.file_name}-${entry.line_number}`"
+                class="log-entry"
+                :class="`level-${entry.level.toLowerCase()}`"
+              >
+                <div class="entry-header">
+                  <span class="entry-time">{{ formatTimestamp(entry.timestamp) }}</span>
+                  <span class="entry-level" :class="`level-${entry.level.toLowerCase()}`">
+                    {{ entry.level.toUpperCase() }}
+                  </span>
+                  <span class="entry-logger" :style="{ color: entry.color }">
+                    {{ entry.alias || entry.logger_name }}
+                  </span>
+                </div>
+                <div class="entry-message">{{ entry.event }}</div>
+                <div v-if="entry.extra && Object.keys(entry.extra).length > 0" class="entry-extra">
+                  <details>
+                    <summary>额外信息</summary>
+                    <pre>{{ JSON.stringify(entry.extra, null, 2) }}</pre>
+                  </details>
+                </div>
+              </div>
+            </div>
+
+            <!-- 文件日志模式 -->
             <div v-else-if="!selectedFile" class="empty-state">
               <Icon icon="lucide:file-search" class="empty-icon" />
-              <p>请选择一个日志文件</p>
+              <p>请选择一个日志文件或启用实时日志</p>
             </div>
 
             <div v-else-if="logEntries.length === 0" class="empty-state">
@@ -233,7 +296,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 import {
   getLogFiles as apiGetLogFiles,
@@ -242,6 +305,7 @@ import {
   getLogStats as apiGetLogStats
 } from '@/api/log_viewer'
 import type { LogFile, LogEntry, LoggerInfo, LogStats } from '@/api/log_viewer'
+import { getServerInfo } from '@/api/index'
 
 // 状态
 const loading = ref(false)
@@ -266,6 +330,13 @@ const pageSize = ref(100)
 const totalEntries = ref(0)
 
 const totalPages = computed(() => Math.ceil(totalEntries.value / pageSize.value))
+
+// 实时日志相关
+const realtimeEnabled = ref(false)
+const realtimeLogs = ref<LogEntry[]>([])
+const autoScroll = ref(true)
+const websocket = ref<WebSocket | null>(null)
+const logEntriesContainer = ref<HTMLElement | null>(null)
 
 // 加载日志文件列表
 const loadLogFiles = async () => {
@@ -396,9 +467,96 @@ const formatTimestamp = (timestamp: string) => {
   return timestamp.replace('T', ' ').substring(0, 19)
 }
 
+// 实时日志功能
+const toggleRealtime = () => {
+  if (realtimeEnabled.value) {
+    disconnectWebSocket()
+  } else {
+    connectWebSocket()
+  }
+}
+
+const connectWebSocket = async () => {
+  try {
+    // 动态获取服务器信息
+    const serverInfo = await getServerInfo()
+    const wsUrl = `ws://${serverInfo.host}:${serverInfo.port}/plugins/webui_backend/log_viewer/realtime`
+    
+    console.log('正在连接WebSocket:', wsUrl)
+    websocket.value = new WebSocket(wsUrl)
+    
+    websocket.value.onopen = () => {
+      console.log('WebSocket已连接')
+      realtimeEnabled.value = true
+      realtimeLogs.value = []
+      // 切换到实时日志模式
+      selectedFile.value = ''
+    }
+    
+    websocket.value.onmessage = (event) => {
+      try {
+        const logEntry: LogEntry = JSON.parse(event.data)
+        // 添加行号(用于key)
+        logEntry.line_number = realtimeLogs.value.length + 1
+        logEntry.file_name = 'realtime'
+        
+        realtimeLogs.value.push(logEntry)
+        
+        // 限制缓冲区大小
+        if (realtimeLogs.value.length > 1000) {
+          realtimeLogs.value.shift()
+        }
+        
+        // 自动滚动到底部
+        if (autoScroll.value) {
+          nextTick(() => {
+            scrollToBottom()
+          })
+        }
+      } catch (error) {
+        console.error('解析日志消息失败:', error)
+      }
+    }
+    
+    websocket.value.onerror = (error) => {
+      console.error('WebSocket错误:', error)
+    }
+    
+    websocket.value.onclose = () => {
+      console.log('WebSocket已断开')
+      realtimeEnabled.value = false
+    }
+  } catch (error) {
+    console.error('连接WebSocket失败:', error)
+  }
+}
+
+const disconnectWebSocket = () => {
+  if (websocket.value) {
+    websocket.value.close()
+    websocket.value = null
+  }
+  realtimeEnabled.value = false
+}
+
+const clearRealtimeLogs = () => {
+  realtimeLogs.value = []
+}
+
+const scrollToBottom = () => {
+  if (logEntriesContainer.value) {
+    logEntriesContainer.value.scrollTop = logEntriesContainer.value.scrollHeight
+  }
+}
+
 // 初始化
 onMounted(() => {
   loadLogFiles()
+})
+
+// 清理
+onUnmounted(() => {
+  disconnectWebSocket()
 })
 </script>
 
@@ -715,10 +873,32 @@ onMounted(() => {
   transition: all var(--transition);
 }
 
-.icon-button:hover {
+.icon-button:hover:not(:disabled) {
   background: var(--bg-hover);
   color: var(--primary);
   border-color: var(--primary);
+}
+
+.icon-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.icon-button.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.icon-button.active:hover {
+  background: var(--primary-dark);
+}
+
+.separator-line {
+  width: 1px;
+  height: 24px;
+  background: var(--border-color);
+  margin: 0 4px;
 }
 
 /* 高级筛选 */

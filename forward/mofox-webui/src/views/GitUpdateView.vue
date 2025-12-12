@@ -402,6 +402,7 @@ import { Icon } from '@iconify/vue'
 import { getGitStatus, installGit, checkUpdates, updateMainProgram, rollbackVersion, switchBranch, setGitPath, clearGitPath } from '@/api/git_update'
 import type { GitStatus, UpdateCheck, UpdateResult } from '@/api/git_update'
 import { globalUpdateInfo, clearUpdateStatus } from '@/utils/updateChecker'
+import { showConfirm } from '@/utils/dialog'
 
 const loading = ref(true)
 const checking = ref(false)
@@ -541,7 +542,15 @@ async function performUpdate() {
 }
 
 async function rollback(commitHash: string) {
-  if (!confirm(`确定要回滚到版本 ${commitHash.substring(0, 8)} 吗？`)) {
+  const confirmed = await showConfirm({
+    title: '回滚版本',
+    message: `确定要回滚到版本 ${commitHash.substring(0, 8)} 吗？`,
+    type: 'warning',
+    confirmText: '确定回滚',
+    cancelText: '取消'
+  })
+  
+  if (!confirmed) {
     return
   }
   
@@ -579,7 +588,15 @@ async function handleBranchChange() {
     return
   }
 
-  if (!confirm(`确定要切换到分支 ${selectedBranch.value} 吗？\n\n切换分支后将拉取最新代码。`)) {
+  const confirmed = await showConfirm({
+    title: '切换分支',
+    message: `确定要切换到分支 ${selectedBranch.value} 吗？\n\n切换分支后将拉取最新代码。`,
+    type: 'warning',
+    confirmText: '确定切换',
+    cancelText: '取消'
+  })
+  
+  if (!confirmed) {
     // 用户取消，恢复选择
     selectedBranch.value = gitStatus.value?.current_branch || ''
     return
@@ -665,7 +682,15 @@ async function handleSetGitPath() {
 
 // 清除自定义路径
 async function handleClearGitPath() {
-  if (!confirm('确定要清除自定义 Git 路径吗？\n\n系统将重新自动检测 Git。')) {
+  const confirmed = await showConfirm({
+    title: '清除自定义路径',
+    message: '确定要清除自定义 Git 路径吗？\n\n系统将重新自动检测 Git。',
+    type: 'warning',
+    confirmText: '确定清除',
+    cancelText: '取消'
+  })
+  
+  if (!confirmed) {
     return
   }
 
@@ -702,7 +727,15 @@ async function handleAutoDetectGit() {
     } else {
       // 没有检测到，询问是否下载
       if (gitStatus.value?.system_os === 'Windows') {
-        if (confirm('未检测到可用的 Git。\n\n是否立即下载安装便携版 Git？')) {
+        const confirmed = await showConfirm({
+          title: 'Git 未检测到',
+          message: '未检测到可用的 Git。\n\n是否立即下载安装便携版 Git？',
+          type: 'info',
+          confirmText: '立即安装',
+          cancelText: '取消'
+        })
+        
+        if (confirmed) {
           await installGitAuto()
           closeSetPathModal()
         } else {

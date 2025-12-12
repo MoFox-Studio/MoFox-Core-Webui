@@ -161,10 +161,19 @@ const menuItems: MenuItem[] = [
       { name: '插件配置', path: '/dashboard/plugin-config', icon: 'lucide:puzzle' },
     ]
   },
+  { 
+    name: '日志管理', 
+    path: '/dashboard/log-management', 
+    icon: 'lucide:settings',
+    key: 'log-management',
+    children: [
+      { name: '日志查看器', path: '/dashboard/log-viewer', icon: 'lucide:file-text' },
+      { name: '实时日志', path: '/dashboard/live-log', icon: 'lucide:radio' },
+    ]
+  },
   { name: '插件管理', path: '/dashboard/plugin-manage', icon: 'lucide:package' },
   { name: '插件市场', path: '/dashboard/marketplace', icon: 'lucide:store' },
   { name: 'MoFox-Bot更新', path: '/dashboard/git-update', icon: 'lucide:git-branch' },
-  { name: '日志查看器', path: '/dashboard/log-viewer', icon: 'lucide:file-text' },
 ]
 
 const toggleSidebar = () => {

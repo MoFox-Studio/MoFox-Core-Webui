@@ -12,6 +12,7 @@ import PluginMarketplace from '@/views/PluginMarketplace.vue'
 import PluginMarketplaceDetail from '@/views/PluginMarketplaceDetail.vue'
 import GitUpdateView from '@/views/GitUpdateView.vue'
 import LogViewerView from '@/views/LogViewerView.vue'
+import LiveLogView from '@/views/LiveLogView.vue'
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -86,6 +87,11 @@ const routes: Array<RouteRecordRaw> = [
         path: 'log-viewer',
         name: 'LogViewer',
         component: LogViewerView
+      },
+      {
+        path: 'live-log',
+        name: 'LiveLog',
+        component: LiveLogView
       }
     ]
   }

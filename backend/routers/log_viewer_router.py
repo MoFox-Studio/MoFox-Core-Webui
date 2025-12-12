@@ -13,10 +13,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
-from fastapi import Query
+from fastapi import Query, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 
 from src.common.logger import get_logger
+from src.common.log_broadcaster import get_log_broadcaster
 from src.common.security import VerifiedDep
 from src.config.config import PROJECT_ROOT
 from src.plugin_system import BaseRouterComponent
@@ -491,3 +492,49 @@ class LogViewerRouterComponent(BaseRouterComponent):
                 return LogStatsResponse(
                     success=False, total=0, by_level={}, by_logger={}
                 )
+
+        @self.router.websocket("/realtime")
+        async def websocket_realtime_logs(websocket: WebSocket):
+            """WebSocket端点,用于实时推送日志"""
+            await websocket.accept()
+            logger.info("WebSocket客户端已连接")
+
+            # 获取日志广播器
+            broadcaster = get_log_broadcaster()
+
+            # 定义日志回调函数
+            async def send_log(log_record: dict[str, Any]):
+                try:
+                    await websocket.send_json(log_record)
+                except Exception as e:
+                    logger.debug(f"发送日志到WebSocket失败: {e}")
+
+            # 订阅日志
+            await broadcaster.subscribe(send_log)
+
+            try:
+                # 发送历史日志
+                recent_logs = broadcaster.get_recent_logs(limit=100)
+                for log in recent_logs:
+                    try:
+                        await websocket.send_json(log)
+                    except Exception:
+                        break
+
+                # 保持连接,等待客户端消息或断开
+                while True:
+                    try:
+                        # 接收客户端消息(用于心跳或控制命令)
+                        data = await websocket.receive_text()
+                        # 可以在这里处理客户端发送的控制命令
+                        if data == "ping":
+                            await websocket.send_text("pong")
+                    except WebSocketDisconnect:
+                        logger.info("WebSocket客户端已断开")
+                        break
+                    except Exception as e:
+                        logger.error(f"WebSocket错误: {e}")
+                        break
+            finally:
+                # 取消订阅
+                await broadcaster.unsubscribe(send_log)
