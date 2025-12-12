@@ -240,6 +240,7 @@ export const API_ENDPOINTS = {
     DISABLE: (name: string) => `plugin_manager/plugins/${name}/disable`,
     RELOAD: (name: string) => `plugin_manager/plugins/${name}/reload`,
     UNLOAD: (name: string) => `plugin_manager/plugins/${name}/unload`,
+    DELETE: (name: string) => `plugin_manager/plugins/${name}/delete`,
     LOAD: (name: string) => `plugin_manager/plugins/${name}/load`,
     COMPONENTS: (name: string) => `plugin_manager/plugins/${name}/components`,
     COMPONENT_ENABLE: (pluginName: string, componentName: string, type: string) => 
@@ -780,6 +781,13 @@ export async function reloadPlugin(pluginName: string) {
  */
 export async function unloadPlugin(pluginName: string) {
   return api.post<OperationResponse>(API_ENDPOINTS.PLUGIN.UNLOAD(pluginName))
+}
+
+/**
+ * 删除插件（删除文件夹）
+ */
+export async function deletePlugin(pluginName: string) {
+  return api.delete<OperationResponse>(API_ENDPOINTS.PLUGIN.DELETE(pluginName))
 }
 
 /**

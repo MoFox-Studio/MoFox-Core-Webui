@@ -15,6 +15,7 @@ import {
   disablePlugin,
   reloadPlugin,
   unloadPlugin,
+  deletePlugin,
   loadPlugin,
   getPluginComponents,
   enableComponent,
@@ -282,6 +283,31 @@ export const usePluginStore = defineStore('plugin', () => {
   }
   
   /**
+   * 删除插件（删除文件夹）
+   */
+  async function deletePluginAction(pluginName: string) {
+    try {
+      const response = await deletePlugin(pluginName)
+      
+      if (response.success) {
+        // 从列表中移除
+        const index = plugins.value.findIndex(p => p.name === pluginName)
+        if (index !== -1) {
+          plugins.value.splice(index, 1)
+        }
+        if (currentPlugin.value?.name === pluginName) {
+          currentPlugin.value = null
+        }
+        return { success: true, message: response.data?.message }
+      } else {
+        return { success: false, error: response.data?.error || response.error }
+      }
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : '网络错误' }
+    }
+  }
+  
+  /**
    * 加载插件
    */
   async function loadPluginAction(pluginName: string) {
@@ -529,6 +555,7 @@ export const usePluginStore = defineStore('plugin', () => {
     disablePluginAction,
     reloadPluginAction,
     unloadPluginAction,
+    deletePluginAction,
     loadPluginAction,
     enableComponentAction,
     disableComponentAction,

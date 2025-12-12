@@ -45,11 +45,19 @@
         </button>
         <button 
           v-if="currentPlugin?.loaded && !isSystemPlugin(currentPlugin)"
-          class="btn btn-error" 
+          class="btn btn-warning" 
           @click="handleUnload"
         >
-          <Icon icon="lucide:trash-2" />
+          <Icon icon="lucide:power-off" />
           卸载
+        </button>
+        <button 
+          v-if="!isSystemPlugin(currentPlugin)"
+          class="btn btn-error" 
+          @click="handleDelete"
+        >
+          <Icon icon="lucide:trash-2" />
+          删除
         </button>
       </div>
     </header>
@@ -422,6 +430,23 @@ async function handleUnload() {
       const result = await pluginStore.unloadPluginAction(pluginName)
       showToast(
         result.success ? '插件已卸载' : result.error || '卸载失败',
+        result.success ? 'success' : 'error'
+      )
+      if (result.success) {
+        goBack()
+      }
+    }
+  )
+}
+
+async function handleDelete() {
+  showConfirm(
+    '删除插件',
+    `确定要删除插件 "${currentPlugin.value?.display_name}" 吗？此操作将删除插件的所有文件，且无法撤销！`,
+    async () => {
+      const result = await pluginStore.deletePluginAction(pluginName)
+      showToast(
+        result.success ? '插件已删除' : result.error || '删除失败',
         result.success ? 'success' : 'error'
       )
       if (result.success) {
@@ -939,6 +964,18 @@ onMounted(() => {
   background: var(--bg-hover);
   color: var(--text-primary);
   border-color: var(--primary);
+}
+
+.btn-warning {
+  background: rgba(251, 191, 36, 0.1);
+  color: rgb(251, 191, 36);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+}
+
+.btn-warning:hover:not(:disabled) {
+  background: rgb(251, 191, 36);
+  color: white;
+  border-color: rgb(251, 191, 36);
 }
 
 .btn-error {

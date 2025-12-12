@@ -379,6 +379,57 @@ class WebUIPluginRouter(BaseRouterComponent):
                 logger.error(f"卸载插件失败: {e}", exc_info=True)
                 return OperationResponse(success=False, error=f"内部错误: {str(e)}")
 
+        @self.router.delete("/plugins/{plugin_name}/delete", summary="删除插件")
+        async def delete_plugin(plugin_name: str, _=VerifiedDep) -> OperationResponse:
+            """删除指定的插件（删除文件夹）"""
+            try:
+                import shutil
+                from pathlib import Path
+                
+                # 先卸载插件（如果已加载）
+                if plugin_manage_api.is_plugin_loaded(plugin_name):
+                    logger.info(f"插件 '{plugin_name}' 已加载，先进行卸载")
+                    await plugin_manage_api.unload_plugin(plugin_name)
+                
+                # 获取插件路径
+                plugin_path = plugin_manager.get_plugin_path(plugin_name)
+                if not plugin_path:
+                    logger.error(f"无法获取插件 '{plugin_name}' 的路径")
+                    return OperationResponse(success=False, error=f"无法找到插件 '{plugin_name}' 的文件夹")
+                
+                # 获取插件文件夹路径（去除 plugin.py 或 __init__.py 部分）
+                plugin_folder = Path(plugin_path).parent
+                
+                # 安全检查：确保路径包含 "plugins" 目录
+                if "plugins" not in str(plugin_folder).lower():
+                    logger.error(f"安全检查失败：插件路径不在 plugins 目录中: {plugin_folder}")
+                    return OperationResponse(success=False, error="安全检查失败：插件路径不合法")
+                
+                # 检查文件夹是否存在
+                if not plugin_folder.exists():
+                    logger.warning(f"插件文件夹不存在: {plugin_folder}")
+                    return OperationResponse(success=False, error=f"插件文件夹不存在: {plugin_folder}")
+                
+                # 删除文件夹
+                logger.info(f"正在删除插件文件夹: {plugin_folder}")
+                shutil.rmtree(plugin_folder)
+                logger.info(f"插件 '{plugin_name}' 文件夹已删除: {plugin_folder}")
+                
+                # 从注册表中移除插件信息
+                if plugin_name in plugin_manager.plugin_classes:
+                    del plugin_manager.plugin_classes[plugin_name]
+                if plugin_name in plugin_manager.plugin_paths:
+                    del plugin_manager.plugin_paths[plugin_name]
+                
+                return OperationResponse(success=True, message=f"插件 '{plugin_name}' 已成功删除")
+                
+            except PermissionError as e:
+                logger.error(f"删除插件失败（权限不足）: {e}", exc_info=True)
+                return OperationResponse(success=False, error="权限不足，无法删除插件文件夹")
+            except Exception as e:
+                logger.error(f"删除插件失败: {e}", exc_info=True)
+                return OperationResponse(success=False, error=f"内部错误: {str(e)}")
+
         @self.router.post("/plugins/{plugin_name}/load", summary="加载插件")
         async def load_plugin(plugin_name: str, _=VerifiedDep) -> OperationResponse:
             """加载指定的插件"""

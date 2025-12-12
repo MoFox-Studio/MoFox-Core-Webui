@@ -135,6 +135,14 @@
               <Icon icon="lucide:refresh-cw" />
               重试
             </button>
+            <button 
+              v-if="!isSystemPlugin(plugin)"
+              class="btn btn-sm btn-error" 
+              @click="handleDeletePlugin(plugin.name, plugin.display_name)"
+              title="删除插件"
+            >
+              <Icon icon="lucide:trash-2" />
+            </button>
           </div>
         </div>
       </div>
@@ -239,6 +247,14 @@
               title="重载插件"
             >
               <Icon icon="lucide:refresh-cw" />
+            </button>
+            <button 
+              v-if="!isSystemPlugin(plugin)"
+              class="btn btn-sm btn-error" 
+              @click="handleDeletePlugin(plugin.name, plugin.display_name)"
+              title="删除插件"
+            >
+              <Icon icon="lucide:trash-2" />
             </button>
             <button 
               v-if="plugin.loaded"
@@ -408,6 +424,24 @@ async function handleLoadPlugin(pluginName: string) {
         result.success ? '插件加载成功' : result.error || '加载失败',
         result.success ? 'success' : 'error'
       )
+    }
+  )
+}
+
+async function handleDeletePlugin(pluginName: string, displayName: string) {
+  showConfirm(
+    '删除插件',
+    `确定要删除插件 "${displayName || pluginName}" 吗？此操作将删除插件的所有文件，且无法撤销！`,
+    async () => {
+      const result = await pluginStore.deletePluginAction(pluginName)
+      showToast(
+        result.success ? '插件已删除' : result.error || '删除失败',
+        result.success ? 'success' : 'error'
+      )
+      if (result.success) {
+        // 刷新插件列表
+        await refreshPluginList()
+      }
     }
   )
 }
