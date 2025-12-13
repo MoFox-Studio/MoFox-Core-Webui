@@ -111,35 +111,26 @@
             <p style="font-size: 12px; margin-top: 8px;">尝试调整筛选条件或搜索关键词</p>
           </div>
 
-          <div v-else class="log-entries">
+          <div v-else class="log-entries terminal-style">
             <div 
               v-for="entry in filteredLogs" 
               :key="entry.line_number"
-              class="log-entry"
+              class="log-entry terminal-line"
               :class="`level-${entry.level.toLowerCase()}`"
             >
-              <div class="entry-header">
-                <span class="entry-time">{{ formatTimestamp(entry.timestamp) }}</span>
-                <span class="entry-level" :class="`level-${entry.level.toLowerCase()}`">
-                  {{ entry.level }}
-                </span>
-                <span 
-                  class="entry-logger" 
-                  v-if="entry.alias || entry.logger_name"
-                  :style="entry.color ? { color: entry.color } : {}"
-                  :title="entry.alias ? entry.logger_name : ''"
-                >
-                  {{ entry.alias || entry.logger_name }}
-                </span>
-                <span class="entry-line">#{{ entry.line_number }}</span>
-              </div>
-              <div class="entry-message" v-html="formatLogMessage(entry.event)"></div>
-              <div v-if="entry.extra" class="entry-extra">
-                <details>
-                  <summary>额外信息</summary>
-                  <pre>{{ JSON.stringify(entry.extra, null, 2) }}</pre>
-                </details>
-              </div>
+              <span class="terminal-time">{{ formatTimestamp(entry.timestamp) }}</span>
+              <span class="terminal-level" :class="`level-${entry.level.toLowerCase()}`">
+                [{{ entry.level.padEnd(8, ' ') }}]
+              </span>
+              <span 
+                class="terminal-logger" 
+                v-if="entry.alias || entry.logger_name"
+                :style="entry.color ? { color: entry.color } : {}"
+                :title="entry.alias ? entry.logger_name : ''"
+              >
+                [{{ entry.alias || entry.logger_name }}]
+              </span>
+              <span class="terminal-message" v-html="formatLogMessage(entry.event)"></span>
             </div>
           </div>
         </div>
@@ -231,7 +222,6 @@ const formatTimestamp = (timestamp: string) => {
 
 // 格式化日志消息（处理 ANSI 转义序列和 JSON）
 const formatLogMessage = (message: string) => {
-  console.log('[formatLogMessage] 输入消息:', message, '类型:', typeof message)
   if (!message) return ''
   
   // 尝试解析 JSON 格式的日志（包括 Python 字典格式）
@@ -240,34 +230,23 @@ const formatLogMessage = (message: string) => {
     let parsed = null
     try {
       parsed = JSON.parse(message)
-      console.log('[formatLogMessage] 标准JSON解析成功:', parsed)
     } catch {
       // 如果失败，尝试将 Python 字典格式转换为 JSON
-      // 将单引号替换为双引号（注意：这是简化处理，可能在某些情况下不够完善）
-      console.log('[formatLogMessage] 尝试Python字典格式转换')
       const jsonMessage = message
         .replace(/'/g, '"')  // 单引号转双引号
         .replace(/True/g, 'true')  // Python True -> JSON true
         .replace(/False/g, 'false')  // Python False -> JSON false
         .replace(/None/g, 'null')  // Python None -> JSON null
-      console.log('[formatLogMessage] 转换后的JSON字符串:', jsonMessage)
       parsed = JSON.parse(jsonMessage)
-      console.log('[formatLogMessage] Python字典格式解析成功:', parsed)
     }
     
     if (parsed && typeof parsed === 'object') {
-      // 格式化为可读的文本
-      const parts: string[] = []
-      if (parsed.event) parts.push(parsed.event)
-      if (parsed.logger_name && !parsed.alias) parts.push(`[${parsed.logger_name}]`)
-      if (parsed.level) parts.push(`[${parsed.level}]`)
-      if (parsed.timestamp) parts.push(`[${parsed.timestamp}]`)
-      const result = escapeHtml(parts.join(' '))
-      console.log('[formatLogMessage] JSON格式化结果:', result)
-      return result
+      // 只返回 event 内容
+      if (parsed.event) {
+        return escapeHtml(parsed.event)
+      }
     }
   } catch (e) {
-    console.log('[formatLogMessage] JSON解析完全失败，继续ANSI处理:', e)
     // 不是 JSON，继续处理
   }
   
@@ -314,9 +293,7 @@ const formatLogMessage = (message: string) => {
     }
   }
   
-  const finalResult = result || escapeHtml(message)
-  console.log('[formatLogMessage] ANSI处理最终结果:', finalResult)
-  return finalResult
+  return result || escapeHtml(message)
 }
 
 // HTML 转义
@@ -564,16 +541,46 @@ onUnmounted(() => {
   max-height: calc(100vh - 220px);
   display: flex;
   flex-direction: column;
-  background: var(--bg-primary);
+  background: var(--terminal-bg);
   border-radius: var(--radius-lg);
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--terminal-border);
   overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* 终端配色变量 */
+:root {
+  --terminal-bg: #0a0a0a;
+  --terminal-bar-bg: #1a1a1a;
+  --terminal-border: #2a2a2a;
+  --terminal-text: #e0e0e0;
+  --terminal-text-dim: #909090;
+  --terminal-text-darker: #808080;
+  --terminal-hover: rgba(255, 255, 255, 0.03);
+  --terminal-scrollbar-track: #1a1a1a;
+  --terminal-scrollbar-thumb: #404040;
+  --terminal-scrollbar-thumb-hover: #505050;
+}
+
+/* 浅色模式 */
+html.light {
+  --terminal-bg: #f8f9fa;
+  --terminal-bar-bg: #e9ecef;
+  --terminal-border: #dee2e6;
+  --terminal-text: #212529;
+  --terminal-text-dim: #6c757d;
+  --terminal-text-darker: #495057;
+  --terminal-hover: rgba(0, 0, 0, 0.03);
+  --terminal-scrollbar-track: #e9ecef;
+  --terminal-scrollbar-thumb: #ced4da;
+  --terminal-scrollbar-thumb-hover: #adb5bd;
 }
 
 /* 工具栏 */
 .toolbar {
   padding: 16px;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--terminal-border);
+  background: var(--terminal-bar-bg);
   display: flex;
   justify-content: space-between;
   gap: 16px;
@@ -748,8 +755,8 @@ onUnmounted(() => {
 /* 统计栏 */
 .stats-bar {
   padding: 12px 16px;
-  border-bottom: 1px solid var(--border-color);
-  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--terminal-border);
+  background: var(--terminal-bar-bg);
   display: flex;
   gap: 24px;
   flex-wrap: wrap;
@@ -761,15 +768,16 @@ onUnmounted(() => {
   align-items: center;
   gap: 6px;
   font-size: 13px;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
 }
 
 .stat-label {
-  color: var(--text-secondary);
+  color: var(--terminal-text-dim);
 }
 
 .stat-value {
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--terminal-text);
 }
 
 .stat-value.level-debug { color: #8b8b8b; }
@@ -778,112 +786,148 @@ onUnmounted(() => {
 .stat-value.level-error { color: #ef4444; }
 .stat-value.level-critical { color: #dc2626; }
 
-/* 日志内容区 */
+/* 日志内容区 - 命令行样式 */
 .log-content {
   flex: 1;
   overflow-y: auto;
-  overflow-x: hidden;
-  padding: 16px;
+  overflow-x: auto;
+  padding: 12px;
   min-height: 0;
+  background: var(--terminal-bg);
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
 }
 
 .log-content::-webkit-scrollbar {
-  width: 8px;
+  width: 10px;
+  height: 10px;
 }
 
 .log-content::-webkit-scrollbar-track {
-  background: var(--bg-secondary);
-  border-radius: 4px;
+  background: var(--terminal-scrollbar-track);
 }
 
 .log-content::-webkit-scrollbar-thumb {
-  background: var(--border-color);
-  border-radius: 4px;
+  background: var(--terminal-scrollbar-thumb);
+  border-radius: 2px;
 }
 
 .log-content::-webkit-scrollbar-thumb:hover {
-  background: var(--text-tertiary);
+  background: var(--terminal-scrollbar-thumb-hover);
 }
 
-.log-entries {
+/* 命令行样式的日志条目 */
+.log-entries.terminal-style {
   display: flex;
   flex-direction: column;
+  gap: 0;
+}
+
+.log-entry.terminal-line {
+  padding: 2px 4px;
+  border: none;
+  background: transparent;
+  transition: background 0.1s ease;
+  animation: terminalFadeIn 0.15s ease-out;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  display: flex;
   gap: 8px;
 }
 
-.log-entry {
-  padding: 12px;
-  border-radius: var(--radius);
-  border-left: 3px solid var(--border-color);
-  background: var(--bg-secondary);
-  transition: all var(--transition);
-  animation: slideIn 0.2s ease-out;
-}
-
-@keyframes slideIn {
+@keyframes terminalFadeIn {
   from {
     opacity: 0;
-    transform: translateY(-10px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
-.log-entry:hover {
-  background: var(--bg-hover);
+.log-entry.terminal-line:hover {
+  background: var(--terminal-hover);
 }
 
-.log-entry.level-debug { border-left-color: #8b8b8b; }
-.log-entry.level-info { border-left-color: #3b82f6; }
-.log-entry.level-warning { border-left-color: #f59e0b; }
-.log-entry.level-error { border-left-color: #ef4444; }
-.log-entry.level-critical { border-left-color: #dc2626; }
-
-.entry-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 8px;
-  font-size: 12px;
-  flex-wrap: wrap;
+/* 时间戳 - 橙黄色 */
+.terminal-time {
+  color: #d97706;
+  flex-shrink: 0;
+  font-weight: normal;
 }
 
-.entry-time {
-  color: var(--text-tertiary);
-  font-family: 'Consolas', 'Monaco', monospace;
+html.light .terminal-time {
+  color: #b45309;
 }
 
-.entry-level {
-  padding: 2px 8px;
-  border-radius: var(--radius-sm);
-  font-weight: 600;
-  font-size: 11px;
+/* 日志级别 - 根据级别显示不同颜色 */
+.terminal-level {
+  font-weight: bold;
+  flex-shrink: 0;
+  min-width: 90px;
 }
 
-.entry-level.level-debug { background: #8b8b8b; color: white; }
-.entry-level.level-info { background: #3b82f6; color: white; }
-.entry-level.level-warning { background: #f59e0b; color: white; }
-.entry-level.level-error { background: #ef4444; color: white; }
-.entry-level.level-critical { background: #dc2626; color: white; }
-
-.entry-logger {
-  font-weight: 600;
-  color: var(--text-primary);
+.terminal-level.level-debug { color: #9ca3af; }
+.terminal-level.level-info { color: #3b82f6; }
+.terminal-level.level-warning { color: #f59e0b; }
+.terminal-level.level-error { color: #ef4444; }
+.terminal-level.level-critical { 
+  color: #dc2626;
+  background: rgba(220, 38, 38, 0.2);
+  padding: 0 4px;
 }
 
-.entry-line {
-  color: var(--text-tertiary);
-  margin-left: auto;
+/* 浅色模式下的级别颜色调整 */
+html.light .terminal-level.level-debug { color: #6b7280; }
+html.light .terminal-level.level-info { color: #2563eb; }
+html.light .terminal-level.level-warning { color: #d97706; }
+html.light .terminal-level.level-error { color: #dc2626; }
+html.light .terminal-level.level-critical { 
+  color: #991b1b;
+  background: rgba(220, 38, 38, 0.15);
 }
 
-.entry-message {
-  color: var(--text-primary);
-  font-size: 14px;
-  line-height: 1.6;
+/* Logger名称 */
+.terminal-logger {
+  color: var(--terminal-text-darker);
+  flex-shrink: 0;
+  font-weight: normal;
+}
+
+/* 消息内容 */
+.terminal-message {
+  color: var(--terminal-text);
+  flex: 1;
   word-break: break-word;
-  font-family: 'Consolas', 'Monaco', monospace;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+/* 错误级别的消息使用红色背景 */
+.log-entry.terminal-line.level-error {
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.log-entry.terminal-line.level-critical {
+  background: rgba(220, 38, 38, 0.1);
+}
+
+/* 警告级别的消息使用橙色背景 */
+.log-entry.terminal-line.level-warning {
+  background: rgba(245, 158, 11, 0.05);
+}
+
+/* 浅色模式下的背景颜色调整 */
+html.light .log-entry.terminal-line.level-error {
+  background: rgba(239, 68, 68, 0.08);
+}
+
+html.light .log-entry.terminal-line.level-critical {
+  background: rgba(220, 38, 38, 0.12);
+}
+
+html.light .log-entry.terminal-line.level-warning {
+  background: rgba(245, 158, 11, 0.08);
 }
 
 .entry-extra {
@@ -919,8 +963,9 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   padding: 60px 20px;
-  color: var(--text-tertiary);
+  color: var(--terminal-text-darker);
   height: 100%;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
 }
 
 .empty-icon,
@@ -928,12 +973,14 @@ onUnmounted(() => {
   font-size: 48px;
   margin-bottom: 12px;
   opacity: 0.5;
+  color: var(--terminal-text-darker);
 }
 
 .empty-state p,
 .loading-state p {
   font-size: 14px;
   margin: 0;
+  color: var(--terminal-text-dim);
 }
 
 .spinning {
