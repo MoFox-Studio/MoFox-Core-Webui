@@ -63,7 +63,7 @@
         
         <button type="submit" class="login-button" :disabled="loading">
           <span v-if="loading" class="loading-spinner"></span>
-          <span v-else>
+          <span v-else class="button-content">
             <Icon icon="lucide:log-in" />
             登录
           </span>
@@ -71,9 +71,9 @@
       </form>
 
       <!-- 底部信息 -->
-      <div class="footer-info">
+      <!-- <div class="footer-info">
         <p>© 2024 MoFox Bot · 安全登录</p>
-      </div>
+      </div> -->
     </div>
   </div>
 </template>
@@ -437,6 +437,12 @@ const handleLogin = async () => {
   font-weight: 600;
   cursor: pointer;
   transition: all var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.button-content {
   display: flex;
   align-items: center;
   justify-content: center;
