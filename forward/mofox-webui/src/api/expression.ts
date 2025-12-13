@@ -33,7 +33,11 @@ export interface Expression {
   style: string
   count: number
   last_active_time: number
-  chat_id: string
+  chat_id: string  // 哈希值，用于后端操作
+  chat_id_display?: string  // 格式化显示：platform:raw_id:type（可选，兼容旧数据）
+  chat_platform?: string  // 平台（如：QQ、OneBot）（可选）
+  chat_raw_id?: string  // 原始ID（群号或用户ID）（可选）
+  chat_type?: string  // 类型（group/private）（可选）
   chat_name: string
   type: ExpressionType
   create_date: number

@@ -123,9 +123,9 @@
           </div>
         </div>
         <div class="card-footer">
-          <span class="chat-name" :title="expr.chat_id">
+          <span class="chat-name" :title="`${expr.chat_id_display || expr.chat_id}\n哈希: ${expr.chat_id}`">
             <Icon icon="mdi:chat" />
-            {{ formatChatId(expr.chat_id) }}
+            {{ expr.chat_id_display || expr.chat_name || expr.chat_id.substring(0, 8) + '...' }}
           </span>
           <span class="last-use">
             <Icon icon="mdi:clock-outline" />
@@ -206,9 +206,9 @@
 
                 <div class="detail-item">
                   <label>所属聊天流</label>
-                  <div class="detail-value">
+                  <div class="detail-value" :title="`平台: ${expressionDetail.chat_platform}\nID: ${expressionDetail.chat_raw_id}\n类型: ${expressionDetail.chat_type}\n\n完整ID: ${expressionDetail.chat_id_display}\n哈希: ${expressionDetail.chat_id}`">
                     <Icon icon="mdi:chat" />
-                    {{ expressionDetail.chat_name }}
+                    {{ expressionDetail.chat_name }} ({{ expressionDetail.chat_id_display }})
                   </div>
                 </div>
 
@@ -312,8 +312,13 @@
                   v-model="editForm.chat_id"
                   type="text"
                   class="form-input"
-                  placeholder="输入聊天流ID"
+                  placeholder="格式: platform:id:type (如 QQ:12345:group) 或哈希值"
                 />
+                <small style="color: var(--text-tertiary); font-size: 12px; margin-top: 4px; display: block;">
+                  支持格式：<br>
+                  • platform:raw_id:type (如: QQ:12345:group 或 QQ:67890:private)<br>
+                  • 哈希值 (如: abc123def456...)
+                </small>
               </div>
             </div>
             <div class="dialog-footer">
@@ -403,8 +408,13 @@
                   v-model="learningChatId"
                   type="text"
                   class="form-input"
-                  placeholder="输入聊天流ID"
+                  placeholder="格式: platform:id:type (如 QQ:12345:group) 或哈希值"
                 />
+                <small style="color: var(--text-tertiary); font-size: 12px; margin-top: 4px; display: block;">
+                  支持格式：<br>
+                  • platform:raw_id:type (如: QQ:12345:group 或 QQ:67890:private)<br>
+                  • 哈希值 (如: abc123def456...)
+                </small>
               </div>
 
               <div class="form-group">
@@ -716,29 +726,6 @@ const triggerLearning = async () => {
   } catch (err) {
     await showError(err instanceof Error ? err.message : '学习失败')
   }
-}
-
-// 格式化聊天ID显示
-const formatChatId = (chatId: string) => {
-  if (!chatId) return '未知'
-  
-  // 如果是群聊ID (group_数字格式)
-  if (chatId.startsWith('group_')) {
-    return `群聊 ${chatId.replace('group_', '')}`
-  }
-  
-  // 如果是私聊ID (很长的数字)
-  if (/^\d+$/.test(chatId) && chatId.length > 10) {
-    // 只显示前4位和后4位
-    return `${chatId.slice(0, 4)}...${chatId.slice(-4)}`
-  }
-  
-  // 其他格式，如果太长则截断
-  if (chatId.length > 20) {
-    return `${chatId.slice(0, 10)}...${chatId.slice(-6)}`
-  }
-  
-  return chatId
 }
 
 // 格式化相对时间
