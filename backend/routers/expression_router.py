@@ -44,14 +44,6 @@ class BatchDeleteRequest(BaseModel):
     expression_ids: list[int] = Field(..., description="要删除的表达方式ID列表")
 
 
-class TriggerLearningRequest(BaseModel):
-    """触发学习请求"""
-
-    chat_id: str = Field(..., description="聊天流ID")
-    type: Literal["style", "grammar", "both"] = Field(default="both", description="学习类型")
-    force: bool = Field(default=False, description="是否强制学习")
-
-
 class ImportExpressionsRequest(BaseModel):
     """导入表达方式请求"""
 
@@ -78,9 +70,6 @@ class ExpressionRouterComponent(BaseRouterComponent):
     - DELETE /expression/{id}: 删除表达方式
     - POST /expression/batch-delete: 批量删除
     - POST /expression/{id}/activate: 激活表达方式
-    - POST /expression/learning/trigger: 触发学习
-    - GET /expression/learning/status/{chat_id}: 获取学习状态
-    - POST /expression/cleanup: 清理过期表达方式
     - GET /expression/sharing-groups/list: 获取共享组配置
     - GET /expression/related-chats/{chat_id}: 获取关联聊天流
     - GET /expression/export/data: 导出表达方式
@@ -269,52 +258,7 @@ class ExpressionRouterComponent(BaseRouterComponent):
                 logger.error(f"激活表达方式失败: {e}")
                 raise HTTPException(status_code=500, detail=str(e)) from e
 
-        @self.router.post(
-            "/learning/trigger",
-            summary="触发学习",
-            description="手动触发表达方式学习"
-        )
-        async def trigger_learning(request: TriggerLearningRequest, _= VerifiedDep):
-            """触发学习"""
-            try:
-                result = await expression_api.trigger_learning(chat_id=request.chat_id, type=request.type, force=request.force)
-                return result
-            except ValueError as e:
-                raise HTTPException(status_code=400, detail=str(e)) from e
-            except Exception as e:
-                logger.error(f"触发学习失败: {e}")
-                raise HTTPException(status_code=500, detail=str(e)) from e
 
-        @self.router.get(
-            "/learning/status/{chat_id}",
-            summary="获取学习状态",
-            description="获取指定聊天流的学习状态"
-        )
-        async def get_learning_status(chat_id: str, _= VerifiedDep):
-            """获取学习状态"""
-            try:
-                return await expression_api.get_learning_status(chat_id)
-            except Exception as e:
-                logger.error(f"获取学习状态失败: {e}")
-                raise HTTPException(status_code=500, detail=str(e)) from e
-
-        @self.router.post(
-            "/cleanup",
-            summary="清理过期表达方式",
-            description="清理长时间未使用的表达方式"
-        )
-        async def cleanup_expired(
-            _= VerifiedDep,
-            chat_id: str | None = Query(None, description="聊天流ID"),
-            expiration_days: int | None = Query(None, ge=1, description="过期天数"),
-        ):
-            """清理过期表达方式"""
-            try:
-                deleted = await expression_api.cleanup_expired_expressions(chat_id=chat_id, expiration_days=expiration_days)
-                return {"deleted": deleted}
-            except Exception as e:
-                logger.error(f"清理过期表达方式失败: {e}")
-                raise HTTPException(status_code=500, detail=str(e)) from e
 
         @self.router.get(
             "/sharing-groups/list",

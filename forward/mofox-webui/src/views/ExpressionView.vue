@@ -11,10 +11,6 @@
           <Icon icon="mdi:chart-box" />
           统计信息
         </button>
-        <button class="action-btn learning-btn" @click="showLearningDialog = true">
-          <Icon icon="mdi:brain" />
-          学习管理
-        </button>
         <button class="action-btn create-btn" @click="openCreateDialog">
           <Icon icon="mdi:plus-circle" />
           新建表达
@@ -91,7 +87,7 @@
     <div v-else-if="!expressionList || expressionList.length === 0" class="empty-state">
       <Icon class="empty-icon" icon="mdi:folder-open-outline" />
       <h3>暂无表达方式</h3>
-      <p>{{ searchQuery ? '没有找到匹配的表达方式' : '还没有学习到任何表达方式' }}</p>
+      <p>{{ searchQuery ? '没有找到匹配的表达方式' : '还没有创建任何表达方式' }}</p>
     </div>
 
     <!-- 表达方式网格 -->
@@ -389,61 +385,6 @@
         </div>
       </Transition>
     </Teleport>
-
-    <!-- 学习管理对话框 -->
-    <Teleport to="body">
-      <Transition name="dialog-fade">
-        <div v-if="showLearningDialog" class="dialog-overlay" @click.self="showLearningDialog = false">
-          <div class="dialog learning-dialog">
-            <div class="dialog-header">
-              <h3>学习管理</h3>
-              <button class="close-button" @click="showLearningDialog = false">
-                <Icon icon="mdi:close" />
-              </button>
-            </div>
-            <div class="dialog-body">
-              <div class="form-group">
-                <label>聊天流ID</label>
-                <input
-                  v-model="learningChatId"
-                  type="text"
-                  class="form-input"
-                  placeholder="格式: platform:id:type (如 QQ:12345:group) 或哈希值"
-                />
-                <small style="color: var(--text-tertiary); font-size: 12px; margin-top: 4px; display: block;">
-                  支持格式：<br>
-                  • platform:raw_id:type (如: QQ:12345:group 或 QQ:67890:private)<br>
-                  • 哈希值 (如: abc123def456...)
-                </small>
-              </div>
-
-              <div class="form-group">
-                <label>学习类型</label>
-                <select v-model="learningType">
-                  <option value="both">全部</option>
-                  <option value="style">语言风格</option>
-                  <option value="grammar">句法特点</option>
-                </select>
-              </div>
-
-              <div class="form-group">
-                <label>
-                  <input v-model="forceLearning" type="checkbox" />
-                  强制学习（忽略限制条件）
-                </label>
-              </div>
-            </div>
-            <div class="dialog-footer">
-              <button class="cancel-button" @click="showLearningDialog = false">取消</button>
-              <button class="confirm-button" :disabled="!learningChatId" @click="triggerLearning">
-                <Icon icon="mdi:brain" />
-                开始学习
-              </button>
-            </div>
-          </div>
-        </div>
-      </Transition>
-    </Teleport>
   </div>
 </template>
 
@@ -457,7 +398,6 @@ import {
   updateExpression,
   deleteExpression,
   getStatistics,
-  triggerLearning as apiTriggerLearning,
   type Expression,
   type ExpressionDetail,
   type ExpressionStatistics,
@@ -485,7 +425,6 @@ const sortOrder = ref<'asc' | 'desc'>('desc')
 const showDetailDialog = ref(false)
 const showEditDialog = ref(false)
 const showStatisticsDialog = ref(false)
-const showLearningDialog = ref(false)
 
 // 详情和编辑
 const expressionDetail = ref<ExpressionDetail | null>(null)
@@ -502,16 +441,17 @@ const editForm = reactive({
 // 统计信息
 const statistics = ref<ExpressionStatistics | null>(null)
 
-// 学习相关
-const learningChatId = ref('')
-const learningType = ref<'style' | 'grammar' | 'both'>('both')
-const forceLearning = ref(false)
-
 // 监听统计对话框打开
 watch(showStatisticsDialog, (newVal) => {
   if (newVal && !statistics.value) {
     loadStatistics()
   }
+})
+
+// 监听筛选条件变化，自动刷新列表
+watch([filterType, sortBy, sortOrder], () => {
+  currentPage.value = 1 // 重置到第一页
+  loadExpressionList()
 })
 
 // 加载表达方式列表
@@ -523,7 +463,7 @@ const loadExpressionList = async () => {
     const result = await getExpressionList(
       currentPage.value,
       pageSize.value,
-      filterType.value || undefined,
+      undefined, // chatId 参数，目前不需要按聊天筛选
       filterType.value as ExpressionType | undefined,
       sortBy.value,
       sortOrder.value
@@ -705,29 +645,6 @@ const loadStatistics = async () => {
   }
 }
 
-// 触发学习
-const triggerLearning = async () => {
-  try {
-    const result = await apiTriggerLearning({
-      chat_id: learningChatId.value,
-      type: learningType.value,
-      force: forceLearning.value
-    })
-    
-    if (result.success && result.data) {
-      await showSuccess(
-        `学习完成！\n语言风格: ${result.data.style_learned}个\n句法特点: ${result.data.grammar_learned}个\n总计: ${result.data.total}个`
-      )
-      showLearningDialog.value = false
-      await loadExpressionList()
-    } else {
-      await showError(result.error || '学习失败')
-    }
-  } catch (err) {
-    await showError(err instanceof Error ? err.message : '学习失败')
-  }
-}
-
 // 格式化相对时间
 const formatRelativeTime = (timestamp: number) => {
   const now = Date.now() / 1000
@@ -795,11 +712,6 @@ const formatDate = (timestamp: number) => {
 .statistics-btn {
   background: var(--info-bg);
   color: var(--info);
-}
-
-.learning-btn {
-  background: var(--success-bg);
-  color: var(--success);
 }
 
 .create-btn {

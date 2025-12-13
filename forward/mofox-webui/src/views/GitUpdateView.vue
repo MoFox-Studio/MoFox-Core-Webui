@@ -279,6 +279,20 @@
             <span>已更新 {{ lastUpdateResult.updated_files.length }} 个文件</span>
           </div>
 
+          <!-- 依赖安装信息 -->
+          <div v-if="lastUpdateResult?.dependencies_message" class="dependencies-info">
+            <div class="dependencies-header">
+              <Icon :icon="lastUpdateResult.dependencies_installed ? 'lucide:package-check' : 'lucide:package-x'" />
+              <span class="dependencies-title">依赖安装</span>
+              <span v-if="lastUpdateResult.venv_type" class="venv-badge">
+                {{ lastUpdateResult.venv_type }}
+              </span>
+            </div>
+            <p class="dependencies-message" :class="{ 'message-success': lastUpdateResult.dependencies_installed, 'message-warning': !lastUpdateResult.dependencies_installed }">
+              {{ lastUpdateResult.dependencies_message }}
+            </p>
+          </div>
+
           <div class="modal-actions">
             <button class="btn-modal-primary" @click="closeSuccessModal">
               <Icon icon="lucide:check" />
@@ -528,6 +542,20 @@ async function performUpdate() {
       lastUpdateResult.value = response.data
       updateInfo.value = null
       showSuccessModal.value = true
+      
+      // 显示依赖安装提示
+      if (response.data?.dependencies_message) {
+        const message = response.data.dependencies_message
+        const installed = response.data.dependencies_installed
+        setTimeout(() => {
+          if (installed) {
+            showToast(`✅ ${message}`, 'success', 4000)
+          } else {
+            showToast(`⚠️ ${message}`, 'warning', 5000)
+          }
+        }, 500)
+      }
+      
       // 重新检查状态
       await refreshGitStatus()
     } else {
@@ -611,8 +639,25 @@ async function handleBranchChange() {
       showSuccessModal.value = true
       lastUpdateResult.value = {
         success: true,
-        message: response.data.message
+        message: response.data.message,
+        dependencies_installed: response.data.dependencies_installed,
+        dependencies_message: response.data.dependencies_message,
+        venv_type: response.data.venv_type
       }
+      
+      // 显示依赖安装提示
+      if (response.data?.dependencies_message) {
+        const message = response.data.dependencies_message
+        const installed = response.data.dependencies_installed
+        setTimeout(() => {
+          if (installed) {
+            showToast(`✅ ${message}`, 'success', 4000)
+          } else {
+            showToast(`⚠️ ${message}`, 'warning', 5000)
+          }
+        }, 500)
+      }
+      
       // 刷新状态
       await refreshGitStatus()
       // 检查新分支的更新
@@ -1619,6 +1664,59 @@ onMounted(async () => {
 
 .updated-summary svg {
   color: var(--color-success);
+}
+
+/* 依赖安装信息 */
+.dependencies-info {
+  margin-bottom: 28px;
+  padding: 20px;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+}
+
+.dependencies-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.dependencies-header svg {
+  font-size: 18px;
+}
+
+.dependencies-title {
+  flex: 1;
+}
+
+.venv-badge {
+  padding: 4px 10px;
+  background: rgba(99, 102, 241, 0.1);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--color-primary);
+  letter-spacing: 0.5px;
+}
+
+.dependencies-message {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.dependencies-message.message-success {
+  color: var(--color-success);
+}
+
+.dependencies-message.message-warning {
+  color: var(--color-warning);
 }
 
 .modal-actions {

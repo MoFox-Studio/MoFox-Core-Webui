@@ -32,6 +32,9 @@ export interface UpdateResult {
   updated_files?: string[]
   backup_commit?: string
   error?: string
+  dependencies_installed?: boolean
+  dependencies_message?: string
+  venv_type?: string
 }
 
 /**
@@ -84,6 +87,9 @@ export function switchBranch(branch: string) {
     message: string
     current_branch?: string
     error?: string
+    dependencies_installed?: boolean
+    dependencies_message?: string
+    venv_type?: string
   }>('git_update/switch-branch', {
     branch
   })

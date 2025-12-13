@@ -107,30 +107,6 @@ export interface ExpressionStatistics {
 }
 
 /**
- * 学习状态响应
- */
-export interface LearningStatus {
-  can_learn: boolean
-  enable_learning: boolean
-  learning_intensity: number
-  last_learning_time: number
-  messages_since_last: number
-  next_learning_in: number
-  should_trigger: boolean
-  min_messages_required: number
-}
-
-/**
- * 学习结果响应
- */
-export interface LearningResult {
-  success: boolean
-  style_learned: number
-  grammar_learned: number
-  total: number
-}
-
-/**
  * 共享组信息
  */
 export interface SharingGroup {
@@ -183,15 +159,6 @@ export interface UpdateExpressionRequest {
   style?: string
   count?: number
   type?: ExpressionType
-}
-
-/**
- * 触发学习请求
- */
-export interface TriggerLearningRequest {
-  chat_id: string
-  type?: 'style' | 'grammar' | 'both'
-  force?: boolean
 }
 
 /**
@@ -318,22 +285,6 @@ export async function batchDeleteExpressions(expressionIds: number[]) {
  */
 export async function activateExpression(expressionId: number, increment: number = 0.1) {
   return await api.post<{ success: boolean }>(`expression/${expressionId}/activate?increment=${increment}`)
-}
-
-// ==================== 学习管理接口 ====================
-
-/**
- * 触发学习
- */
-export async function triggerLearning(data: TriggerLearningRequest) {
-  return await api.post<LearningResult>('expression/learning/trigger', data)
-}
-
-/**
- * 获取学习状态
- */
-export async function getLearningStatus(chatId: string) {
-  return await api.get<LearningStatus>(`expression/learning/status/${chatId}`)
 }
 
 /**
