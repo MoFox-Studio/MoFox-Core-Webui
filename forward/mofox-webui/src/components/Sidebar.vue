@@ -208,8 +208,10 @@ const isGroupActive = (item: MenuItem) => {
 <style scoped>
 .sidebar {
   height: 100vh;
-  background: var(--bg-primary);
-  border-right: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-right: 1px solid rgba(255, 255, 255, 0.5);
   display: flex;
   flex-direction: column;
   position: sticky;
@@ -218,6 +220,12 @@ const isGroupActive = (item: MenuItem) => {
   width: var(--sidebar-width);
   transition: width var(--transition-slow) cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+[data-theme="dark"] .sidebar {
+  background: rgba(30, 41, 59, 0.8);
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .sidebar.collapsed {
@@ -226,37 +234,42 @@ const isGroupActive = (item: MenuItem) => {
 
 /* 侧边栏头部 */
 .sidebar-header {
-  height: 72px;
+  height: 88px;
   display: flex;
   align-items: center;
-  padding: 0 20px;
-  border-bottom: 1px solid var(--border-color);
+  padding: 0 24px;
+  margin-bottom: 12px;
 }
 
 .logo-wrapper {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
   overflow: hidden;
 }
 
 .logo-icon {
-  width: 40px;
-  height: 40px;
-  min-width: 40px;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-  border-radius: var(--radius);
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
+  font-size: 26px;
   color: white;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  box-shadow: var(--shadow-soft);
+  transition: transform var(--transition);
+}
+
+.logo-wrapper:hover .logo-icon {
+  transform: rotate(-5deg) scale(1.05);
 }
 
 .logo-text {
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 24px;
+  font-weight: 800;
   color: var(--text-primary);
   white-space: nowrap;
   letter-spacing: -0.5px;
@@ -265,7 +278,7 @@ const isGroupActive = (item: MenuItem) => {
 /* 导航菜单 */
 .sidebar-nav {
   flex: 1;
-  padding: 16px 12px;
+  padding: 0 16px;
   overflow-y: auto;
   overflow-x: hidden;
 }
@@ -273,16 +286,16 @@ const isGroupActive = (item: MenuItem) => {
 .nav-section {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .nav-section-title {
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 700;
   color: var(--text-tertiary);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: 8px 12px 12px;
+  letter-spacing: 1px;
+  padding: 16px 16px 8px;
   white-space: nowrap;
 }
 
@@ -293,21 +306,25 @@ const isGroupActive = (item: MenuItem) => {
 .nav-item-content {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px;
+  gap: 14px;
+  padding: 14px 16px;
   border-radius: var(--radius);
   cursor: pointer;
   position: relative;
   transition: all var(--transition);
   overflow: hidden;
+  color: var(--text-secondary);
 }
 
 .nav-item-content:hover {
-  background: var(--bg-hover);
+  background: var(--bg-tertiary);
+  color: var(--primary);
 }
 
 .nav-item.active .nav-item-content {
   background: var(--primary-bg);
+  color: var(--primary);
+  font-weight: 600;
 }
 
 .nav-icon-wrapper {
@@ -320,38 +337,30 @@ const isGroupActive = (item: MenuItem) => {
 }
 
 .nav-icon {
-  font-size: 20px;
-  color: var(--text-secondary);
+  font-size: 22px;
   transition: all var(--transition);
 }
 
-.nav-item.active .nav-icon,
-.nav-item-content:hover .nav-icon {
-  color: var(--primary);
+.nav-item.active .nav-icon {
+  transform: scale(1.1);
 }
 
 .nav-text {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-secondary);
+  font-size: 15px;
   white-space: nowrap;
   transition: all var(--transition);
 }
 
-.nav-item.active .nav-text,
-.nav-item-content:hover .nav-text {
-  color: var(--primary);
-}
-
 .active-indicator {
   position: absolute;
-  left: 0;
+  right: 12px;
   top: 50%;
   transform: translateY(-50%);
-  width: 3px;
-  height: 24px;
+  width: 6px;
+  height: 6px;
   background: var(--primary);
-  border-radius: 0 var(--radius-full) var(--radius-full) 0;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--primary-lighter);
 }
 
 /* 导航组样式 */
@@ -373,71 +382,63 @@ const isGroupActive = (item: MenuItem) => {
 }
 
 .nav-group-header.expanded {
-  background: var(--bg-hover);
+  background: var(--bg-tertiary);
 }
 
 .nav-arrow {
   margin-left: auto;
-  font-size: 16px;
+  font-size: 18px;
   color: var(--text-tertiary);
   transition: transform var(--transition);
 }
 
 .nav-group-header.expanded .nav-arrow {
   color: var(--primary);
+  transform: rotate(180deg);
 }
 
 /* 子菜单样式 */
 .nav-children {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   padding-left: 12px;
-  margin-top: 4px;
+  margin-top: 6px;
   overflow: hidden;
 }
 
 .nav-child-item .nav-item-content {
-  padding: 10px 12px;
+  padding: 10px 16px;
+  font-size: 14px;
 }
 
 .nav-child-item .nav-icon {
-  font-size: 16px;
-}
-
-.nav-child-item .nav-text {
-  font-size: 13px;
+  font-size: 18px;
 }
 
 .nav-child-item.active .nav-item-content {
   background: var(--primary-bg);
 }
 
-.nav-child-item.active .nav-icon,
-.nav-child-item.active .nav-text {
-  color: var(--primary);
-}
-
 /* 侧边栏底部 */
 .sidebar-footer {
-  padding: 12px;
-  border-top: 1px solid var(--border-color);
+  padding: 24px 16px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
 }
 
 .footer-button {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px;
+  gap: 14px;
+  padding: 14px 16px;
   border-radius: var(--radius);
   background: transparent;
   border: none;
   color: var(--text-secondary);
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 15px;
+  font-weight: 600;
   cursor: pointer;
   transition: all var(--transition);
   white-space: nowrap;
@@ -445,13 +446,13 @@ const isGroupActive = (item: MenuItem) => {
 }
 
 .footer-button:hover {
-  background: var(--bg-hover);
+  background: var(--bg-tertiary);
   color: var(--primary);
 }
 
 .footer-button svg {
-  font-size: 20px;
-  min-width: 20px;
+  font-size: 22px;
+  min-width: 22px;
 }
 
 .collapse-icon {
@@ -483,7 +484,7 @@ const isGroupActive = (item: MenuItem) => {
 /* 展开动画 */
 .expand-enter-active,
 .expand-leave-active {
-  transition: all 0.25s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
 }
 
@@ -497,14 +498,14 @@ const isGroupActive = (item: MenuItem) => {
 .expand-enter-to,
 .expand-leave-from {
   opacity: 1;
-  max-height: 200px;
-  margin-top: 4px;
+  max-height: 300px;
+  margin-top: 6px;
 }
 
 /* 折叠状态下的样式调整 */
 .sidebar.collapsed .nav-item-content {
   justify-content: center;
-  padding: 12px 8px;
+  padding: 14px 0;
 }
 
 .sidebar.collapsed .sidebar-header {
@@ -514,12 +515,12 @@ const isGroupActive = (item: MenuItem) => {
 
 .sidebar.collapsed .footer-button {
   justify-content: center;
-  padding: 12px 8px;
+  padding: 14px 0;
 }
 
 .sidebar.collapsed .active-indicator {
-  left: auto;
-  right: 0;
-  border-radius: var(--radius-full) 0 0 var(--radius-full);
+  right: 8px;
+  top: 12px;
+  transform: none;
 }
 </style>

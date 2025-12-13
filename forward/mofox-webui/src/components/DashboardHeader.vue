@@ -212,11 +212,19 @@ const vClickOutside = {
 
 <style scoped>
 .dashboard-header {
-  background: var(--bg-primary);
-  border-bottom: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.5);
   position: sticky;
   top: 0;
   z-index: 50;
+  box-shadow: var(--shadow-sm);
+}
+
+[data-theme="dark"] .dashboard-header {
+  background: rgba(30, 41, 59, 0.8);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .header-container {
@@ -237,8 +245,8 @@ const vClickOutside = {
 }
 
 .page-title {
-  font-size: 24px;
-  font-weight: 700;
+  font-size: 26px;
+  font-weight: 800;
   color: var(--text-primary);
   letter-spacing: -0.5px;
   margin: 0;
@@ -248,6 +256,7 @@ const vClickOutside = {
   font-size: 14px;
   color: var(--text-tertiary);
   margin: 0;
+  font-weight: 500;
 }
 
 /* 右侧操作区 */
@@ -265,6 +274,7 @@ const vClickOutside = {
   padding: 8px 14px;
   background: var(--success-bg);
   border-radius: var(--radius-full);
+  border: 1px solid rgba(74, 222, 128, 0.2);
 }
 
 .status-dot {
@@ -273,6 +283,7 @@ const vClickOutside = {
   background: var(--success);
   border-radius: 50%;
   animation: pulse-dot 2s ease-in-out infinite;
+  box-shadow: 0 0 0 2px rgba(74, 222, 128, 0.2);
 }
 
 @keyframes pulse-dot {
@@ -288,7 +299,7 @@ const vClickOutside = {
 
 .status-text {
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--success);
 }
 
@@ -302,27 +313,27 @@ const vClickOutside = {
 .project-badge {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  gap: 10px;
+  padding: 10px 18px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
   border-radius: var(--radius);
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+  box-shadow: var(--shadow-soft);
   transition: all var(--transition);
 }
 
 .bot-control-menu:hover .project-badge {
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+  box-shadow: 0 8px 20px -6px var(--primary);
   transform: translateY(-1px);
 }
 
 .project-icon {
-  font-size: 18px;
+  font-size: 20px;
   color: white;
 }
 
 .project-name {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 700;
   color: white;
   letter-spacing: -0.3px;
 }
@@ -331,6 +342,7 @@ const vClickOutside = {
   font-size: 16px;
   color: white;
   transition: transform var(--transition);
+  opacity: 0.8;
 }
 
 .dropdown-icon.rotate {
@@ -340,40 +352,45 @@ const vClickOutside = {
 /* 下拉菜单 */
 .dropdown-menu {
   position: absolute;
-  top: calc(100% + 8px);
+  top: calc(100% + 12px);
   right: 0;
-  min-width: 160px;
-  background: var(--bg-primary);
+  min-width: 180px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(20px);
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-lg);
   overflow: hidden;
   z-index: 1000;
+  padding: 6px;
 }
 
 .menu-item {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
   padding: 12px 16px;
   background: transparent;
   border: none;
   color: var(--text-primary);
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   text-align: left;
   cursor: pointer;
   transition: all var(--transition);
+  border-radius: var(--radius-sm);
 }
 
 .menu-item svg {
   font-size: 18px;
   flex-shrink: 0;
+  color: var(--text-tertiary);
+  transition: color var(--transition);
 }
 
 .restart-item:hover {
-  background: rgba(59, 130, 246, 0.1);
+  background: var(--primary-bg);
   color: var(--primary);
 }
 
@@ -382,7 +399,7 @@ const vClickOutside = {
 }
 
 .shutdown-item:hover {
-  background: rgba(239, 68, 68, 0.1);
+  background: var(--danger-bg);
   color: var(--danger);
 }
 
@@ -393,17 +410,17 @@ const vClickOutside = {
 /* 下拉动画 */
 .dropdown-enter-active,
 .dropdown-leave-active {
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .dropdown-enter-from {
   opacity: 0;
-  transform: translateY(-10px);
+  transform: translateY(-10px) scale(0.95);
 }
 
 .dropdown-leave-to {
   opacity: 0;
-  transform: translateY(-10px);
+  transform: translateY(-10px) scale(0.95);
 }
 
 /* 登出按钮 */
@@ -412,12 +429,12 @@ const vClickOutside = {
   align-items: center;
   gap: 8px;
   padding: 10px 16px;
-  background: var(--bg-tertiary);
+  background: transparent;
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
   color: var(--text-secondary);
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all var(--transition);
 }
@@ -447,7 +464,7 @@ const vClickOutside = {
   }
   
   .page-title {
-    font-size: 20px;
+    font-size: 22px;
   }
   
   .project-name,
