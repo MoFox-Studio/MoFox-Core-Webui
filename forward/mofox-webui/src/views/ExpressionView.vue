@@ -303,18 +303,45 @@
               </div>
 
               <div v-if="editMode === 'create'" class="form-group">
-                <label>聊天流ID</label>
-                <input
-                  v-model="editForm.chat_id"
-                  type="text"
-                  class="form-input"
-                  placeholder="格式: platform:id:type (如 QQ:12345:group) 或哈希值"
-                />
-                <small style="color: var(--text-tertiary); font-size: 12px; margin-top: 4px; display: block;">
-                  支持格式：<br>
-                  • platform:raw_id:type (如: QQ:12345:group 或 QQ:67890:private)<br>
-                  • 哈希值 (如: abc123def456...)
-                </small>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                  <label style="margin-bottom: 0;">聊天流</label>
+                  <button 
+                    class="text-button" 
+                    style="font-size: 12px; color: var(--primary-color); background: none; border: none; cursor: pointer;"
+                    @click="inputType = inputType === 'select' ? 'manual' : 'select'"
+                  >
+                    {{ inputType === 'select' ? '手动输入' : '从列表选择' }}
+                  </button>
+                </div>
+                
+                <div v-if="inputType === 'select'">
+                  <select v-model="editForm.chat_id" :disabled="loadingChats" style="width: 100%;">
+                    <option value="" disabled>请选择聊天流</option>
+                    <option v-for="chat in chatList" :key="chat.id" :value="chat.id">
+                      {{ chat.name }} ({{ chat.platform }})
+                    </option>
+                  </select>
+                  <div v-if="loadingChats" style="font-size: 12px; color: var(--text-tertiary); margin-top: 4px;">
+                    加载中...
+                  </div>
+                  <div v-else-if="chatList.length === 0" style="font-size: 12px; color: var(--warning); margin-top: 4px;">
+                    未找到活跃的聊天流，请尝试手动输入
+                  </div>
+                </div>
+
+                <div v-else>
+                  <input
+                    v-model="editForm.chat_id"
+                    type="text"
+                    class="form-input"
+                    placeholder="格式: platform:id:type (如 QQ:12345:group) 或哈希值"
+                  />
+                  <small style="color: var(--text-tertiary); font-size: 12px; margin-top: 4px; display: block;">
+                    支持格式：<br>
+                    • platform:raw_id:type (如: QQ:12345:group 或 QQ:67890:private)<br>
+                    • 哈希值 (如: abc123def456...)
+                  </small>
+                </div>
               </div>
             </div>
             <div class="dialog-footer">
@@ -398,11 +425,13 @@ import {
   updateExpression,
   deleteExpression,
   getStatistics,
+  getChatList,
   type Expression,
   type ExpressionDetail,
   type ExpressionStatistics,
   type ExpressionType,
-  type SortByField
+  type SortByField,
+  type ChatInfo
 } from '@/api/expression'
 import { showSuccess, showError, showConfirm } from '@/utils/dialog'
 
@@ -414,6 +443,11 @@ const totalPages = ref(0)
 const totalCount = ref(0)
 const loading = ref(false)
 const error = ref('')
+
+// 聊天流列表
+const chatList = ref<ChatInfo[]>([])
+const loadingChats = ref(false)
+const inputType = ref<'select' | 'manual'>('select')
 
 // 搜索和筛选
 const searchQuery = ref('')
@@ -447,6 +481,25 @@ watch(showStatisticsDialog, (newVal) => {
     loadStatistics()
   }
 })
+
+// 监听编辑对话框打开
+watch(showEditDialog, (newVal) => {
+  if (newVal && editMode.value === 'create') {
+    loadChatList()
+  }
+})
+
+async function loadChatList() {
+  loadingChats.value = true
+  try {
+    const res = await getChatList()
+    chatList.value = res.data
+  } catch (e) {
+    console.error('Failed to load chat list', e)
+  } finally {
+    loadingChats.value = false
+  }
+}
 
 // 监听筛选条件变化，自动刷新列表
 watch([filterType, sortBy, sortOrder], () => {

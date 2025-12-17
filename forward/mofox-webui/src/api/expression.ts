@@ -339,3 +339,20 @@ export async function exportExpressions(
 export async function importExpressions(data: ImportExpressionsRequest) {
   return await api.post<ImportResult>('expression/import/data', data)
 }
+
+/**
+ * 聊天流信息
+ */
+export interface ChatInfo {
+  id: string
+  name: string
+  platform?: string
+  type?: string
+}
+
+/**
+ * 获取聊天流列表
+ */
+export async function getChatList() {
+  return await api.get<ChatInfo[]>('expression/chat-list')
+}

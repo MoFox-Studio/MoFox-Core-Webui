@@ -83,6 +83,42 @@ class ExpressionRouterComponent(BaseRouterComponent):
         """注册所有HTTP端点"""
 
         @self.router.get(
+            "/chat-list",
+            summary="获取聊天流列表",
+            description="获取所有可用的聊天流列表"
+        )
+        async def get_chat_list(_= VerifiedDep):
+            """获取聊天流列表"""
+            try:
+                from src.plugin_system.apis import chat_api
+                
+                streams = []
+                if hasattr(chat_api, "get_streams"):
+                    streams = chat_api.get_streams()
+                elif hasattr(chat_api, "get_all_streams"):
+                    streams = chat_api.get_all_streams()
+                
+                result = []
+                for stream in streams:
+                    # 兼容对象和字典
+                    s_id = stream.get("stream_id") if isinstance(stream, dict) else getattr(stream, "stream_id", "")
+                    s_name = stream.get("name") if isinstance(stream, dict) else getattr(stream, "name", "")
+                    s_platform = stream.get("platform") if isinstance(stream, dict) else getattr(stream, "platform", "")
+                    s_type = stream.get("type") if isinstance(stream, dict) else getattr(stream, "type", "")
+                    
+                    if s_id:
+                        result.append({
+                            "id": s_id,
+                            "name": s_name or s_id,
+                            "platform": s_platform,
+                            "type": s_type
+                        })
+                return result
+            except Exception as e:
+                logger.error(f"获取聊天流列表失败: {e}")
+                return []
+
+        @self.router.get(
             "/list",
             summary="获取表达方式列表",
             description="获取表达方式列表，支持分页、筛选和排序"
