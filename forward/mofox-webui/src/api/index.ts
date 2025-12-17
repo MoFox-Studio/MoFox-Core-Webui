@@ -31,7 +31,7 @@ export async function getServerInfo(): Promise<ServerInfo> {
   }
 
   try {
-    const response = await fetch(`${DISCOVERY_SERVER_URL}/api/server-info`)
+    const response = await fetch(`${DISCOVERY_SERVER_URL}/server-info`)
     if (!response.ok) {
       throw new Error(`发现服务器请求失败: ${response.status}`)
     }
@@ -89,37 +89,6 @@ class ApiClient {
   }
 
   /**
-   * Mock 请求处理 (Demo 模式)
-   */
-  private async mockRequest<T>(endpoint: string, options: RequestInit): Promise<{ success: boolean; data?: T; error?: string; status: number }> {
-    console.log(`[Demo Mode] Mocking request to: ${endpoint}`);
-    await new Promise(resolve => setTimeout(resolve, 500)); // 模拟网络延迟
-
-    // 登录 Mock
-    if (endpoint === 'auth/login') {
-       // 在 Login.vue 中，api.setToken 已经被调用，所以 this.token 应该是用户输入的值
-       if (this.token === 'mofox') {
-         return { success: true, data: { success: true } as any, status: 200 };
-       } else {
-         return { success: false, error: '密钥错误 (Demo模式: 请输入 "mofox")', status: 401 };
-       }
-    }
-    
-    // 统计数据 Mock
-    if (endpoint === 'stats/overview' || endpoint === '/dashboard/stats') {
-        return { success: true, data: { 
-            total_messages: 12345, 
-            uptime_seconds: 7200,
-            active_plugins: 8,
-            total_plugins: 12
-        } as any, status: 200 };
-    }
-
-    // 默认成功响应
-    return { success: true, data: {} as any, status: 200 };
-  }
-
-  /**
    * 构建完整的 API URL
    * @param endpoint - API 端点，如 'auth/login'
    */
@@ -139,11 +108,6 @@ class ApiClient {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<{ success: boolean; data?: T; error?: string; status: number }> {
-    // Demo 模式拦截
-    if (import.meta.env.MODE === 'demo') {
-        return this.mockRequest<T>(endpoint, options);
-    }
-
     const url = await this.buildUrl(endpoint)
     
     const headers = new Headers(options.headers)

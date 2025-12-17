@@ -100,7 +100,31 @@
     <!-- 插件和组件统计（合并为一行） -->
     <section class="combined-stats-section">
       <div class="combined-stats-grid">
-
+        <!-- 插件统计卡片 -->
+        <div class="mini-card" @click="showPluginDetail = true">
+          <div class="mini-card-header">
+            <Icon icon="lucide:puzzle" class="mini-card-icon" style="color: #3b82f6" />
+            <span class="mini-card-title">插件统计</span>
+          </div>
+          <div class="mini-card-stats">
+            <div class="mini-stat">
+              <span class="mini-stat-value success">{{ overview?.plugins.enabled ?? 0 }}</span>
+              <span class="mini-stat-label">启用</span>
+            </div>
+            <div class="mini-stat">
+              <span class="mini-stat-value">{{ overview?.plugins.loaded ?? 0 }}</span>
+              <span class="mini-stat-label">已加载</span>
+            </div>
+            <div class="mini-stat">
+              <span class="mini-stat-value warning">{{ overview?.plugins.disabled ?? 0 }}</span>
+              <span class="mini-stat-label">禁用</span>
+            </div>
+            <div class="mini-stat">
+              <span class="mini-stat-value danger">{{ overview?.plugins.failed ?? 0 }}</span>
+              <span class="mini-stat-label">失败</span>
+            </div>
+          </div>
+        </div>
 
         <!-- 动作组件卡片 -->
         <div 
@@ -306,7 +330,61 @@
       </div>
     </section>
 
-
+    <!-- 插件详情弹窗 -->
+    <div v-if="showPluginDetail" class="modal-overlay" @click.self="showPluginDetail = false">
+      <div class="modal-content modal-large">
+        <div class="modal-header">
+          <h3>插件详情</h3>
+          <button class="close-btn" @click="showPluginDetail = false">
+            <Icon icon="lucide:x" />
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="stats-detail-grid">
+            <div class="stats-detail-item clickable" @click="showPluginListModal('loaded')">
+              <div class="detail-icon" style="background: rgba(16, 185, 129, 0.1)">
+                <Icon icon="lucide:check-circle" style="color: #10b981" />
+              </div>
+              <div class="detail-info">
+                <span class="detail-value">{{ overview?.plugins.loaded ?? '-' }}</span>
+                <span class="detail-label">已加载</span>
+              </div>
+              <Icon icon="lucide:chevron-right" class="detail-arrow" />
+            </div>
+            <div class="stats-detail-item clickable" @click="showPluginListModal('enabled')">
+              <div class="detail-icon" style="background: rgba(59, 130, 246, 0.1)">
+                <Icon icon="lucide:circle-dot" style="color: #3b82f6" />
+              </div>
+              <div class="detail-info">
+                <span class="detail-value">{{ overview?.plugins.enabled ?? '-' }}</span>
+                <span class="detail-label">已启用</span>
+              </div>
+              <Icon icon="lucide:chevron-right" class="detail-arrow" />
+            </div>
+            <div class="stats-detail-item clickable" @click="showPluginListModal('disabled')">
+              <div class="detail-icon" style="background: rgba(245, 158, 11, 0.1)">
+                <Icon icon="lucide:circle-pause" style="color: #f59e0b" />
+              </div>
+              <div class="detail-info">
+                <span class="detail-value">{{ overview?.plugins.disabled ?? '-' }}</span>
+                <span class="detail-label">已禁用</span>
+              </div>
+              <Icon icon="lucide:chevron-right" class="detail-arrow" />
+            </div>
+            <div class="stats-detail-item clickable" @click="showPluginListModal('failed')">
+              <div class="detail-icon" style="background: rgba(239, 68, 68, 0.1)">
+                <Icon icon="lucide:alert-circle" style="color: #ef4444" />
+              </div>
+              <div class="detail-info">
+                <span class="detail-value">{{ overview?.plugins.failed ?? '-' }}</span>
+                <span class="detail-label">加载失败</span>
+              </div>
+              <Icon icon="lucide:chevron-right" class="detail-arrow" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- 插件列表弹窗 -->
     <div v-if="showPluginList" class="modal-overlay" @click.self="showPluginList = false">
@@ -438,6 +516,7 @@ const messageStats = ref<MessageStatsResponse | null>(null)
 const messageStatsPeriod = ref<'last_hour' | 'last_24_hours' | 'last_7_days' | 'last_30_days'>('last_24_hours')
 
 // 弹窗状态
+const showPluginDetail = ref(false)
 const showPluginList = ref(false)
 const showComponentDetail = ref(false)
 
@@ -827,331 +906,363 @@ onMounted(() => {
 .dashboard-home {
   display: flex;
   flex-direction: column;
-  gap: 32px;
-  padding-bottom: 40px;
-  animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  gap: 24px;
+  animation: fadeIn 0.5s ease;
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-/* 统计卡片区域 */
-.stats-section {
-  margin-bottom: 8px;
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+/* 统计卡片区 */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
 }
 
 .stat-card {
-  background: var(--bg-glass);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--glass-border);
-  border-radius: 24px;
-  padding: 24px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 20px;
   display: flex;
   align-items: center;
-  gap: 24px;
-  box-shadow: var(--shadow-lg);
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  gap: 16px;
+  transition: all var(--transition);
 }
 
 .stat-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-xl);
-  border-color: rgba(255, 255, 255, 0.6);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 .stat-icon {
-  width: 64px;
-  height: 64px;
-  border-radius: 20px;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 32px;
-  box-shadow: var(--shadow-md);
-  background: var(--primary-gradient);
-  color: white !important; /* Override inline style if needed, or adjust template */
+  font-size: 24px;
 }
 
-/* Override inline styles for icon color if possible, or just let them be */
-/* Actually, the template uses inline styles for background and color. 
-   I should probably respect them or override them if I want a uniform look.
-   The template has: :style="{ background: stat.bgColor }" and :style="{ color: stat.color }"
-   I'll leave them as is for now, but maybe add a glass effect to the card itself.
-*/
-
 .stat-content {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
 .stat-value {
-  font-size: 32px;
-  font-weight: 800;
+  font-size: 24px;
+  font-weight: 700;
   color: var(--text-primary);
-  line-height: 1.2;
-  letter-spacing: -1px;
+  letter-spacing: -0.5px;
 }
 
 .stat-label {
-  font-size: 14px;
-  color: var(--text-secondary);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  font-size: 13px;
+  color: var(--text-tertiary);
 }
 
 .stat-sub {
-  margin-left: auto;
-  font-size: 13px;
-  padding: 6px 12px;
-  background: rgba(255, 255, 255, 0.5);
-  border-radius: 12px;
-  color: var(--text-secondary);
-  font-weight: 600;
-  border: 1px solid var(--glass-border);
+  font-size: 12px;
+  color: var(--text-tertiary);
+  padding: 4px 8px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
 }
 
-/* 主要内容区 */
-.main-section {
-  margin-bottom: 8px;
-}
-
-.content-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-  gap: 32px;
-}
-
-/* 通用卡片样式 */
+/* 卡片通用样式 */
 .card {
-  background: var(--bg-glass);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-radius: 24px;
-  box-shadow: var(--shadow-lg);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  border: 1px solid var(--glass-border);
-  transition: all 0.3s ease;
-}
-
-.card:hover {
-  box-shadow: var(--shadow-xl);
-  border-color: rgba(255, 255, 255, 0.6);
 }
 
 .card-header {
-  padding: 24px 32px;
-  border-bottom: 1px solid var(--glass-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: rgba(255, 255, 255, 0.3);
+  padding: 20px;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .card-title {
-  font-size: 20px;
-  font-weight: 800;
-  color: var(--text-primary);
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
   margin: 0;
 }
 
 .card-title svg {
+  font-size: 20px;
   color: var(--primary);
-  filter: drop-shadow(0 2px 4px rgba(249, 115, 22, 0.3));
 }
 
 .card-body {
-  padding: 32px;
+  padding: 20px;
   flex: 1;
-}
-
-/* 插件和组件统计 */
-.combined-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 24px;
-}
-
-.mini-card {
-  background: rgba(255, 255, 255, 0.5);
-  border-radius: 20px;
-  padding: 24px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--glass-border);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+}
+
+/* 月度计划固定高度 */
+.plans-body {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.refresh-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: var(--bg-secondary);
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.refresh-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--primary);
+}
+
+.refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.total-badge {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  padding: 4px 12px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-full);
+}
+
+/* 主内容区网格 */
+.content-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+  align-items: stretch;
+}
+
+/* 日程和月度计划卡片等高 */
+.content-grid > .card {
+  height: 500px;
+  min-height: 400px;
+  max-height: 500px;
+}
+
+/* 合并的统计卡片区 */
+.combined-stats-section {
+  margin-top: 0;
+}
+
+.combined-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 16px;
 }
 
 .mini-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-md);
-  background: white;
-  border-color: var(--primary);
+  background: var(--bg-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
 }
 
 .mini-card-header {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 
 .mini-card-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  background: var(--primary-gradient);
-  color: white;
-  box-shadow: var(--shadow-md);
-}
-
-.mini-card-title {
   font-size: 18px;
-  font-weight: 700;
-  color: var(--text-primary);
 }
 
-.mini-card-stats {
-  display: flex;
-  gap: 32px;
+.mini-stat-value.success {
+  color: var(--success);
 }
 
-.mini-stat {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+.mini-stat-value.warning {
+  color: #f59e0b;
 }
 
-.mini-stat-value {
-  font-size: 28px;
-  font-weight: 800;
-  color: var(--text-primary);
+.mini-stat-value.danger {
+  color: #ef4444;
 }
 
 .mini-stat-label {
-  font-size: 13px;
+  font-size: 11px;
   color: var(--text-tertiary);
-  font-weight: 600;
-  text-transform: uppercase;
 }
 
 /* 图表区域 */
 .chart-section {
-  margin-top: 8px;
+  margin-top: 0;
+}
+
+.chart-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.period-select {
+  padding: 6px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 13px;
+  cursor: pointer;
+  outline: none;
+  transition: all var(--transition-fast);
+}
+
+.period-select:hover {
+  border-color: var(--primary);
+}
+
+.period-select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-bg);
+}
+
+.chart-body {
+  min-height: 300px;
 }
 
 .chart-container {
-  height: 320px;
+  height: 280px;
+}
+
+.chart {
   width: 100%;
-  margin-top: 24px;
+  height: 100%;
+}
+
+.chart-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 280px;
+  color: var(--text-tertiary);
 }
 
 .chart-summary {
   display: flex;
+  justify-content: center;
   gap: 40px;
-  margin-bottom: 24px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
 }
 
 .summary-item {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  align-items: center;
+  gap: 4px;
 }
 
 .summary-label {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-tertiary);
-  font-weight: 600;
-  text-transform: uppercase;
 }
 
 .summary-value {
-  font-size: 28px;
-  font-weight: 800;
+  font-size: 20px;
+  font-weight: 600;
 }
 
 .summary-value.received {
-  color: var(--success);
+  color: #10b981;
 }
 
 .summary-value.sent {
-  color: var(--primary);
+  color: #3b82f6;
 }
 
 /* 插件统计详情 */
 .stats-detail-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
 }
 
 .stats-detail-item {
   display: flex;
   align-items: center;
-  gap: 20px;
-  padding: 20px;
-  background: rgba(255, 255, 255, 0.5);
-  border-radius: 20px;
-  transition: all 0.3s ease;
-  border: 1px solid var(--glass-border);
+  gap: 12px;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius);
+  transition: all var(--transition-fast);
 }
 
 .stats-detail-item:hover {
-  background: white;
-  box-shadow: var(--shadow-md);
-  border-color: var(--primary);
-  transform: translateY(-2px);
+  background: var(--bg-hover);
 }
 
 .detail-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 18px;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
-  background: var(--bg-secondary);
-  color: var(--primary);
+  font-size: 18px;
 }
 
 .detail-info {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 2px;
 }
 
 .detail-value {
-  font-size: 24px;
-  font-weight: 800;
+  font-size: 20px;
+  font-weight: 600;
   color: var(--text-primary);
 }
 
 .detail-label {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-tertiary);
-  font-weight: 600;
 }
 
 /* 弹窗样式 */
@@ -1161,38 +1272,33 @@ onMounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  animation: fadeIn 0.3s ease;
+  backdrop-filter: blur(4px);
 }
 
 .modal-content {
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-radius: 32px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
   width: 90%;
-  max-width: 560px;
-  max-height: 85vh;
+  max-width: 500px;
+  max-height: 80vh;
   overflow: hidden;
-  animation: modalIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: var(--shadow-2xl);
-  border: 1px solid white;
+  animation: modalIn 0.2s ease;
 }
 
 @keyframes modalIn {
   from {
     opacity: 0;
-    transform: scale(0.95) translateY(20px);
+    transform: scale(0.95);
   }
   to {
     opacity: 1;
-    transform: scale(1) translateY(0);
+    transform: scale(1);
   }
 }
 
@@ -1200,15 +1306,14 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 24px 32px;
-  border-bottom: 1px solid var(--glass-border);
-  background: rgba(255, 255, 255, 0.5);
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .modal-header h3 {
   margin: 0;
-  font-size: 20px;
-  font-weight: 800;
+  font-size: 16px;
+  font-weight: 600;
   color: var(--text-primary);
 }
 
@@ -1216,24 +1321,23 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 28px;
+  height: 28px;
   border: none;
   background: transparent;
-  border-radius: 12px;
+  border-radius: var(--radius);
   color: var(--text-secondary);
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all var(--transition-fast);
 }
 
 .close-btn:hover {
-  background: rgba(255, 82, 82, 0.1);
-  color: #ff5252;
-  transform: rotate(90deg);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
 }
 
 .modal-body {
-  padding: 32px;
+  padding: 20px;
   overflow-y: auto;
 }
 
@@ -1243,80 +1347,76 @@ onMounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 64px;
+  padding: 40px;
   color: var(--text-tertiary);
-  gap: 24px;
+  gap: 12px;
 }
 
 .empty-state.small {
-  padding: 40px;
+  padding: 24px;
 }
 
 .empty-state.small .empty-icon {
-  font-size: 40px;
+  font-size: 32px;
 }
 
 .empty-icon {
-  font-size: 64px;
+  font-size: 48px;
   opacity: 0.5;
-  color: var(--text-tertiary);
-  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
 }
 
 /* 日程卡片 */
 .date-badge {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--primary);
-  padding: 8px 16px;
-  background: rgba(249, 115, 22, 0.1);
-  border-radius: 20px;
-  font-weight: 700;
-  border: 1px solid rgba(249, 115, 22, 0.2);
+  padding: 4px 12px;
+  background: var(--primary-bg);
+  border-radius: var(--radius-full);
+  font-weight: 500;
 }
 
 .current-activity {
-  background: linear-gradient(135deg, rgba(249, 115, 22, 0.1), rgba(249, 115, 22, 0.02));
-  border: 1px solid rgba(249, 115, 22, 0.2);
-  border-radius: 20px;
-  padding: 24px;
-  margin-bottom: 24px;
-  box-shadow: var(--shadow-sm);
+  background: linear-gradient(135deg, var(--primary-bg), rgba(59, 130, 246, 0.05));
+  border: 1px solid var(--primary);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 16px;
 }
 
 .current-label {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 13px;
-  font-weight: 800;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
   color: var(--primary);
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
 }
 
 .current-content {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
 .current-time {
-  font-size: 15px;
-  color: var(--text-secondary);
-  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-tertiary);
+  font-weight: 500;
 }
 
 .current-text {
-  font-size: 20px;
-  font-weight: 800;
+  font-size: 16px;
+  font-weight: 600;
   color: var(--text-primary);
 }
 
 .schedule-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   flex: 1;
   overflow-y: auto;
 }
@@ -1324,83 +1424,72 @@ onMounted(() => {
 .schedule-item {
   display: flex;
   align-items: center;
-  gap: 20px;
-  padding: 16px 20px;
-  background: rgba(255, 255, 255, 0.5);
-  border-radius: 16px;
-  transition: all 0.3s ease;
-  border: 1px solid transparent;
+  gap: 12px;
+  padding: 12px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius);
+  transition: all var(--transition-fast);
 }
 
 .schedule-item:hover {
-  background: white;
-  box-shadow: var(--shadow-md);
-  transform: translateX(4px);
-  border-color: var(--glass-border);
+  background: var(--bg-hover);
 }
 
 .schedule-item.is-current {
-  background: rgba(249, 115, 22, 0.05);
-  border-left: 4px solid var(--primary);
+  background: var(--primary-bg);
+  border-left: 3px solid var(--primary);
 }
 
 .schedule-time {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--text-secondary);
-  min-width: 120px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  min-width: 100px;
 }
 
 .schedule-activity {
-  font-size: 16px;
+  font-size: 14px;
   color: var(--text-primary);
   flex: 1;
-  font-weight: 600;
 }
 
 /* 月度计划卡片 */
 .plans-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 10px;
 }
 
 .plan-item {
   display: flex;
   align-items: flex-start;
-  gap: 16px;
-  padding: 16px;
-  background: rgba(255, 255, 255, 0.5);
-  border-radius: 16px;
-  transition: all 0.3s ease;
-  border: 1px solid transparent;
+  gap: 10px;
+  padding: 12px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius);
+  transition: all var(--transition-fast);
 }
 
 .plan-item:hover {
-  background: white;
-  box-shadow: var(--shadow-md);
-  border-color: var(--glass-border);
-  transform: translateX(4px);
+  background: var(--bg-hover);
 }
 
 .plan-icon {
-  font-size: 20px;
+  font-size: 16px;
   color: var(--success);
   flex-shrink: 0;
   margin-top: 2px;
-  filter: drop-shadow(0 2px 4px rgba(34, 197, 94, 0.2));
 }
 
 .plan-text {
-  font-size: 16px;
+  font-size: 14px;
   color: var(--text-primary);
-  line-height: 1.6;
-  font-weight: 500;
+  line-height: 1.5;
 }
 
 /* 加大弹窗 */
 .modal-large {
-  max-width: 800px;
+  max-width: 700px;
 }
 
 /* 可点击的详情项 */
@@ -1409,22 +1498,14 @@ onMounted(() => {
 }
 
 .stats-detail-item.clickable:hover {
-  background: white;
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-lg);
-  border-color: var(--primary);
+  background: var(--bg-hover);
+  transform: translateX(4px);
 }
 
 .detail-arrow {
   color: var(--text-tertiary);
-  font-size: 20px;
+  font-size: 16px;
   margin-left: auto;
-  transition: transform 0.3s ease;
-}
-
-.stats-detail-item.clickable:hover .detail-arrow {
-  transform: translateX(4px);
-  color: var(--primary);
 }
 
 /* 加载状态 */
@@ -1432,82 +1513,71 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-  padding: 64px;
+  gap: 8px;
+  padding: 40px;
   color: var(--text-tertiary);
-  font-weight: 600;
-  font-size: 16px;
 }
 
 /* 插件列表 */
 .plugin-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   max-height: 400px;
   overflow-y: auto;
-  padding-right: 8px;
 }
 
 .plugin-item {
-  background: rgba(255, 255, 255, 0.5);
-  border-radius: 16px;
-  padding: 20px;
-  transition: all 0.3s ease;
-  border: 1px solid transparent;
+  background: var(--bg-secondary);
+  border-radius: var(--radius);
+  padding: 16px;
+  transition: all var(--transition-fast);
 }
 
 .plugin-item:hover {
-  background: white;
-  box-shadow: var(--shadow-md);
-  border-color: var(--glass-border);
-  transform: translateX(4px);
+  background: var(--bg-hover);
 }
 
 .plugin-item-header {
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 12px;
+  gap: 10px;
+  margin-bottom: 8px;
 }
 
 .plugin-name {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 15px;
+  font-weight: 600;
   color: var(--text-primary);
   flex: 1;
 }
 
 .plugin-version {
-  font-size: 13px;
-  color: var(--text-secondary);
-  padding: 4px 10px;
-  background: rgba(255, 255, 255, 0.8);
-  border-radius: 10px;
-  font-weight: 600;
-  border: 1px solid var(--glass-border);
+  font-size: 12px;
+  color: var(--text-tertiary);
+  padding: 2px 8px;
+  background: var(--bg-primary);
+  border-radius: var(--radius-sm);
 }
 
 .plugin-item-info {
   display: flex;
-  gap: 20px;
-  font-size: 14px;
+  gap: 16px;
+  font-size: 13px;
   color: var(--text-secondary);
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .plugin-error {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  font-size: 14px;
-  color: var(--danger);
-  background: rgba(255, 82, 82, 0.1);
-  padding: 12px 16px;
-  border-radius: 12px;
-  margin-top: 12px;
-  font-weight: 500;
-  border: 1px solid rgba(255, 82, 82, 0.2);
+  gap: 6px;
+  font-size: 12px;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  margin-top: 8px;
 }
 
 .plugin-error span {
@@ -1518,82 +1588,116 @@ onMounted(() => {
 .component-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   max-height: 400px;
   overflow-y: auto;
-  padding-right: 8px;
 }
 
 .component-item {
-  background: rgba(255, 255, 255, 0.5);
-  border-radius: 16px;
-  padding: 20px;
-  transition: all 0.3s ease;
-  border: 1px solid transparent;
+  background: var(--bg-secondary);
+  border-radius: var(--radius);
+  padding: 16px;
+  transition: all var(--transition-fast);
 }
 
 .component-item:hover {
-  background: white;
-  box-shadow: var(--shadow-md);
-  border-color: var(--glass-border);
-  transform: translateX(4px);
+  background: var(--bg-hover);
 }
 
 .component-item-header {
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 12px;
+  gap: 10px;
+  margin-bottom: 8px;
 }
 
 .component-name {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 15px;
+  font-weight: 600;
   color: var(--text-primary);
   flex: 1;
 }
 
 .component-status {
-  font-size: 13px;
-  font-weight: 700;
-  padding: 6px 12px;
-  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
 }
 
 .component-status.enabled {
-  color: var(--success);
-  background: rgba(34, 197, 94, 0.1);
-  border: 1px solid rgba(34, 197, 94, 0.2);
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
 }
 
 .component-status.disabled {
-  color: var(--warning);
-  background: rgba(234, 179, 8, 0.1);
-  border: 1px solid rgba(234, 179, 8, 0.2);
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
 }
 
 .component-item-desc {
-  font-size: 15px;
+  font-size: 13px;
   color: var(--text-secondary);
-  line-height: 1.6;
-  margin-bottom: 12px;
+  line-height: 1.5;
+  margin-bottom: 8px;
 }
 
 .component-item-plugin {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
+  gap: 6px;
+  font-size: 12px;
   color: var(--text-tertiary);
-  font-weight: 600;
-  background: rgba(255, 255, 255, 0.5);
-  padding: 6px 12px;
-  border-radius: 10px;
-  width: fit-content;
 }
 
 .component-item-plugin svg {
-  font-size: 16px;
+  font-size: 14px;
+}
+
+/* 小卡片文字自适应 */
+.mini-card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 16px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  min-width: 0;
+}
+
+.mini-card-title {
+  font-size: clamp(12px, 2vw, 14px);
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mini-stat-value {
+  font-size: clamp(14px, 2.5vw, 18px);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.mini-stat-label {
+  font-size: clamp(10px, 1.5vw, 11px);
+  color: var(--text-tertiary);
+}
+
+.mini-card-stats {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.mini-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+  min-width: 40px;
 }
 
 /* 响应式 */

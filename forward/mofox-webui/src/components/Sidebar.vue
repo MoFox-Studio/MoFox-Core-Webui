@@ -173,8 +173,6 @@ const menuItems: MenuItem[] = [
   },
   { name: '插件管理', path: '/dashboard/plugin-manage', icon: 'lucide:package' },
   { name: '插件市场', path: '/dashboard/marketplace', icon: 'lucide:store' },
-  { name: '人物关系', path: '/dashboard/relationship', icon: 'lucide:users' },
-  { name: '表达方式管理', path: '/dashboard/expression', icon: 'lucide:users' },
   { name: 'MoFox-Bot更新', path: '/dashboard/git-update', icon: 'lucide:git-branch' },
 ]
 
@@ -210,10 +208,8 @@ const isGroupActive = (item: MenuItem) => {
 <style scoped>
 .sidebar {
   height: 100vh;
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-right: 1px solid rgba(255, 255, 255, 0.5);
+  background: var(--bg-primary);
+  border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   position: sticky;
@@ -222,12 +218,6 @@ const isGroupActive = (item: MenuItem) => {
   width: var(--sidebar-width);
   transition: width var(--transition-slow) cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
-  box-shadow: var(--shadow-sm);
-}
-
-[data-theme="dark"] .sidebar {
-  background: rgba(30, 41, 59, 0.8);
-  border-right: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .sidebar.collapsed {
@@ -236,42 +226,37 @@ const isGroupActive = (item: MenuItem) => {
 
 /* 侧边栏头部 */
 .sidebar-header {
-  height: 88px;
+  height: 72px;
   display: flex;
   align-items: center;
-  padding: 0 24px;
-  margin-bottom: 12px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .logo-wrapper {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   overflow: hidden;
 }
 
 .logo-icon {
-  width: 48px;
-  height: 48px;
-  min-width: 48px;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
-  border-radius: 16px;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  border-radius: var(--radius);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 26px;
+  font-size: 22px;
   color: white;
-  box-shadow: var(--shadow-soft);
-  transition: transform var(--transition);
-}
-
-.logo-wrapper:hover .logo-icon {
-  transform: rotate(-5deg) scale(1.05);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
 .logo-text {
-  font-size: 24px;
-  font-weight: 800;
+  font-size: 20px;
+  font-weight: 700;
   color: var(--text-primary);
   white-space: nowrap;
   letter-spacing: -0.5px;
@@ -280,7 +265,7 @@ const isGroupActive = (item: MenuItem) => {
 /* 导航菜单 */
 .sidebar-nav {
   flex: 1;
-  padding: 0 16px;
+  padding: 16px 12px;
   overflow-y: auto;
   overflow-x: hidden;
 }
@@ -288,16 +273,16 @@ const isGroupActive = (item: MenuItem) => {
 .nav-section {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .nav-section-title {
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 600;
   color: var(--text-tertiary);
   text-transform: uppercase;
-  letter-spacing: 1px;
-  padding: 16px 16px 8px;
+  letter-spacing: 0.5px;
+  padding: 8px 12px 12px;
   white-space: nowrap;
 }
 
@@ -308,25 +293,21 @@ const isGroupActive = (item: MenuItem) => {
 .nav-item-content {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 14px 16px;
+  gap: 12px;
+  padding: 12px;
   border-radius: var(--radius);
   cursor: pointer;
   position: relative;
   transition: all var(--transition);
   overflow: hidden;
-  color: var(--text-secondary);
 }
 
 .nav-item-content:hover {
-  background: var(--bg-tertiary);
-  color: var(--primary);
+  background: var(--bg-hover);
 }
 
 .nav-item.active .nav-item-content {
   background: var(--primary-bg);
-  color: var(--primary);
-  font-weight: 600;
 }
 
 .nav-icon-wrapper {
@@ -339,30 +320,38 @@ const isGroupActive = (item: MenuItem) => {
 }
 
 .nav-icon {
-  font-size: 22px;
+  font-size: 20px;
+  color: var(--text-secondary);
   transition: all var(--transition);
 }
 
-.nav-item.active .nav-icon {
-  transform: scale(1.1);
+.nav-item.active .nav-icon,
+.nav-item-content:hover .nav-icon {
+  color: var(--primary);
 }
 
 .nav-text {
-  font-size: 15px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
   white-space: nowrap;
   transition: all var(--transition);
 }
 
+.nav-item.active .nav-text,
+.nav-item-content:hover .nav-text {
+  color: var(--primary);
+}
+
 .active-indicator {
   position: absolute;
-  right: 12px;
+  left: 0;
   top: 50%;
   transform: translateY(-50%);
-  width: 6px;
-  height: 6px;
+  width: 3px;
+  height: 24px;
   background: var(--primary);
-  border-radius: 50%;
-  box-shadow: 0 0 0 2px var(--primary-lighter);
+  border-radius: 0 var(--radius-full) var(--radius-full) 0;
 }
 
 /* 导航组样式 */
@@ -384,63 +373,71 @@ const isGroupActive = (item: MenuItem) => {
 }
 
 .nav-group-header.expanded {
-  background: var(--bg-tertiary);
+  background: var(--bg-hover);
 }
 
 .nav-arrow {
   margin-left: auto;
-  font-size: 18px;
+  font-size: 16px;
   color: var(--text-tertiary);
   transition: transform var(--transition);
 }
 
 .nav-group-header.expanded .nav-arrow {
   color: var(--primary);
-  transform: rotate(180deg);
 }
 
 /* 子菜单样式 */
 .nav-children {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   padding-left: 12px;
-  margin-top: 6px;
+  margin-top: 4px;
   overflow: hidden;
 }
 
 .nav-child-item .nav-item-content {
-  padding: 10px 16px;
-  font-size: 14px;
+  padding: 10px 12px;
 }
 
 .nav-child-item .nav-icon {
-  font-size: 18px;
+  font-size: 16px;
+}
+
+.nav-child-item .nav-text {
+  font-size: 13px;
 }
 
 .nav-child-item.active .nav-item-content {
   background: var(--primary-bg);
 }
 
+.nav-child-item.active .nav-icon,
+.nav-child-item.active .nav-text {
+  color: var(--primary);
+}
+
 /* 侧边栏底部 */
 .sidebar-footer {
-  padding: 24px 16px;
+  padding: 12px;
+  border-top: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
 .footer-button {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 14px 16px;
+  gap: 12px;
+  padding: 12px;
   border-radius: var(--radius);
   background: transparent;
   border: none;
   color: var(--text-secondary);
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
   transition: all var(--transition);
   white-space: nowrap;
@@ -448,13 +445,13 @@ const isGroupActive = (item: MenuItem) => {
 }
 
 .footer-button:hover {
-  background: var(--bg-tertiary);
+  background: var(--bg-hover);
   color: var(--primary);
 }
 
 .footer-button svg {
-  font-size: 22px;
-  min-width: 22px;
+  font-size: 20px;
+  min-width: 20px;
 }
 
 .collapse-icon {
@@ -486,7 +483,7 @@ const isGroupActive = (item: MenuItem) => {
 /* 展开动画 */
 .expand-enter-active,
 .expand-leave-active {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.25s ease;
   overflow: hidden;
 }
 
@@ -500,14 +497,14 @@ const isGroupActive = (item: MenuItem) => {
 .expand-enter-to,
 .expand-leave-from {
   opacity: 1;
-  max-height: 300px;
-  margin-top: 6px;
+  max-height: 200px;
+  margin-top: 4px;
 }
 
 /* 折叠状态下的样式调整 */
 .sidebar.collapsed .nav-item-content {
   justify-content: center;
-  padding: 14px 0;
+  padding: 12px 8px;
 }
 
 .sidebar.collapsed .sidebar-header {
@@ -517,12 +514,12 @@ const isGroupActive = (item: MenuItem) => {
 
 .sidebar.collapsed .footer-button {
   justify-content: center;
-  padding: 14px 0;
+  padding: 12px 8px;
 }
 
 .sidebar.collapsed .active-indicator {
-  right: 8px;
-  top: 12px;
-  transform: none;
+  left: auto;
+  right: 0;
+  border-radius: var(--radius-full) 0 0 var(--radius-full);
 }
 </style>

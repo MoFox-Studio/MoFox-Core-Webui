@@ -42,7 +42,6 @@
 import { ref, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useUserStore } from '@/stores/user'
-import { api, API_ENDPOINTS } from '@/api'
 
 const userStore = useUserStore()
 
@@ -76,10 +75,10 @@ const formatUptime = (seconds: number): string => {
 const fetchStats = async () => {
   try {
     loading.value = true
-    const result = await api.get<any>(API_ENDPOINTS.STATS.OVERVIEW)
+    const response = await userStore.authFetch('/dashboard/stats')
     
-    if (result.success && result.data) {
-      const data = result.data
+    if (response.ok) {
+      const data = await response.json()
       stats.value = {
         totalRequests: data.total_messages || 0,
         onlineTime: formatUptime(data.uptime_seconds || 0),
@@ -87,7 +86,7 @@ const fetchStats = async () => {
         totalCost: '0.00' // 需要从其他API获取
       }
     } else {
-      console.error('获取统计数据失败:', result.error)
+      console.error('获取统计数据失败:', response.status)
     }
   } catch (error) {
     console.error('获取统计数据出错:', error)

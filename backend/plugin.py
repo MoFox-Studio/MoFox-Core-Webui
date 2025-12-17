@@ -21,14 +21,12 @@ from src.plugin_system.base.config_types import ConfigField
 from .handlers import WebUIShutdownHandler, WebUIStartupHandler
 from .routers import (
     GitUpdateRouterComponent,
-    LogViewerRouterComponent,
     MarketplaceRouterComponent,
-    RelationshipRouterComponent,
     WebUIAuthRouter,
     WebUIConfigRouter,
     WebUIPluginRouter,
-    ExpressionRouterComponent,
     WebUIStatsRouter,
+    LogViewerRouterComponent,
 )
 
 logger = get_logger("WebUIAuth.Plugin")
@@ -115,6 +113,4 @@ class WebUIAuthPlugin(BasePlugin):
             (MarketplaceRouterComponent.get_router_info(), MarketplaceRouterComponent),
             (GitUpdateRouterComponent.get_router_info(), GitUpdateRouterComponent),
             (LogViewerRouterComponent.get_router_info(), LogViewerRouterComponent),
-            (RelationshipRouterComponent.get_router_info(), RelationshipRouterComponent),
-            (ExpressionRouterComponent.get_router_info(), ExpressionRouterComponent),
         ]

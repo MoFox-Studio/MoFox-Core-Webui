@@ -48,45 +48,42 @@ onUnmounted(() => {
   right: 24px;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 16px 24px;
+  gap: 8px;
+  padding: 12px 20px;
   background: var(--bg-primary);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-lg);
-  font-size: 15px;
-  font-weight: 600;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  font-size: 14px;
   z-index: 9999;
-  animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 1px solid var(--border-color);
+  animation: slideIn 0.3s ease;
 }
 
 .global-toast.success {
-  border-left: 4px solid var(--success);
-  color: var(--success);
+  border-left: 4px solid #10b981;
+  color: #10b981;
 }
 
 .global-toast.error {
-  border-left: 4px solid var(--danger);
-  color: var(--danger);
+  border-left: 4px solid #ef4444;
+  color: #ef4444;
 }
 
 @keyframes slideIn {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateX(20px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateX(0);
   }
 }
 
 @media (max-width: 768px) {
   .global-toast {
-    bottom: 20px;
-    right: 20px;
-    left: 20px;
-    justify-content: center;
+    bottom: 12px;
+    right: 12px;
+    left: 12px;
   }
 }
 </style>

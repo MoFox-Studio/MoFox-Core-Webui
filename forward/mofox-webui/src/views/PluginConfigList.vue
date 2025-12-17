@@ -131,13 +131,12 @@ onMounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  animation: fadeIn 0.4s ease;
-  gap: 16px;
+  animation: fadeIn 0.3s ease;
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes spin {
@@ -154,64 +153,52 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 32px;
+  padding: 20px 24px;
   background: var(--bg-primary);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  margin-bottom: 8px;
-  border: 1px solid transparent;
-  transition: all var(--transition);
-}
-
-.page-header:hover {
-  box-shadow: var(--shadow-md);
-  border-color: var(--border-light);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 16px;
 }
 
 .header-icon {
-  font-size: 36px;
-  color: var(--primary);
-  background: var(--primary-bg);
-  padding: 8px;
-  border-radius: 12px;
+  font-size: 32px;
+  color: #10b981;
 }
 
 .header-info h1 {
-  font-size: 22px;
-  font-weight: 700;
+  font-size: 20px;
+  font-weight: 600;
   color: var(--text-primary);
   margin: 0 0 4px 0;
 }
 
 .header-info p {
-  font-size: 14px;
-  color: var(--text-secondary);
+  font-size: 13px;
+  color: var(--text-tertiary);
   margin: 0;
 }
 
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 }
 
 .btn {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 20px;
+  padding: 10px 16px;
   border: none;
-  border-radius: var(--radius-full);
-  font-size: 14px;
-  font-weight: 600;
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
-  transition: all var(--transition);
+  transition: all var(--transition-fast);
 }
 
 .btn-ghost {
@@ -232,20 +219,18 @@ onMounted(() => {
 .btn-primary {
   background: var(--primary);
   color: white;
-  box-shadow: var(--shadow-sm);
 }
 
 .btn-primary:hover {
-  background: var(--primary-hover);
-  box-shadow: var(--shadow-md);
-  transform: translateY(-1px);
+  background: var(--primary-dark);
 }
 
 /* 插件列表容器 */
 .plugin-list-container {
   flex: 1;
   overflow: auto;
-  padding: 8px;
+  padding: 24px;
+  background: var(--bg-secondary);
 }
 
 /* 状态提示 */
@@ -256,11 +241,10 @@ onMounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 20px;
-  padding: 80px 20px;
+  gap: 16px;
+  padding: 60px 20px;
   color: var(--text-tertiary);
-  font-size: 15px;
-  font-weight: 500;
+  font-size: 14px;
 }
 
 .loading-state svg,
@@ -268,15 +252,14 @@ onMounted(() => {
 .empty-state svg {
   font-size: 64px;
   opacity: 0.5;
-  margin-bottom: 8px;
 }
 
 .error-state {
-  color: var(--danger);
+  color: #ef4444;
 }
 
 .empty-state .hint {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--text-tertiary);
 }
 
@@ -284,45 +267,37 @@ onMounted(() => {
 .plugin-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 20px;
+  gap: 16px;
 }
 
 .plugin-card {
   display: flex;
   align-items: center;
-  gap: 20px;
-  padding: 24px;
+  gap: 16px;
+  padding: 20px;
   background: var(--bg-primary);
-  border: 1px solid transparent;
+  border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   cursor: pointer;
-  transition: all var(--transition);
-  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-fast);
 }
 
 .plugin-card:hover {
-  border-color: var(--border-light);
-  box-shadow: var(--shadow-md);
-  transform: translateY(-4px);
+  border-color: var(--primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
 }
 
 .plugin-icon {
-  width: 56px;
-  height: 56px;
+  width: 48px;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--primary-bg);
-  border-radius: 18px;
-  color: var(--primary);
-  font-size: 28px;
-  transition: all var(--transition);
-}
-
-.plugin-card:hover .plugin-icon {
-  background: var(--primary);
+  background: linear-gradient(135deg, #10b981, #059669);
+  border-radius: var(--radius);
   color: white;
-  transform: scale(1.1) rotate(5deg);
+  font-size: 24px;
 }
 
 .plugin-info {
@@ -331,8 +306,8 @@ onMounted(() => {
 }
 
 .plugin-info h3 {
-  font-size: 16px;
-  font-weight: 700;
+  font-size: 15px;
+  font-weight: 600;
   color: var(--text-primary);
   margin: 0 0 6px 0;
   overflow: hidden;
@@ -340,67 +315,57 @@ onMounted(() => {
   white-space: nowrap;
 }
 
-.plugin-info h3:hover {
-  color: var(--primary);
-}
-
 .plugin-path {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-tertiary);
   margin: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: monospace;
 }
 
 .arrow-icon {
-  font-size: 24px;
+  font-size: 20px;
   color: var(--text-tertiary);
-  transition: all var(--transition);
-  opacity: 0;
-  transform: translateX(-10px);
+  transition: all var(--transition-fast);
 }
 
 .plugin-card:hover .arrow-icon {
-  opacity: 1;
   color: var(--primary);
-  transform: translateX(0);
+  transform: translateX(4px);
 }
 
 /* Toast */
 .toast {
   position: fixed;
-  bottom: 32px;
-  right: 32px;
+  bottom: 24px;
+  right: 24px;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 16px 24px;
+  gap: 8px;
+  padding: 12px 20px;
   background: var(--bg-primary);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  font-size: 15px;
-  font-weight: 500;
+  border-radius: var(--radius);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  font-size: 14px;
   z-index: 2000;
-  animation: slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 1px solid var(--border-light);
+  animation: slideIn 0.3s ease;
 }
 
 .toast.success {
-  border-left: 4px solid var(--success);
-  color: var(--success);
+  border-left: 4px solid #10b981;
+  color: #10b981;
 }
 
 .toast.error {
-  border-left: 4px solid var(--danger);
-  color: var(--danger);
+  border-left: 4px solid #ef4444;
+  color: #ef4444;
 }
 
 @keyframes slideIn {
   from {
     opacity: 0;
-    transform: translateX(40px);
+    transform: translateX(20px);
   }
   to {
     opacity: 1;
