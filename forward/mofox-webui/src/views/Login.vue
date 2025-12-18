@@ -8,16 +8,18 @@
     </div>
     
     <!-- 主题切换按钮 -->
-    <button class="theme-toggle" @click="themeStore.toggleTheme" title="切换主题">
-      <Icon :icon="themeStore.theme === 'light' ? 'lucide:moon' : 'lucide:sun'" />
+    <button class="m3-icon-button theme-toggle" @click="themeStore.toggleTheme" title="切换主题">
+      <span class="material-symbols-rounded">
+        {{ themeStore.theme === 'light' ? 'dark_mode' : 'light_mode' }}
+      </span>
     </button>
 
     <!-- 登录卡片 -->
-    <div class="login-card">
+    <div class="m3-card login-card">
       <!-- Logo区域 -->
       <div class="logo-section">
         <div class="logo-icon">
-          <Icon icon="lucide:bot" />
+          <span class="material-symbols-rounded">smart_toy</span>
         </div>
         <h1 class="logo-title">MoFox</h1>
         <p class="logo-subtitle">智能机器人管理控制台</p>
@@ -26,30 +28,32 @@
       <!-- 登录表单 -->
       <form class="login-form" @submit.prevent="handleLogin">
         <div class="form-group">
-          <label class="form-label">
-            <Icon icon="lucide:key" class="label-icon" />
+          <label class="m3-label">
+            <span class="material-symbols-rounded label-icon">key</span>
             访问密钥
           </label>
           <div class="input-wrapper">
             <input 
               v-model="loginForm.password"
               :type="showPassword ? 'text' : 'password'"
-              class="form-input" 
+              class="m3-input" 
               placeholder="请输入访问密钥"
               required
             >
             <button 
               type="button" 
-              class="password-toggle"
+              class="m3-icon-button password-toggle"
               @click="showPassword = !showPassword"
             >
-              <Icon :icon="showPassword ? 'lucide:eye-off' : 'lucide:eye'" />
+              <span class="material-symbols-rounded">
+                {{ showPassword ? 'visibility_off' : 'visibility' }}
+              </span>
             </button>
           </div>
         </div>
         
         <div class="form-options">
-          <label class="checkbox-wrapper">
+          <label class="m3-checkbox-wrapper">
             <input v-model="loginForm.remember" type="checkbox">
             <span class="checkmark"></span>
             <span class="checkbox-label">记住登录状态</span>
@@ -57,14 +61,14 @@
         </div>
 
         <div v-if="errorMessage" class="error-message">
-          <Icon icon="lucide:alert-circle" />
+          <span class="material-symbols-rounded">error</span>
           <span>{{ errorMessage }}</span>
         </div>
         
-        <button type="submit" class="login-button" :disabled="loading">
-          <span v-if="loading" class="loading-spinner"></span>
-          <span v-else>
-            <Icon icon="lucide:log-in" />
+        <button type="submit" class="m3-button filled login-button" :disabled="loading">
+          <span v-if="loading" class="material-symbols-rounded spinning">progress_activity</span>
+          <span v-else class="button-content">
+            <span class="material-symbols-rounded">login</span>
             登录
           </span>
         </button>
@@ -83,7 +87,6 @@ import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useThemeStore } from '@/stores/theme'
-import { Icon } from '@iconify/vue'
 import { api, API_ENDPOINTS } from '@/api'
 
 const router = useRouter()
@@ -140,7 +143,7 @@ const handleLogin = async () => {
   padding: 24px;
   position: relative;
   overflow: hidden;
-  background: var(--bg-secondary);
+  background: var(--md-sys-color-surface);
 }
 
 /* 背景装饰 */
@@ -161,7 +164,7 @@ const handleLogin = async () => {
 .orb-1 {
   width: 600px;
   height: 600px;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+  background: linear-gradient(135deg, var(--md-sys-color-primary) 0%, var(--md-sys-color-primary-container) 100%);
   top: -200px;
   right: -100px;
   animation: float 20s ease-in-out infinite;
@@ -170,7 +173,7 @@ const handleLogin = async () => {
 .orb-2 {
   width: 400px;
   height: 400px;
-  background: linear-gradient(135deg, var(--primary-light) 0%, #8b5cf6 100%);
+  background: linear-gradient(135deg, var(--md-sys-color-secondary) 0%, var(--md-sys-color-tertiary) 100%);
   bottom: -100px;
   left: -100px;
   animation: float 15s ease-in-out infinite reverse;
@@ -179,7 +182,7 @@ const handleLogin = async () => {
 .orb-3 {
   width: 300px;
   height: 300px;
-  background: linear-gradient(135deg, #06b6d4 0%, var(--primary) 100%);
+  background: linear-gradient(135deg, var(--md-sys-color-tertiary) 0%, var(--md-sys-color-primary) 100%);
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
@@ -211,39 +214,20 @@ const handleLogin = async () => {
   position: fixed;
   top: 24px;
   right: 24px;
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-full);
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  color: var(--text-primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  cursor: pointer;
-  transition: all var(--transition);
   z-index: 100;
-  box-shadow: var(--shadow-md);
-}
-
-.theme-toggle:hover {
-  background: var(--bg-hover);
-  transform: rotate(15deg);
+  background: var(--md-sys-color-surface-container-high);
+  box-shadow: var(--md-sys-elevation-2);
 }
 
 /* 登录卡片 */
 .login-card {
-  background: var(--bg-primary);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-xl);
   width: 100%;
   max-width: 420px;
   padding: 48px 40px;
   position: relative;
   z-index: 1;
-  border: 1px solid var(--border-color);
   animation: slideUp 0.5s ease-out;
+  background: var(--md-sys-color-surface-container-low);
 }
 
 @keyframes slideUp {
@@ -266,28 +250,31 @@ const handleLogin = async () => {
 .logo-icon {
   width: 72px;
   height: 72px;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-  border-radius: var(--radius-lg);
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  border-radius: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto 20px;
-  font-size: 36px;
-  color: white;
-  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.3);
+  box-shadow: var(--md-sys-elevation-3);
+}
+
+.logo-icon .material-symbols-rounded {
+  font-size: 40px;
 }
 
 .logo-title {
   font-size: 28px;
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--md-sys-color-on-surface);
   margin-bottom: 8px;
   letter-spacing: -0.5px;
 }
 
 .logo-subtitle {
   font-size: 14px;
-  color: var(--text-tertiary);
+  color: var(--md-sys-color-on-surface-variant);
   font-weight: 400;
 }
 
@@ -304,62 +291,35 @@ const handleLogin = async () => {
   gap: 8px;
 }
 
-.form-label {
+.m3-label {
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 14px;
   font-weight: 500;
-  color: var(--text-secondary);
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .label-icon {
-  font-size: 16px;
-  color: var(--primary);
+  font-size: 18px;
+  color: var(--md-sys-color-primary);
 }
 
 .input-wrapper {
   position: relative;
 }
 
-.form-input {
+.m3-input {
   width: 100%;
-  padding: 14px 48px 14px 16px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius);
-  font-size: 15px;
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  transition: all var(--transition-fast);
-}
-
-.form-input:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px var(--primary-bg);
-}
-
-.form-input::placeholder {
-  color: var(--text-tertiary);
+  padding-right: 48px;
 }
 
 .password-toggle {
   position: absolute;
-  right: 12px;
+  right: 4px;
   top: 50%;
   transform: translateY(-50%);
-  background: none;
-  border: none;
-  color: var(--text-tertiary);
-  font-size: 18px;
-  cursor: pointer;
-  padding: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.password-toggle:hover {
-  color: var(--text-secondary);
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 /* 表单选项 */
@@ -369,7 +329,7 @@ const handleLogin = async () => {
   justify-content: space-between;
 }
 
-.checkbox-wrapper {
+.m3-checkbox-wrapper {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -377,39 +337,39 @@ const handleLogin = async () => {
   user-select: none;
 }
 
-.checkbox-wrapper input {
+.m3-checkbox-wrapper input {
   display: none;
 }
 
 .checkmark {
-  width: 20px;
-  height: 20px;
-  border: 2px solid var(--border-color);
-  border-radius: var(--radius-sm);
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--md-sys-color-outline);
+  border-radius: 2px;
   position: relative;
-  transition: all var(--transition-fast);
+  transition: all 0.2s;
 }
 
-.checkbox-wrapper input:checked + .checkmark {
-  background: var(--primary);
-  border-color: var(--primary);
+.m3-checkbox-wrapper input:checked + .checkmark {
+  background: var(--md-sys-color-primary);
+  border-color: var(--md-sys-color-primary);
 }
 
-.checkbox-wrapper input:checked + .checkmark::after {
+.m3-checkbox-wrapper input:checked + .checkmark::after {
   content: '';
   position: absolute;
-  left: 6px;
-  top: 2px;
-  width: 5px;
+  left: 5px;
+  top: 1px;
+  width: 4px;
   height: 10px;
-  border: solid white;
+  border: solid var(--md-sys-color-on-primary);
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
 }
 
 .checkbox-label {
   font-size: 14px;
-  color: var(--text-secondary);
+  color: var(--md-sys-color-on-surface);
 }
 
 /* 错误消息 */
@@ -418,52 +378,35 @@ const handleLogin = async () => {
   align-items: center;
   gap: 8px;
   padding: 12px 16px;
-  background: var(--danger-bg);
-  border: 1px solid var(--danger);
-  border-radius: var(--radius);
-  color: var(--danger);
+  background: var(--md-sys-color-error-container);
+  border-radius: 12px;
+  color: var(--md-sys-color-on-error-container);
   font-size: 14px;
+}
+
+.error-message .material-symbols-rounded {
+  font-size: 20px;
 }
 
 /* 登录按钮 */
 .login-button {
   width: 100%;
-  padding: 14px 24px;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-  color: white;
-  border: none;
-  border-radius: var(--radius);
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--transition);
+  height: 48px;
+  font-size: 16px;
+  font-weight: 500;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.button-content {
+  display: flex;
+  align-items: center;
   gap: 8px;
 }
 
-.login-button:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4);
-}
-
-.login-button:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-.login-button:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
-.loading-spinner {
-  width: 20px;
-  height: 20px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: white;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
+.spinning {
+  animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
@@ -480,20 +423,22 @@ const handleLogin = async () => {
 
 .footer-info p {
   font-size: 13px;
-  color: var(--text-tertiary);
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 /* 响应式设计 */
 @media (max-width: 480px) {
   .login-card {
     padding: 32px 24px;
-    border-radius: var(--radius-lg);
   }
   
   .logo-icon {
     width: 60px;
     height: 60px;
-    font-size: 30px;
+  }
+  
+  .logo-icon .material-symbols-rounded {
+    font-size: 32px;
   }
   
   .logo-title {

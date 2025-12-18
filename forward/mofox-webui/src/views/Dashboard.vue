@@ -2,7 +2,6 @@
   <div class="dashboard-wrapper">
     <Sidebar />
     <div class="main-layout">
-      <DashboardHeader />
       <main class="dashboard-content">
         <router-view v-slot="{ Component }">
           <Transition name="page-fade" mode="out-in">
@@ -16,13 +15,12 @@
 
 <script setup lang="ts">
 import Sidebar from '@/components/Sidebar.vue'
-import DashboardHeader from '@/components/DashboardHeader.vue'
 </script>
 
 <style scoped>
 .dashboard-wrapper {
   min-height: 100vh;
-  background-color: var(--bg-secondary);
+  background-color: var(--md-sys-color-surface);
   display: flex;
 }
 
@@ -32,12 +30,12 @@ import DashboardHeader from '@/components/DashboardHeader.vue'
   flex-direction: column;
   overflow-x: hidden;
   min-width: 0;
+  background-color: var(--md-sys-color-surface);
 }
 
 .dashboard-content {
   flex: 1;
-  padding: 24px 32px;
-  max-width: 1400px;
+  padding: 24px;
   width: 100%;
   margin: 0 auto;
 }
@@ -45,7 +43,7 @@ import DashboardHeader from '@/components/DashboardHeader.vue'
 /* 页面过渡动画 */
 .page-fade-enter-active,
 .page-fade-leave-active {
-  transition: all var(--transition);
+  transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
 .page-fade-enter-from {
@@ -61,7 +59,7 @@ import DashboardHeader from '@/components/DashboardHeader.vue'
 /* 响应式 */
 @media (max-width: 768px) {
   .dashboard-content {
-    padding: 16px 20px;
+    padding: 16px;
   }
 }
 </style>

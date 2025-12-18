@@ -13,6 +13,8 @@ import PluginMarketplaceDetail from '@/views/PluginMarketplaceDetail.vue'
 import GitUpdateView from '@/views/GitUpdateView.vue'
 import LogViewerView from '@/views/LogViewerView.vue'
 import LiveLogView from '@/views/LiveLogView.vue'
+import ExpressionView from '@/views/ExpressionView.vue'
+import RelationshipView from '@/views/RelationshipView.vue'
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -77,6 +79,16 @@ const routes: Array<RouteRecordRaw> = [
         name: 'PluginMarketplaceDetail',
         component: PluginMarketplaceDetail,
         props: true
+      },
+      {
+        path: 'expression',
+        name: 'Expression',
+        component: ExpressionView
+      },
+      {
+        path: 'relationship',
+        name: 'Relationship',
+        component: RelationshipView
       },
       {
         path: 'git-update',

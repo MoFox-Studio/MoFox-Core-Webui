@@ -1,0 +1,250 @@
+/* Material 3 Expressive Components */
+
+/* Buttons */
+.m3-button {
+  height: 40px;
+  padding: 0 24px;
+  border-radius: 20px;
+  font-family: var(--md-sys-typescale-label-large-font);
+  font-size: var(--md-sys-typescale-label-large-size);
+  font-weight: var(--md-sys-typescale-label-large-weight);
+  line-height: var(--md-sys-typescale-label-large-line-height);
+  letter-spacing: var(--md-sys-typescale-label-large-tracking);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  border: none;
+  outline: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.m3-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.38;
+}
+
+/* Filled Button */
+.m3-button.filled {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+}
+
+.m3-button.filled:hover:not(:disabled) {
+  box-shadow: var(--md-sys-elevation-1);
+  background: linear-gradient(rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.08)), var(--md-sys-color-primary);
+}
+
+/* Tonal Button */
+.m3-button.tonal {
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.m3-button.tonal:hover:not(:disabled) {
+  box-shadow: var(--md-sys-elevation-1);
+  background: linear-gradient(rgba(29, 25, 43, 0.08), rgba(29, 25, 43, 0.08)), var(--md-sys-color-secondary-container);
+}
+
+/* Outlined Button */
+.m3-button.outlined {
+  background: transparent;
+  border: 1px solid var(--md-sys-color-outline);
+  color: var(--md-sys-color-primary);
+}
+
+.m3-button.outlined:hover:not(:disabled) {
+  background: var(--md-sys-color-surface-container-highest);
+  border-color: var(--md-sys-color-primary);
+}
+
+/* Text Button */
+.m3-button.text {
+  background: transparent;
+  color: var(--md-sys-color-primary);
+  padding: 0 12px;
+}
+
+.m3-button.text:hover:not(:disabled) {
+  background: var(--md-sys-color-surface-container-highest);
+}
+
+/* Icon Button */
+.m3-icon-button {
+  width: 40px;
+  height: 40px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--md-sys-color-on-surface-variant);
+  transition: all 0.2s;
+}
+
+.m3-icon-button:hover:not(:disabled) {
+  background: var(--md-sys-color-surface-container-highest);
+  color: var(--md-sys-color-on-surface);
+}
+
+.m3-icon-button.filled {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+}
+
+.m3-icon-button.tonal {
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+/* Cards */
+.m3-card {
+  background: var(--md-sys-color-surface-container);
+  border-radius: 16px;
+  padding: 16px;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.m3-card.elevated {
+  background: var(--md-sys-color-surface-container-low);
+  box-shadow: var(--md-sys-elevation-1);
+}
+
+.m3-card.outlined {
+  background: var(--md-sys-color-surface);
+  border: 1px solid var(--md-sys-color-outline-variant);
+}
+
+/* Text Fields */
+.m3-text-field {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 16px;
+}
+
+.m3-text-field label {
+  font-size: 12px;
+  color: var(--md-sys-color-on-surface-variant);
+  margin-bottom: 4px;
+  margin-left: 16px;
+}
+
+.m3-input {
+  height: 56px;
+  border-radius: 4px 4px 0 0;
+  background: var(--md-sys-color-surface-container-highest);
+  border: none;
+  border-bottom: 1px solid var(--md-sys-color-on-surface-variant);
+  padding: 0 16px;
+  font-size: 16px;
+  color: var(--md-sys-color-on-surface);
+  transition: all 0.2s;
+}
+
+.m3-input:focus {
+  border-bottom: 2px solid var(--md-sys-color-primary);
+  background: var(--md-sys-color-surface-container-high);
+  outline: none;
+}
+
+.m3-input.outlined {
+  background: transparent;
+  border: 1px solid var(--md-sys-color-outline);
+  border-radius: 4px;
+  height: 56px;
+}
+
+.m3-input.outlined:focus {
+  border: 2px solid var(--md-sys-color-primary);
+}
+
+/* Switch */
+.m3-switch {
+  position: relative;
+  display: inline-block;
+  width: 52px;
+  height: 32px;
+}
+
+.m3-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.m3-switch-track {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--md-sys-color-surface-container-highest);
+  border: 2px solid var(--md-sys-color-outline);
+  border-radius: 16px;
+  transition: .4s;
+}
+
+.m3-switch-thumb {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 6px;
+  bottom: 6px;
+  background-color: var(--md-sys-color-outline);
+  border-radius: 50%;
+  transition: .4s;
+}
+
+.m3-switch input:checked + .m3-switch-track {
+  background-color: var(--md-sys-color-primary);
+  border-color: var(--md-sys-color-primary);
+}
+
+.m3-switch input:checked + .m3-switch-track .m3-switch-thumb {
+  transform: translateX(20px);
+  background-color: var(--md-sys-color-on-primary);
+  height: 24px;
+  width: 24px;
+  bottom: 2px;
+  left: 2px;
+}
+
+/* Chips */
+.m3-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 16px;
+  border-radius: 8px;
+  border: 1px solid var(--md-sys-color-outline);
+  background: transparent;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.m3-chip:hover {
+  background: var(--md-sys-color-surface-container-highest);
+}
+
+.m3-chip.selected {
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  border-color: transparent;
+}
+
+.m3-chip .material-symbols-rounded {
+  font-size: 18px;
+  margin-right: 8px;
+  margin-left: -4px;
+}

@@ -1,25 +1,29 @@
 <template>
-  <div class="log-viewer">
+  <div class="log-viewer-view">
     <!-- 页面标题 -->
-    <div class="page-header">
+    <header class="page-header">
       <div class="header-content">
         <div class="title-group">
-          <Icon icon="lucide:file-text" class="title-icon" />
-          <h1 class="page-title">日志查看器</h1>
+          <div class="header-icon-container">
+            <span class="material-symbols-rounded header-icon">description</span>
+          </div>
+          <div class="header-text">
+            <h1 class="page-title">日志查看器</h1>
+            <p class="page-description">查看、搜索和分析系统日志</p>
+          </div>
         </div>
-        <p class="page-description">查看、搜索和分析系统日志</p>
       </div>
-    </div>
+    </header>
 
     <!-- 主内容区 -->
     <div class="content-wrapper">
       <div class="log-container">
         <!-- 左侧：日志文件列表 -->
-        <div class="file-list-panel">
+        <div class="m3-card file-list-panel">
           <div class="panel-header">
             <h3 class="panel-title">日志文件</h3>
-            <button class="refresh-button" @click="loadLogFiles" :disabled="loading">
-              <Icon icon="lucide:refresh-cw" :class="{ spinning: loading }" />
+            <button class="m3-icon-button" @click="loadLogFiles" :disabled="loading" title="刷新列表">
+              <span class="material-symbols-rounded" :class="{ spinning: loading }">refresh</span>
             </button>
           </div>
           
@@ -31,45 +35,42 @@
               :class="{ active: selectedFile === file.name }"
               @click="selectFile(file.name)"
             >
-              <div class="file-info">
-                <Icon 
-                  :icon="file.compressed ? 'lucide:file-archive' : 'lucide:file-text'" 
-                  class="file-icon"
-                />
-                <div class="file-details">
-                  <div class="file-name">{{ file.name }}</div>
-                  <div class="file-meta">
-                    <span>{{ file.size_human }}</span>
-                    <span>{{ file.mtime_human }}</span>
-                  </div>
+              <span class="material-symbols-rounded file-icon">
+                {{ file.compressed ? 'folder_zip' : 'text_snippet' }}
+              </span>
+              <div class="file-details">
+                <div class="file-name">{{ file.name }}</div>
+                <div class="file-meta">
+                  <span>{{ file.size_human }}</span>
+                  <span>{{ file.mtime_human }}</span>
                 </div>
               </div>
             </div>
             
-            <div v-if="logFiles.length === 0 && !loading" class="empty-state">
-              <Icon icon="lucide:inbox" class="empty-icon" />
+            <div v-if="logFiles.length === 0 && !loading" class="empty-state small">
+              <span class="material-symbols-rounded empty-icon">inbox</span>
               <p>暂无日志文件</p>
             </div>
           </div>
         </div>
 
         <!-- 右侧：日志内容 -->
-        <div class="log-content-panel">
+        <div class="m3-card log-content-panel">
           <!-- 搜索和筛选工具栏 -->
           <div class="toolbar">
             <div class="search-group">
               <div class="search-input-wrapper">
-                <Icon icon="lucide:search" class="search-icon" />
+                <span class="material-symbols-rounded search-icon">search</span>
                 <input 
                   v-model="searchQuery"
                   type="text"
                   placeholder="搜索日志内容..."
-                  class="search-input"
+                  class="m3-input search-input"
                   @keyup.enter="searchLogs"
                 />
               </div>
               <button 
-                class="search-button"
+                class="m3-button filled"
                 @click="searchLogs"
                 :disabled="!selectedFile || loading"
               >
@@ -78,31 +79,40 @@
             </div>
 
             <div class="filter-group">
-              <select v-model="filterLevel" class="filter-select" @change="searchLogs">
-                <option value="">所有级别</option>
-                <option value="debug">DEBUG</option>
-                <option value="info">INFO</option>
-                <option value="warning">WARNING</option>
-                <option value="error">ERROR</option>
-                <option value="critical">CRITICAL</option>
-              </select>
+              <div class="select-wrapper">
+                <select v-model="filterLevel" class="m3-input filter-select" @change="searchLogs">
+                  <option value="">所有级别</option>
+                  <option value="debug">DEBUG</option>
+                  <option value="info">INFO</option>
+                  <option value="warning">WARNING</option>
+                  <option value="error">ERROR</option>
+                  <option value="critical">CRITICAL</option>
+                </select>
+                <span class="material-symbols-rounded select-arrow">arrow_drop_down</span>
+              </div>
 
-              <select v-model="filterLogger" class="filter-select" @change="searchLogs">
-                <option value="">所有模块</option>
-                <option v-for="logger in loggers" :key="logger.name" :value="logger.name">
-                  {{ logger.alias || logger.name }}
-                </option>
-              </select>
+              <div class="select-wrapper">
+                <select v-model="filterLogger" class="m3-input filter-select" @change="searchLogs">
+                  <option value="">所有模块</option>
+                  <option v-for="logger in loggers" :key="logger.name" :value="logger.name">
+                    {{ logger.alias || logger.name }}
+                  </option>
+                </select>
+                <span class="material-symbols-rounded select-arrow">arrow_drop_down</span>
+              </div>
 
-              <button class="icon-button" @click="showAdvancedFilter = !showAdvancedFilter" title="高级筛选">
-                <Icon icon="lucide:filter" />
+              <button 
+                class="m3-icon-button" 
+                :class="{ active: showAdvancedFilter }"
+                @click="showAdvancedFilter = !showAdvancedFilter" 
+                title="高级筛选"
+              >
+                <span class="material-symbols-rounded">filter_list</span>
               </button>
 
-              <button class="icon-button" @click="clearFilters" title="清除筛选">
-                <Icon icon="lucide:x" />
+              <button class="m3-icon-button" @click="clearFilters" title="清除筛选">
+                <span class="material-symbols-rounded">close</span>
               </button>
-
-             
             </div>
           </div>
 
@@ -111,15 +121,15 @@
             <div v-if="showAdvancedFilter" class="advanced-filter">
               <div class="filter-row">
                 <label class="filter-label">开始时间</label>
-                <input v-model="filterStartTime" type="datetime-local" class="filter-input" />
+                <input v-model="filterStartTime" type="datetime-local" class="m3-input filter-input" />
               </div>
               <div class="filter-row">
                 <label class="filter-label">结束时间</label>
-                <input v-model="filterEndTime" type="datetime-local" class="filter-input" />
+                <input v-model="filterEndTime" type="datetime-local" class="m3-input filter-input" />
               </div>
-              <div class="filter-row">
-                <label class="filter-label">
-                  <input v-model="useRegex" type="checkbox" />
+              <div class="filter-row checkbox-row">
+                <label class="m3-checkbox-label">
+                  <input v-model="useRegex" type="checkbox" class="m3-checkbox" />
                   使用正则表达式
                 </label>
               </div>
@@ -134,33 +144,32 @@
             </div>
             <div class="stat-item" v-for="(count, level) in stats.by_level" :key="level">
               <span class="stat-label">{{ level.toUpperCase() }}:</span>
-              <span class="stat-value" :class="`level-${level}`">{{ count }}</span>
+              <span class="stat-value" :class="'level-' + level.toLowerCase()">{{ count }}</span>
             </div>
           </div>
 
           <!-- 日志条目列表 -->
           <div class="log-entries" ref="logEntriesContainer">
             <div v-if="loading" class="loading-state">
-              <Icon icon="lucide:loader-2" class="loading-icon spinning" />
+              <span class="material-symbols-rounded spinning loading-icon">progress_activity</span>
               <p>加载中...</p>
             </div>
 
-
             <!-- 文件日志模式 -->
             <div v-else-if="!selectedFile" class="empty-state">
-              <Icon icon="lucide:file-search" class="empty-icon" />
+              <span class="material-symbols-rounded empty-icon">find_in_page</span>
               <p>请选择一个日志文件或启用实时日志</p>
             </div>
 
             <div v-else-if="logEntries.length === 0" class="empty-state">
-              <Icon icon="lucide:inbox" class="empty-icon" />
+              <span class="material-symbols-rounded empty-icon">inbox</span>
               <p>没有找到日志条目</p>
             </div>
 
             <div v-else class="entries-list">
               <div 
                 v-for="entry in logEntries" 
-                :key="`${entry.file_name}-${entry.line_number}`"
+                :key="entry.file_name + '-' + entry.line_number"
                 class="log-entry"
                 :class="`level-${entry.level.toLowerCase()}`"
               >
@@ -188,18 +197,20 @@
           <!-- 分页控制 -->
           <div v-if="logEntries.length > 0" class="pagination">
             <button 
-              class="pagination-button"
+              class="m3-icon-button small"
               :disabled="currentPage === 1"
               @click="goToPage(1)"
+              title="第一页"
             >
-              <Icon icon="lucide:chevrons-left" />
+              <span class="material-symbols-rounded">first_page</span>
             </button>
             <button 
-              class="pagination-button"
+              class="m3-icon-button small"
               :disabled="currentPage === 1"
               @click="goToPage(currentPage - 1)"
+              title="上一页"
             >
-              <Icon icon="lucide:chevron-left" />
+              <span class="material-symbols-rounded">chevron_left</span>
             </button>
             
             <div class="pagination-info">
@@ -209,26 +220,31 @@
             </div>
 
             <button 
-              class="pagination-button"
+              class="m3-icon-button small"
               :disabled="currentPage === totalPages"
               @click="goToPage(currentPage + 1)"
+              title="下一页"
             >
-              <Icon icon="lucide:chevron-right" />
+              <span class="material-symbols-rounded">chevron_right</span>
             </button>
             <button 
-              class="pagination-button"
+              class="m3-icon-button small"
               :disabled="currentPage === totalPages"
               @click="goToPage(totalPages)"
+              title="最后一页"
             >
-              <Icon icon="lucide:chevrons-right" />
+              <span class="material-symbols-rounded">last_page</span>
             </button>
 
-            <select v-model="pageSize" class="page-size-select" @change="changePageSize">
-              <option :value="50">50 条/页</option>
-              <option :value="100">100 条/页</option>
-              <option :value="200">200 条/页</option>
-              <option :value="500">500 条/页</option>
-            </select>
+            <div class="select-wrapper small">
+              <select v-model="pageSize" class="m3-input page-size-select" @change="changePageSize">
+                <option :value="50">50 条/页</option>
+                <option :value="100">100 条/页</option>
+                <option :value="200">200 条/页</option>
+                <option :value="500">500 条/页</option>
+              </select>
+              <span class="material-symbols-rounded select-arrow">arrow_drop_down</span>
+            </div>
           </div>
         </div>
       </div>
@@ -237,8 +253,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
-import { Icon } from '@iconify/vue'
+import { ref, computed, onMounted } from 'vue'
 import {
   getLogFiles as apiGetLogFiles,
   searchLogs as apiSearchLogs,
@@ -246,7 +261,6 @@ import {
   getLogStats as apiGetLogStats
 } from '@/api/log_viewer'
 import type { LogFile, LogEntry, LoggerInfo, LogStats } from '@/api/log_viewer'
-import { getServerInfo } from '@/api/index'
 
 // 状态
 const loading = ref(false)
@@ -271,8 +285,6 @@ const pageSize = ref(100)
 const totalEntries = ref(0)
 
 const totalPages = computed(() => Math.ceil(totalEntries.value / pageSize.value))
-
-
 
 // 加载日志文件列表
 const loadLogFiles = async () => {
@@ -407,51 +419,64 @@ const formatTimestamp = (timestamp: string) => {
 onMounted(() => {
   loadLogFiles()
 })
-
 </script>
 
 <style scoped>
-.log-viewer {
+.log-viewer-view {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: var(--bg-secondary);
+  gap: 16px;
+  animation: fadeIn 0.4s cubic-bezier(0.2, 0, 0, 1);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* 页面标题 */
 .page-header {
-  background: transparent;
-  border-bottom: none;
-  padding: 24px 32px;
+  padding: 0 8px;
 }
 
 .header-content {
-  max-width: 1400px;
-  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .title-group {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 8px;
+  gap: 16px;
 }
 
-.title-icon {
-  font-size: 28px;
-  color: var(--primary);
+.header-icon-container {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-icon {
+  font-size: 24px;
 }
 
 .page-title {
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--md-sys-color-on-surface);
+  margin: 0 0 4px;
 }
 
 .page-description {
   font-size: 14px;
-  color: var(--text-secondary);
+  color: var(--md-sys-color-on-surface-variant);
   margin: 0;
 }
 
@@ -459,32 +484,26 @@ onMounted(() => {
 .content-wrapper {
   flex: 1;
   overflow: hidden;
-  padding: 24px 32px;
   display: flex;
   flex-direction: column;
 }
 
 .log-container {
-  max-width: 1400px;
-  margin: 0 auto;
   flex: 1;
   display: grid;
   grid-template-columns: 280px 1fr;
-  gap: 24px;
+  gap: 16px;
   min-height: 0;
   overflow: hidden;
 }
 
 /* 文件列表面板 */
 .file-list-panel {
-  background: var(--bg-primary);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   height: 100%;
-  max-height: calc(100vh - 180px);
+  padding: 0;
 }
 
 .panel-header {
@@ -492,97 +511,49 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 16px;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
 }
 
 .panel-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface);
   margin: 0;
-}
-
-.refresh-button {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius);
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all var(--transition);
-}
-
-.refresh-button:hover:not(:disabled) {
-  background: var(--bg-hover);
-  color: var(--primary);
-  border-color: var(--primary);
-}
-
-.refresh-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 .file-list {
   flex: 1;
   overflow-y: auto;
-  overflow-x: hidden;
   padding: 8px;
-  min-height: 0;
-}
-
-.file-list::-webkit-scrollbar {
-  width: 6px;
-}
-
-.file-list::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.file-list::-webkit-scrollbar-thumb {
-  background: var(--border-color);
-  border-radius: 3px;
-}
-
-.file-list::-webkit-scrollbar-thumb:hover {
-  background: var(--text-tertiary);
 }
 
 .file-item {
   padding: 12px;
-  border-radius: var(--radius);
+  border-radius: 12px;
   cursor: pointer;
-  transition: all var(--transition);
+  transition: all 0.2s;
   margin-bottom: 4px;
-}
-
-.file-item:hover {
-  background: var(--bg-hover);
-}
-
-.file-item.active {
-  background: var(--primary-bg);
-  border-left: 3px solid var(--primary);
-}
-
-.file-info {
   display: flex;
   align-items: flex-start;
   gap: 12px;
 }
 
+.file-item:hover {
+  background: var(--md-sys-color-surface-container-highest);
+}
+
+.file-item.active {
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
 .file-icon {
   font-size: 20px;
-  color: var(--text-secondary);
-  flex-shrink: 0;
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .file-item.active .file-icon {
-  color: var(--primary);
+  color: var(--md-sys-color-on-secondary-container);
 }
 
 .file-details {
@@ -591,16 +562,15 @@ onMounted(() => {
 }
 
 .file-name {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
-  color: var(--text-primary);
-  word-break: break-all;
   margin-bottom: 4px;
+  word-break: break-all;
 }
 
 .file-meta {
   font-size: 11px;
-  color: var(--text-tertiary);
+  opacity: 0.7;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -608,23 +578,21 @@ onMounted(() => {
 
 /* 日志内容面板 */
 .log-content-panel {
-  background: var(--bg-primary);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   height: 100%;
-  max-height: calc(100vh - 180px);
+  padding: 0;
 }
 
 /* 工具栏 */
 .toolbar {
   padding: 16px;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+  background: var(--md-sys-color-surface-container-low);
 }
 
 .search-group {
@@ -644,47 +612,14 @@ onMounted(() => {
   left: 12px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 18px;
-  color: var(--text-tertiary);
+  font-size: 20px;
+  color: var(--md-sys-color-on-surface-variant);
   pointer-events: none;
 }
 
 .search-input {
+  padding-left: 44px;
   width: 100%;
-  padding: 10px 12px 10px 40px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius);
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-  font-size: 14px;
-  transition: all var(--transition);
-}
-
-.search-input:focus {
-  outline: none;
-  border-color: var(--primary);
-  background: var(--bg-primary);
-}
-
-.search-button {
-  padding: 10px 24px;
-  background: var(--primary);
-  color: white;
-  border: none;
-  border-radius: var(--radius);
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition);
-}
-
-.search-button:hover:not(:disabled) {
-  background: var(--primary-dark);
-}
-
-.search-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 .filter-group {
@@ -693,48 +628,30 @@ onMounted(() => {
   align-items: center;
 }
 
-.filter-select {
-  padding: 10px 12px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius);
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-  font-size: 14px;
-  cursor: pointer;
-  transition: all var(--transition);
-}
-
-.filter-select:focus {
-  outline: none;
-  border-color: var(--primary);
-}
-
-.icon-button {
-  width: 40px;
-  height: 40px;
+.select-wrapper {
+  position: relative;
   display: flex;
   align-items: center;
-  justify-content: center;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius);
-  color: var(--text-secondary);
+}
+
+.filter-select {
+  padding-right: 32px;
+  appearance: none;
   cursor: pointer;
-  transition: all var(--transition);
 }
 
-.icon-button:hover:not(:disabled) {
-  background: var(--bg-hover);
-  color: var(--primary);
-  border-color: var(--primary);
+.select-arrow {
+  position: absolute;
+  right: 8px;
+  pointer-events: none;
+  color: var(--md-sys-color-on-surface-variant);
 }
-
 
 /* 高级筛选 */
 .advanced-filter {
   padding: 16px;
-  border-bottom: 1px solid var(--border-color);
-  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+  background: var(--md-sys-color-surface-container);
   display: flex;
   gap: 16px;
   flex-wrap: wrap;
@@ -748,24 +665,39 @@ onMounted(() => {
 
 .filter-label {
   font-size: 13px;
-  color: var(--text-secondary);
+  color: var(--md-sys-color-on-surface-variant);
   white-space: nowrap;
 }
 
 .filter-input {
   padding: 8px 12px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius);
-  background: var(--bg-primary);
-  color: var(--text-primary);
   font-size: 13px;
+}
+
+.checkbox-row {
+  margin-left: auto;
+}
+
+.m3-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--md-sys-color-on-surface);
+  cursor: pointer;
+}
+
+.m3-checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--md-sys-color-primary);
 }
 
 /* 统计栏 */
 .stats-bar {
   padding: 12px 16px;
-  border-bottom: 1px solid var(--border-color);
-  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+  background: var(--md-sys-color-surface-container-low);
   display: flex;
   gap: 24px;
   flex-wrap: wrap;
@@ -779,45 +711,20 @@ onMounted(() => {
 }
 
 .stat-label {
-  color: var(--text-secondary);
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .stat-value {
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--md-sys-color-on-surface);
 }
-
-.stat-value.level-debug { color: #8b8b8b; }
-.stat-value.level-info { color: #3b82f6; }
-.stat-value.level-warning { color: #f59e0b; }
-.stat-value.level-error { color: #ef4444; }
-.stat-value.level-critical { color: #dc2626; }
 
 /* 日志条目列表 */
 .log-entries {
   flex: 1;
   overflow-y: auto;
-  overflow-x: hidden;
   padding: 16px;
-  min-height: 0;
-}
-
-.log-entries::-webkit-scrollbar {
-  width: 8px;
-}
-
-.log-entries::-webkit-scrollbar-track {
-  background: var(--bg-secondary);
-  border-radius: 4px;
-}
-
-.log-entries::-webkit-scrollbar-thumb {
-  background: var(--border-color);
-  border-radius: 4px;
-}
-
-.log-entries::-webkit-scrollbar-thumb:hover {
-  background: var(--text-tertiary);
+  background: var(--md-sys-color-surface);
 }
 
 .entries-list {
@@ -828,21 +735,23 @@ onMounted(() => {
 
 .log-entry {
   padding: 12px;
-  border-radius: var(--radius);
-  border-left: 3px solid var(--border-color);
-  background: var(--bg-secondary);
-  transition: all var(--transition);
+  border-radius: 8px;
+  border-left: 4px solid var(--md-sys-color-outline);
+  background: var(--md-sys-color-surface-container-lowest);
+  transition: all 0.2s;
+  font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
 }
 
 .log-entry:hover {
-  background: var(--bg-hover);
+  background: var(--md-sys-color-surface-container-low);
 }
 
-.log-entry.level-debug { border-left-color: #8b8b8b; }
-.log-entry.level-info { border-left-color: #3b82f6; }
-.log-entry.level-warning { border-left-color: #f59e0b; }
-.log-entry.level-error { border-left-color: #ef4444; }
-.log-entry.level-critical { border-left-color: #dc2626; }
+/* 日志级别颜色 */
+.log-entry.level-debug { border-left-color: #909090; }
+.log-entry.level-info { border-left-color: #2196F3; }
+.log-entry.level-warning { border-left-color: #FFC107; }
+.log-entry.level-error { border-left-color: #F44336; }
+.log-entry.level-critical { border-left-color: #D32F2F; }
 
 .entry-header {
   display: flex;
@@ -854,37 +763,38 @@ onMounted(() => {
 }
 
 .entry-time {
-  color: var(--text-tertiary);
-  font-family: 'Consolas', 'Monaco', monospace;
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .entry-level {
   padding: 2px 8px;
-  border-radius: var(--radius-sm);
+  border-radius: 4px;
   font-weight: 600;
   font-size: 11px;
+  color: white;
 }
 
-.entry-level.level-debug { background: #8b8b8b; color: white; }
-.entry-level.level-info { background: #3b82f6; color: white; }
-.entry-level.level-warning { background: #f59e0b; color: white; }
-.entry-level.level-error { background: #ef4444; color: white; }
-.entry-level.level-critical { background: #dc2626; color: white; }
+.entry-level.level-debug { background: #909090; }
+.entry-level.level-info { background: #2196F3; }
+.entry-level.level-warning { background: #FFC107; color: black; }
+.entry-level.level-error { background: #F44336; }
+.entry-level.level-critical { background: #D32F2F; }
 
 .entry-logger {
   font-weight: 600;
 }
 
 .entry-line {
-  color: var(--text-tertiary);
+  color: var(--md-sys-color-on-surface-variant);
   margin-left: auto;
 }
 
 .entry-message {
-  color: var(--text-primary);
-  font-size: 14px;
+  color: var(--md-sys-color-on-surface);
+  font-size: 13px;
   line-height: 1.6;
   word-break: break-word;
+  white-space: pre-wrap;
 }
 
 .entry-extra {
@@ -892,59 +802,30 @@ onMounted(() => {
   font-size: 12px;
 }
 
-.entry-extra details {
-  cursor: pointer;
-}
-
 .entry-extra summary {
-  color: var(--primary);
+  color: var(--md-sys-color-primary);
+  cursor: pointer;
   user-select: none;
 }
 
 .entry-extra pre {
   margin-top: 8px;
-  padding: 8px;
-  background: var(--bg-primary);
-  border-radius: var(--radius-sm);
+  padding: 12px;
+  background: var(--md-sys-color-surface-container-high);
+  border-radius: 8px;
   overflow-x: auto;
-  font-family: 'Consolas', 'Monaco', monospace;
-  font-size: 11px;
-  color: var(--text-secondary);
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 /* 分页 */
 .pagination {
-  padding: 16px;
-  border-top: 1px solid var(--border-color);
+  padding: 12px 16px;
+  border-top: 1px solid var(--md-sys-color-outline-variant);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-}
-
-.pagination-button {
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius);
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all var(--transition);
-}
-
-.pagination-button:hover:not(:disabled) {
-  background: var(--bg-hover);
-  color: var(--primary);
-  border-color: var(--primary);
-}
-
-.pagination-button:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
+  background: var(--md-sys-color-surface-container-low);
 }
 
 .pagination-info {
@@ -952,22 +833,17 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   padding: 0 16px;
-  font-size: 14px;
-  color: var(--text-secondary);
+  font-size: 13px;
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .separator {
-  color: var(--border-color);
+  color: var(--md-sys-color-outline);
 }
 
-.page-size-select {
-  padding: 8px 12px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius);
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-  font-size: 13px;
-  cursor: pointer;
+.select-wrapper.small .filter-select {
+  padding: 6px 28px 6px 12px;
+  font-size: 12px;
 }
 
 /* 空状态 */
@@ -978,7 +854,12 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   padding: 60px 20px;
-  color: var(--text-tertiary);
+  color: var(--md-sys-color-on-surface-variant);
+  height: 100%;
+}
+
+.empty-state.small {
+  padding: 32px 16px;
 }
 
 .empty-icon,
@@ -988,13 +869,6 @@ onMounted(() => {
   opacity: 0.5;
 }
 
-.empty-state p,
-.loading-state p {
-  font-size: 14px;
-  margin: 0;
-}
-
-/* 动画 */
 .spinning {
   animation: spin 1s linear infinite;
 }
@@ -1028,26 +902,9 @@ onMounted(() => {
     grid-template-columns: 1fr;
     grid-template-rows: 300px 1fr;
   }
-
-  .file-list-panel {
-    max-height: 300px;
-    height: 300px;
-  }
-  
-  .log-content-panel {
-    max-height: calc(100vh - 540px);
-  }
 }
 
 @media (max-width: 768px) {
-  .content-wrapper {
-    padding: 16px;
-  }
-  
-  .log-container {
-    gap: 16px;
-  }
-  
   .toolbar {
     flex-direction: column;
   }
@@ -1060,6 +917,14 @@ onMounted(() => {
   .filter-group {
     width: 100%;
     flex-wrap: wrap;
+  }
+  
+  .select-wrapper {
+    flex: 1;
+  }
+  
+  .filter-select {
+    width: 100%;
   }
 }
 </style>

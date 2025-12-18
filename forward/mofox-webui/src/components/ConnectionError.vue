@@ -2,9 +2,9 @@
   <Teleport to="body">
     <Transition name="modal">
       <div v-if="visible" class="modal-overlay" @click.self="handleClose">
-        <div class="modal-container">
+        <div class="m3-dialog modal-container">
           <div class="modal-icon">
-            <Icon icon="lucide:wifi-off" />
+            <span class="material-symbols-rounded">wifi_off</span>
           </div>
           <h2 class="modal-title">连接失败</h2>
           <p class="modal-message">
@@ -12,11 +12,11 @@
             <span class="modal-detail">{{ message || '请检查服务是否正常运行' }}</span>
           </p>
           <div class="modal-actions">
-            <button class="btn-retry" @click="handleRetry">
-              <Icon icon="lucide:refresh-cw" />
+            <button class="m3-button filled" @click="handleRetry">
+              <span class="material-symbols-rounded">refresh</span>
               重试连接
             </button>
-            <button class="btn-close" @click="handleClose">
+            <button class="m3-button text" @click="handleClose">
               关闭
             </button>
           </div>
@@ -27,8 +27,6 @@
 </template>
 
 <script setup lang="ts">
-import { Icon } from '@iconify/vue'
-
 interface Props {
   visible: boolean
   message?: string
@@ -67,94 +65,100 @@ function handleRetry() {
 }
 
 .modal-container {
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  padding: 32px;
-  max-width: 400px;
+  background: var(--md-sys-color-surface-container-high);
+  border-radius: 28px;
+  padding: 24px;
+  max-width: 320px;
   width: 90%;
   text-align: center;
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--md-sys-elevation-3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .modal-icon {
-  width: 64px;
-  height: 64px;
-  margin: 0 auto 20px;
-  background: rgba(239, 68, 68, 0.1);
-  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 16px;
+  color: var(--md-sys-color-error);
+  font-size: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 32px;
-  color: #ef4444;
+}
+
+.modal-icon .material-symbols-rounded {
+  font-size: 48px;
 }
 
 .modal-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0 0 12px;
+  font-size: 24px;
+  font-weight: 400;
+  color: var(--md-sys-color-on-surface);
+  margin: 0 0 16px;
 }
 
 .modal-message {
   font-size: 14px;
-  color: var(--text-secondary);
+  color: var(--md-sys-color-on-surface-variant);
   margin: 0 0 24px;
-  line-height: 1.6;
+  line-height: 1.5;
 }
 
 .modal-detail {
   font-size: 12px;
-  color: var(--text-tertiary);
+  color: var(--md-sys-color-error);
+  margin-top: 4px;
+  display: block;
 }
 
 .modal-actions {
   display: flex;
+  flex-direction: column;
   gap: 12px;
-  justify-content: center;
+  width: 100%;
 }
 
-.btn-retry {
+.m3-button {
+  height: 40px;
+  border-radius: 20px;
+  padding: 0 24px;
+  font-size: 14px;
+  font-weight: 500;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  padding: 10px 20px;
-  background: var(--primary);
-  color: white;
+  cursor: pointer;
+  transition: all 0.2s;
   border: none;
-  border-radius: var(--radius);
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition-fast);
+  width: 100%;
 }
 
-.btn-retry:hover {
-  background: var(--primary-hover);
-  transform: translateY(-1px);
+.m3-button.filled {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
 }
 
-.btn-close {
-  padding: 10px 20px;
-  background: var(--bg-secondary);
-  color: var(--text-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius);
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition-fast);
+.m3-button.filled:hover {
+  box-shadow: var(--md-sys-elevation-1);
+  background: linear-gradient(rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.08)), var(--md-sys-color-primary);
 }
 
-.btn-close:hover {
-  background: var(--bg-hover);
+.m3-button.text {
+  background: transparent;
+  color: var(--md-sys-color-primary);
+}
+
+.m3-button.text:hover {
+  background: var(--md-sys-color-surface-container-highest);
 }
 
 /* 过渡动画 */
 .modal-enter-active,
 .modal-leave-active {
-  transition: all 0.3s ease;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .modal-enter-from,
@@ -165,5 +169,6 @@ function handleRetry() {
 .modal-enter-from .modal-container,
 .modal-leave-to .modal-container {
   transform: scale(0.9);
+  opacity: 0;
 }
 </style>

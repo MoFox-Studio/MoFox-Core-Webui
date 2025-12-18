@@ -1044,6 +1044,29 @@ watch(() => props.parsedData, () => {
 
 <style scoped>
 .model-config-editor {
+  /* Map MD3 variables to component variables */
+  --bg-primary: var(--md-sys-color-surface);
+  --bg-secondary: var(--md-sys-color-surface-container);
+  --bg-tertiary: var(--md-sys-color-surface-container-high);
+  --bg-hover: var(--md-sys-color-surface-container-highest);
+  
+  --text-primary: var(--md-sys-color-on-surface);
+  --text-secondary: var(--md-sys-color-on-surface-variant);
+  --text-tertiary: var(--md-sys-color-outline);
+  
+  --border-color: var(--md-sys-color-outline-variant);
+  
+  --primary: var(--md-sys-color-primary);
+  --primary-bg: var(--md-sys-color-primary-container);
+  
+  --radius-sm: var(--md-sys-shape-corner-extra-small);
+  --radius: var(--md-sys-shape-corner-medium);
+  --radius-lg: var(--md-sys-shape-corner-large);
+  
+  --transition-fast: 0.2s ease;
+  --warning: #f59e0b;
+  --error: var(--md-sys-color-error);
+
   display: flex;
   flex-direction: column;
   height: 100%;

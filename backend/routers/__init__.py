@@ -4,6 +4,7 @@ HTTP路由组件模块
 
 from .auth_router import WebUIAuthRouter
 from .config_router import WebUIConfigRouter
+from .expression_router import ExpressionRouterComponent
 from .git_update_router import GitUpdateRouterComponent
 from .log_viewer_router import LogViewerRouterComponent
 from .marketplace_router import MarketplaceRouterComponent
@@ -11,6 +12,7 @@ from .plugin_router import WebUIPluginRouter
 from .stats_router import WebUIStatsRouter
 
 __all__ = [
+    "ExpressionRouterComponent",
     "GitUpdateRouterComponent",
     "LogViewerRouterComponent",
     "MarketplaceRouterComponent",

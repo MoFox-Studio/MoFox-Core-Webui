@@ -2,15 +2,18 @@
   <router-view />
   
   <!-- 全局 Toast 提示 -->
-  <div v-if="toast.show" :class="['global-toast', toast.type]">
-    <Icon :icon="toast.type === 'success' ? 'lucide:check-circle' : 'lucide:alert-circle'" />
-    {{ toast.message }}
-  </div>
+  <Transition name="toast">
+    <div v-if="toast.show" :class="['m3-snackbar', toast.type]">
+      <span class="material-symbols-rounded icon">
+        {{ toast.type === 'success' ? 'check_circle' : 'error' }}
+      </span>
+      <span class="message">{{ toast.message }}</span>
+    </div>
+  </Transition>
 </template>
 
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
-import { Icon } from '@iconify/vue'
 import { useThemeStore } from '@/stores/theme'
 import { startUpdateChecker, stopUpdateChecker, setToastCallback } from '@/utils/updateChecker'
 
@@ -41,49 +44,60 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* 全局 Toast */
-.global-toast {
+/* 全局 Toast (M3 Snackbar 风格) */
+.m3-snackbar {
   position: fixed;
   bottom: 24px;
   right: 24px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px 20px;
-  background: var(--bg-primary);
-  border-radius: 10px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--md-sys-color-inverse-surface);
+  color: var(--md-sys-color-inverse-on-surface);
+  border-radius: 4px;
+  box-shadow: var(--md-sys-elevation-3);
   font-size: 14px;
+  line-height: 20px;
   z-index: 9999;
-  animation: slideIn 0.3s ease;
+  min-width: 288px;
+  max-width: 600px;
 }
 
-.global-toast.success {
-  border-left: 4px solid #10b981;
-  color: #10b981;
+.m3-snackbar.success .icon {
+  color: #a5d6a7; /* Light green for success on dark inverse surface */
 }
 
-.global-toast.error {
-  border-left: 4px solid #ef4444;
-  color: #ef4444;
+.m3-snackbar.error .icon {
+  color: #ef9a9a; /* Light red for error on dark inverse surface */
 }
 
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateX(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+.icon {
+  font-size: 20px;
+}
+
+.message {
+  flex: 1;
+}
+
+/* 动画 */
+.toast-enter-active,
+.toast-leave-active {
+  transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.toast-enter-from,
+.toast-leave-to {
+  opacity: 0;
+  transform: translateY(20px);
 }
 
 @media (max-width: 768px) {
-  .global-toast {
+  .m3-snackbar {
     bottom: 12px;
     right: 12px;
     left: 12px;
+    min-width: auto;
   }
 }
 </style>

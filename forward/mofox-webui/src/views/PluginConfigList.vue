@@ -3,15 +3,19 @@
     <!-- 顶部 -->
     <header class="page-header">
       <div class="header-left">
-        <Icon icon="lucide:puzzle" class="header-icon" />
+        <div class="header-icon-container">
+          <span class="material-symbols-rounded header-icon">extension</span>
+        </div>
         <div class="header-info">
           <h1>插件配置</h1>
           <p>管理已安装插件的配置文件</p>
         </div>
       </div>
       <div class="header-actions">
-        <button class="btn btn-ghost" @click="refreshPluginList" :disabled="loading">
-          <Icon :icon="loading ? 'lucide:loader-2' : 'lucide:refresh-cw'" :class="{ spinning: loading }" />
+        <button class="m3-button text" @click="refreshPluginList" :disabled="loading">
+          <span class="material-symbols-rounded" :class="{ spinning: loading }">
+            {{ loading ? 'progress_activity' : 'refresh' }}
+          </span>
           刷新列表
         </button>
       </div>
@@ -20,16 +24,16 @@
     <!-- 插件列表 -->
     <div class="plugin-list-container">
       <div v-if="loading" class="loading-state">
-        <Icon icon="lucide:loader-2" class="spinning" />
+        <span class="material-symbols-rounded spinning">progress_activity</span>
         加载插件配置列表...
       </div>
       <div v-else-if="loadError" class="error-state">
-        <Icon icon="lucide:alert-circle" />
+        <span class="material-symbols-rounded">error</span>
         {{ loadError }}
-        <button class="btn btn-primary" @click="refreshPluginList">重试</button>
+        <button class="m3-button filled" @click="refreshPluginList">重试</button>
       </div>
       <div v-else-if="pluginConfigs.length === 0" class="empty-state">
-        <Icon icon="lucide:puzzle" />
+        <span class="material-symbols-rounded empty-icon">extension_off</span>
         <p>暂无插件配置文件</p>
         <span class="hint">插件安装后，其配置文件将显示在这里</span>
       </div>
@@ -37,33 +41,36 @@
         <div 
           v-for="config in pluginConfigs" 
           :key="config.path"
-          class="plugin-card"
+          class="m3-card plugin-card clickable"
           @click="openPluginConfig(config)"
         >
           <div class="plugin-icon">
-            <Icon icon="lucide:puzzle" />
+            <span class="material-symbols-rounded">settings_applications</span>
           </div>
           <div class="plugin-info">
             <h3>{{ config.display_name }}</h3>
             <p class="plugin-path">{{ getShortPath(config.path) }}</p>
           </div>
-          <Icon icon="lucide:chevron-right" class="arrow-icon" />
+          <span class="material-symbols-rounded arrow-icon">chevron_right</span>
         </div>
       </div>
     </div>
 
     <!-- Toast 提示 -->
-    <div v-if="toast.show" :class="['toast', toast.type]">
-      <Icon :icon="toast.type === 'success' ? 'lucide:check-circle' : 'lucide:alert-circle'" />
-      {{ toast.message }}
-    </div>
+    <Transition name="toast">
+      <div v-if="toast.show" class="m3-snackbar" :class="toast.type">
+        <span class="material-symbols-rounded">
+          {{ toast.type === 'success' ? 'check_circle' : 'error' }}
+        </span>
+        {{ toast.message }}
+      </div>
+    </Transition>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Icon } from '@iconify/vue'
 import {
   getConfigList,
   type ConfigFileInfo
@@ -81,6 +88,7 @@ const toast = ref({ show: false, message: '', type: 'success' as 'success' | 'er
 
 // 方法
 function getShortPath(path: string): string {
+  if (!path) return ''
   // 截取较短的路径显示
   const parts = path.split(/[/\\]/)
   if (parts.length > 3) {
@@ -98,24 +106,24 @@ function openPluginConfig(config: ConfigFileInfo) {
 async function refreshPluginList() {
   loading.value = true
   loadError.value = ''
-  
   try {
     const res = await getConfigList()
-    if (res.success && res.data) {
+    if (res.success && res.data && res.data.configs) {
+      // 过滤出插件类型的配置
       pluginConfigs.value = res.data.configs.filter((c: ConfigFileInfo) => c.type === 'plugin')
     } else {
-      loadError.value = '获取插件配置列表失败'
+      loadError.value = res.data?.error || res.error || '获取列表失败'
     }
   } catch (e) {
-    loadError.value = '加载插件配置时发生错误'
+    loadError.value = '网络请求失败'
     console.error(e)
   } finally {
     loading.value = false
   }
 }
 
-function showToast(message: string, type: 'success' | 'error') {
-  toast.value = { show: true, message, type }
+function showToast(msg: string, type: 'success' | 'error' = 'success') {
+  toast.value = { show: true, message: msg, type }
   setTimeout(() => {
     toast.value.show = false
   }, 3000)
@@ -128,34 +136,26 @@ onMounted(() => {
 
 <style scoped>
 .plugin-config-list {
-  height: 100%;
   display: flex;
   flex-direction: column;
-  animation: fadeIn 0.3s ease;
+  height: 100%;
+  gap: 24px;
+  animation: fadeIn 0.4s cubic-bezier(0.2, 0, 0, 1);
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-.spinning {
-  animation: spin 1s linear infinite;
-}
-
-/* 顶部 */
+/* 头部样式 */
 .page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px;
-  background: var(--bg-primary);
-  border-bottom: 1px solid var(--border-color);
+  padding: 24px;
+  background: var(--md-sys-color-surface-container);
+  border-radius: 24px;
 }
 
 .header-left {
@@ -164,140 +164,74 @@ onMounted(() => {
   gap: 16px;
 }
 
+.header-icon-container {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  background: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .header-icon {
-  font-size: 32px;
-  color: #10b981;
+  font-size: 24px;
 }
 
 .header-info h1 {
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0 0 4px 0;
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--md-sys-color-on-surface);
+  margin: 0 0 4px;
 }
 
 .header-info p {
-  font-size: 13px;
-  color: var(--text-tertiary);
+  font-size: 14px;
+  color: var(--md-sys-color-on-surface-variant);
   margin: 0;
 }
 
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  border: none;
-  border-radius: var(--radius);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.btn-ghost {
-  background: transparent;
-  color: var(--text-secondary);
-}
-
-.btn-ghost:hover {
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-}
-
-.btn-ghost:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-primary {
-  background: var(--primary);
-  color: white;
-}
-
-.btn-primary:hover {
-  background: var(--primary-dark);
-}
-
-/* 插件列表容器 */
+/* 列表容器 */
 .plugin-list-container {
   flex: 1;
-  overflow: auto;
-  padding: 24px;
-  background: var(--bg-secondary);
-}
-
-/* 状态提示 */
-.loading-state,
-.error-state,
-.empty-state {
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  padding: 60px 20px;
-  color: var(--text-tertiary);
-  font-size: 14px;
 }
 
-.loading-state svg,
-.error-state svg,
-.empty-state svg {
-  font-size: 64px;
-  opacity: 0.5;
-}
-
-.error-state {
-  color: #ef4444;
-}
-
-.empty-state .hint {
-  font-size: 13px;
-  color: var(--text-tertiary);
-}
-
-/* 插件网格 */
 .plugin-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 16px;
+  padding-bottom: 24px;
 }
 
 .plugin-card {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 20px;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
+  padding: 16px;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  position: relative;
+  overflow: hidden;
 }
 
 .plugin-card:hover {
-  border-color: var(--primary);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  background: var(--md-sys-color-surface-container-high);
   transform: translateY(-2px);
+  box-shadow: var(--md-sys-elevation-2);
 }
 
 .plugin-icon {
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #10b981, #059669);
-  border-radius: var(--radius);
-  color: white;
-  font-size: 24px;
 }
 
 .plugin-info {
@@ -306,70 +240,96 @@ onMounted(() => {
 }
 
 .plugin-info h3 {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0 0 6px 0;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface);
+  margin: 0 0 4px 0;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .plugin-path {
   font-size: 12px;
-  color: var(--text-tertiary);
+  color: var(--md-sys-color-on-surface-variant);
   margin: 0;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .arrow-icon {
-  font-size: 20px;
-  color: var(--text-tertiary);
-  transition: all var(--transition-fast);
+  color: var(--md-sys-color-on-surface-variant);
+  transition: transform 0.2s;
 }
 
 .plugin-card:hover .arrow-icon {
-  color: var(--primary);
   transform: translateX(4px);
+  color: var(--md-sys-color-primary);
 }
 
-/* Toast */
-.toast {
+/* 状态展示 */
+.loading-state, .error-state, .empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  gap: 16px;
+  color: var(--md-sys-color-on-surface-variant);
+  min-height: 300px;
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.empty-icon {
+  font-size: 48px;
+  opacity: 0.5;
+}
+
+.hint {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+/* Snackbar */
+.m3-snackbar {
   position: fixed;
   bottom: 24px;
-  right: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--md-sys-color-inverse-surface);
+  color: var(--md-sys-color-inverse-on-surface);
+  padding: 14px 24px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px 20px;
-  background: var(--bg-primary);
-  border-radius: var(--radius);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  font-size: 14px;
+  gap: 12px;
+  box-shadow: var(--md-sys-elevation-3);
   z-index: 2000;
-  animation: slideIn 0.3s ease;
+  min-width: 300px;
 }
 
-.toast.success {
-  border-left: 4px solid #10b981;
-  color: #10b981;
+.m3-snackbar.error {
+  background: var(--md-sys-color-error-container);
+  color: var(--md-sys-color-on-error-container);
 }
 
-.toast.error {
-  border-left: 4px solid #ef4444;
-  color: #ef4444;
+.toast-enter-active,
+.toast-leave-active {
+  transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
 }
 
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateX(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+.toast-enter-from,
+.toast-leave-to {
+  opacity: 0;
+  transform: translate(-50%, 20px);
 }
 </style>

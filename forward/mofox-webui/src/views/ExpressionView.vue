@@ -1,132 +1,143 @@
 <template>
   <div class="expression-view">
     <!-- 顶部操作栏 -->
-    <div class="top-bar">
-      <div class="title-section">
-        <h1>表达方式管理</h1>
-        <span class="subtitle">管理Bot的语言风格和表达习惯</span>
+    <header class="page-header">
+      <div class="header-content">
+        <div class="title-group">
+          <div class="header-icon-container">
+            <span class="material-symbols-rounded header-icon">psychology</span>
+          </div>
+          <div class="header-text">
+            <h1 class="page-title">表达方式管理</h1>
+            <p class="page-description">管理Bot的语言风格和表达习惯</p>
+          </div>
+        </div>
+        <div class="header-actions">
+          <button class="m3-button tonal" @click="showStatisticsDialog = true">
+            <span class="material-symbols-rounded">bar_chart</span>
+            统计信息
+          </button>
+          <button class="m3-button filled" @click="openCreateDialog">
+            <span class="material-symbols-rounded">add</span>
+            新建表达
+          </button>
+        </div>
       </div>
-      <div class="action-buttons">
-        <button class="action-btn statistics-btn" @click="showStatisticsDialog = true">
-          <Icon icon="mdi:chart-box" />
-          统计信息
-        </button>
-        <button class="action-btn create-btn" @click="openCreateDialog">
-          <Icon icon="mdi:plus-circle" />
-          新建表达
-        </button>
-      </div>
-    </div>
+    </header>
 
     <!-- 搜索和筛选栏 -->
-    <div class="search-bar">
-      <div class="search-input-wrapper">
-        <Icon class="search-icon" icon="mdi:magnify" />
-        <input
-          v-model="searchQuery"
-          type="text"
-          class="search-input"
-          placeholder="搜索情境或表达风格..."
-          @keyup.enter="handleSearch"
-        />
-        <button v-if="searchQuery" class="clear-button" @click="clearSearch">
-          <Icon icon="mdi:close" />
+    <div class="m3-card toolbar-card">
+      <div class="toolbar-content">
+        <div class="search-box">
+          <span class="material-symbols-rounded search-icon">search</span>
+          <input
+            v-model="searchQuery"
+            type="text"
+            class="m3-input search-input"
+            placeholder="搜索情境或表达风格..."
+            @keyup.enter="handleSearch"
+          />
+          <button v-if="searchQuery" class="m3-icon-button small clear-btn" @click="clearSearch">
+            <span class="material-symbols-rounded">close</span>
+          </button>
+        </div>
+        
+        <div class="filters-group">
+          <div class="select-wrapper">
+            <select v-model="filterType" class="m3-input filter-select" @change="loadExpressionList">
+              <option value="">全部类型</option>
+              <option value="style">语言风格</option>
+              <option value="grammar">句法特点</option>
+            </select>
+            <span class="material-symbols-rounded select-arrow">arrow_drop_down</span>
+          </div>
+          
+          <div class="select-wrapper">
+            <select v-model="sortBy" class="m3-input filter-select" @change="loadExpressionList">
+              <option value="last_active_time">最后使用</option>
+              <option value="count">使用次数</option>
+              <option value="create_date">创建时间</option>
+            </select>
+            <span class="material-symbols-rounded select-arrow">arrow_drop_down</span>
+          </div>
+          
+          <button 
+            class="m3-icon-button" 
+            @click="toggleSortOrder"
+            :title="sortOrder === 'desc' ? '降序' : '升序'"
+          >
+            <span class="material-symbols-rounded">
+              {{ sortOrder === 'desc' ? 'arrow_downward' : 'arrow_upward' }}
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 内容区域 -->
+    <div class="content-area">
+      <!-- 加载状态 -->
+      <div v-if="loading" class="loading-state">
+        <span class="material-symbols-rounded spinning loading-icon">progress_activity</span>
+        <p>加载中...</p>
+      </div>
+
+      <!-- 错误状态 -->
+      <div v-else-if="error" class="error-state">
+        <span class="material-symbols-rounded error-icon">error</span>
+        <h3>加载失败</h3>
+        <p>{{ error }}</p>
+        <button class="m3-button tonal" @click="loadExpressionList">
+          <span class="material-symbols-rounded">refresh</span>
+          重试
         </button>
       </div>
-      <button class="search-button" @click="handleSearch">
-        <Icon icon="mdi:magnify" />
-        搜索
-      </button>
-    </div>
 
-    <!-- 筛选器 -->
-    <div class="filters">
-      <div class="filter-group">
-        <label>类型：</label>
-        <select v-model="filterType" @change="loadExpressionList">
-          <option value="">全部</option>
-          <option value="style">语言风格</option>
-          <option value="grammar">句法特点</option>
-        </select>
+      <!-- 空状态 -->
+      <div v-else-if="!expressionList || expressionList.length === 0" class="empty-state">
+        <span class="material-symbols-rounded empty-icon">inbox</span>
+        <h3>暂无表达方式</h3>
+        <p>{{ searchQuery ? '没有找到匹配的表达方式' : '还没有创建任何表达方式' }}</p>
       </div>
-      <div class="filter-group">
-        <label>排序：</label>
-        <select v-model="sortBy" @change="loadExpressionList">
-          <option value="last_active_time">最后使用</option>
-          <option value="count">使用次数</option>
-          <option value="create_date">创建时间</option>
-        </select>
-      </div>
-      <div class="filter-group">
-        <label>顺序：</label>
-        <select v-model="sortOrder" @change="loadExpressionList">
-          <option value="desc">降序</option>
-          <option value="asc">升序</option>
-        </select>
-      </div>
-    </div>
 
-    <!-- 加载状态 -->
-    <div v-if="loading" class="loading-state">
-      <div class="spinner"></div>
-      <p>加载中...</p>
-    </div>
-
-    <!-- 错误状态 -->
-    <div v-else-if="error" class="error-state">
-      <Icon class="error-icon" icon="mdi:alert-circle" />
-      <h3>加载失败</h3>
-      <p>{{ error }}</p>
-      <button class="retry-button" @click="loadExpressionList">
-        <Icon icon="mdi:refresh" />
-        重试
-      </button>
-    </div>
-
-    <!-- 空状态 -->
-    <div v-else-if="!expressionList || expressionList.length === 0" class="empty-state">
-      <Icon class="empty-icon" icon="mdi:folder-open-outline" />
-      <h3>暂无表达方式</h3>
-      <p>{{ searchQuery ? '没有找到匹配的表达方式' : '还没有创建任何表达方式' }}</p>
-    </div>
-
-    <!-- 表达方式网格 -->
-    <div v-else class="expression-grid">
-      <div
-        v-for="expr in expressionList"
-        :key="expr.id"
-        class="expression-card"
-        @click="viewExpressionDetail(expr.id)"
-      >
-        <div class="card-header">
-          <div class="type-badge" :class="`type-${expr.type}`">
-            <Icon :icon="expr.type === 'style' ? 'mdi:comment-text' : 'mdi:text-box'" />
-            {{ expr.type === 'style' ? '风格' : '句法' }}
+      <!-- 表达方式网格 -->
+      <div v-else class="expression-grid">
+        <div
+          v-for="expr in expressionList"
+          :key="expr.id"
+          class="m3-card expression-card"
+          @click="viewExpressionDetail(expr.id)"
+        >
+          <div class="card-header">
+            <div class="badges">
+              <span class="m3-badge" :class="expr.type === 'style' ? 'primary' : 'tertiary'">
+                {{ expr.type === 'style' ? '风格' : '句法' }}
+              </span>
+              <span class="m3-badge secondary count-badge">
+                <span class="material-symbols-rounded badge-icon">local_fire_department</span>
+                {{ expr.count.toFixed(1) }}
+              </span>
+            </div>
+            <span class="last-use-time">{{ formatRelativeTime(expr.last_active_time) }}</span>
           </div>
-          <div class="count-badge">
-            <Icon icon="mdi:fire" />
-            {{ expr.count.toFixed(1) }}
+          
+          <div class="card-body">
+            <div class="info-row">
+              <span class="label">情境</span>
+              <p class="text situation">{{ expr.situation }}</p>
+            </div>
+            <div class="info-row">
+              <span class="label">表达</span>
+              <p class="text style">{{ expr.style }}</p>
+            </div>
           </div>
-        </div>
-        <div class="card-body">
-          <div class="situation-section">
-            <label>情境：</label>
-            <p class="situation-text">{{ expr.situation }}</p>
+          
+          <div class="card-footer">
+            <div class="chat-info" :title="`${expr.chat_id_display || expr.chat_id}\n哈希: ${expr.chat_id}`">
+              <span class="material-symbols-rounded footer-icon">chat</span>
+              <span class="chat-name">{{ expr.chat_id_display || expr.chat_name || expr.chat_id.substring(0, 8) + '...' }}</span>
+            </div>
           </div>
-          <div class="style-section">
-            <label>表达：</label>
-            <p class="style-text">{{ expr.style }}</p>
-          </div>
-        </div>
-        <div class="card-footer">
-          <span class="chat-name" :title="`${expr.chat_id_display || expr.chat_id}\n哈希: ${expr.chat_id}`">
-            <Icon icon="mdi:chat" />
-            {{ expr.chat_id_display || expr.chat_name || expr.chat_id.substring(0, 8) + '...' }}
-          </span>
-          <span class="last-use">
-            <Icon icon="mdi:clock-outline" />
-            {{ formatRelativeTime(expr.last_active_time) }}
-          </span>
         </div>
       </div>
     </div>
@@ -134,13 +145,13 @@
     <!-- 分页 -->
     <div v-if="totalPages > 1" class="pagination">
       <button
-        class="page-button"
+        class="m3-icon-button"
         :disabled="currentPage === 1"
         @click="changePage(currentPage - 1)"
       >
-        <Icon icon="mdi:chevron-left" />
-        上一页
+        <span class="material-symbols-rounded">chevron_left</span>
       </button>
+      
       <div class="page-numbers">
         <button
           v-for="page in visiblePages"
@@ -152,272 +163,284 @@
           {{ page }}
         </button>
       </div>
+      
       <button
-        class="page-button"
+        class="m3-icon-button"
         :disabled="currentPage === totalPages"
         @click="changePage(currentPage + 1)"
       >
-        下一页
-        <Icon icon="mdi:chevron-right" />
+        <span class="material-symbols-rounded">chevron_right</span>
       </button>
     </div>
 
     <!-- 详情对话框 -->
-    <Teleport to="body">
-      <Transition name="dialog-fade">
-        <div v-if="showDetailDialog" class="dialog-overlay" @click.self="showDetailDialog = false">
-          <div class="dialog detail-dialog">
-            <div class="dialog-header">
-              <h3>表达方式详情</h3>
-              <button class="close-button" @click="showDetailDialog = false">
-                <Icon icon="mdi:close" />
-              </button>
+    <div class="m3-dialog-overlay" v-if="showDetailDialog" @click="showDetailDialog = false">
+      <div class="m3-dialog detail-dialog" @click.stop>
+        <div class="dialog-header">
+          <h3>表达方式详情</h3>
+          <button class="m3-icon-button" @click="showDetailDialog = false">
+            <span class="material-symbols-rounded">close</span>
+          </button>
+        </div>
+        
+        <div v-if="expressionDetail" class="dialog-content">
+          <div class="detail-header">
+            <span class="m3-badge large" :class="expressionDetail.type === 'style' ? 'primary' : 'tertiary'">
+              <span class="material-symbols-rounded badge-icon">
+                {{ expressionDetail.type === 'style' ? 'format_quote' : 'rule' }}
+              </span>
+              {{ expressionDetail.type === 'style' ? '语言风格' : '句法特点' }}
+            </span>
+          </div>
+
+          <div class="detail-section">
+            <div class="detail-item">
+              <label>情境描述</label>
+              <div class="detail-value">{{ expressionDetail.situation }}</div>
             </div>
-            <div v-if="expressionDetail" class="dialog-body">
-              <div class="detail-section">
-                <div class="type-badge-large" :class="`type-${expressionDetail.type}`">
-                  <Icon :icon="expressionDetail.type === 'style' ? 'mdi:comment-text' : 'mdi:text-box'" />
-                  {{ expressionDetail.type === 'style' ? '语言风格' : '句法特点' }}
-                </div>
-                
-                <div class="detail-item">
-                  <label>情境描述</label>
-                  <div class="detail-value">{{ expressionDetail.situation }}</div>
-                </div>
 
-                <div class="detail-item">
-                  <label>表达风格</label>
-                  <div class="detail-value">{{ expressionDetail.style }}</div>
-                </div>
+            <div class="detail-item">
+              <label>表达风格</label>
+              <div class="detail-value highlight">{{ expressionDetail.style }}</div>
+            </div>
 
-                <div class="detail-item">
-                  <label>权重</label>
-                  <div class="weight-display">
-                    <div class="weight-bar">
-                      <div class="weight-fill" :style="{ width: `${(expressionDetail.count / 5) * 100}%` }"></div>
-                    </div>
-                    <span>{{ expressionDetail.count.toFixed(2)}} / 5.0</span>
-                  </div>
+            <div class="detail-item">
+              <label>权重评分</label>
+              <div class="weight-display">
+                <div class="weight-bar-bg">
+                  <div class="weight-bar-fill" :style="{ width: `${(expressionDetail.count / 5) * 100}%` }"></div>
                 </div>
+                <span class="weight-text">{{ expressionDetail.count.toFixed(2)}} / 5.0</span>
+              </div>
+            </div>
 
-                <div class="detail-item">
-                  <label>所属聊天流</label>
-                  <div class="detail-value" :title="`平台: ${expressionDetail.chat_platform}\nID: ${expressionDetail.chat_raw_id}\n类型: ${expressionDetail.chat_type}\n\n完整ID: ${expressionDetail.chat_id_display}\n哈希: ${expressionDetail.chat_id}`">
-                    <Icon icon="mdi:chat" />
-                    {{ expressionDetail.chat_name }} ({{ expressionDetail.chat_id_display }})
-                  </div>
-                </div>
-
-                <div class="stats-grid">
-                  <div class="stat-card">
-                    <Icon icon="mdi:calendar-plus" />
-                    <span class="stat-label">创建于</span>
-                    <span class="stat-value">{{ formatDate(expressionDetail.create_date) }}</span>
-                  </div>
-                  <div class="stat-card">
-                    <Icon icon="mdi:clock-check" />
-                    <span class="stat-label">最后使用</span>
-                    <span class="stat-value">{{ formatDate(expressionDetail.last_active_time) }}</span>
-                  </div>
-                  <div class="stat-card">
-                    <Icon icon="mdi:timer-sand" />
-                    <span class="stat-label">已创建天数</span>
-                    <span class="stat-value">{{ expressionDetail.usage_stats.days_since_create }} 天</span>
-                  </div>
-                  <div class="stat-card">
-                    <Icon icon="mdi:chart-line" />
-                    <span class="stat-label">使用频率</span>
-                    <span class="stat-value">{{ expressionDetail.usage_stats.usage_frequency.toFixed(3) }} /天</span>
-                  </div>
+            <div class="detail-item">
+              <label>所属聊天流</label>
+              <div class="chat-detail-card">
+                <span class="material-symbols-rounded chat-icon">forum</span>
+                <div class="chat-detail-info">
+                  <span class="chat-detail-name">{{ expressionDetail.chat_name }}</span>
+                  <span class="chat-detail-id">{{ expressionDetail.chat_id_display }}</span>
                 </div>
               </div>
             </div>
-            <div class="dialog-footer">
-              <button class="cancel-button" @click="showDetailDialog = false">关闭</button>
-              <button class="action-button edit-btn" @click="editExpression(expressionDetail!)">
-                <Icon icon="mdi:pencil" />
-                编辑
-              </button>
-              <button class="action-button delete-btn" @click="deleteExpressionConfirm(expressionDetail!.id)">
-                <Icon icon="mdi:delete" />
-                删除
-              </button>
+
+            <div class="stats-grid-mini">
+              <div class="mini-stat">
+                <span class="material-symbols-rounded">calendar_today</span>
+                <div class="mini-stat-content">
+                  <span class="label">创建于</span>
+                  <span class="value">{{ formatDate(expressionDetail.create_date) }}</span>
+                </div>
+              </div>
+              <div class="mini-stat">
+                <span class="material-symbols-rounded">update</span>
+                <div class="mini-stat-content">
+                  <span class="label">最后使用</span>
+                  <span class="value">{{ formatDate(expressionDetail.last_active_time) }}</span>
+                </div>
+              </div>
+              <div class="mini-stat">
+                <span class="material-symbols-rounded">history</span>
+                <div class="mini-stat-content">
+                  <span class="label">已创建</span>
+                  <span class="value">{{ expressionDetail.usage_stats.days_since_create }} 天</span>
+                </div>
+              </div>
+              <div class="mini-stat">
+                <span class="material-symbols-rounded">trending_up</span>
+                <div class="mini-stat-content">
+                  <span class="label">使用频率</span>
+                  <span class="value">{{ expressionDetail.usage_stats.usage_frequency.toFixed(3) }} /天</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </Transition>
-    </Teleport>
+        
+        <div class="dialog-actions">
+          <button class="m3-button text error" @click="deleteExpressionConfirm(expressionDetail!.id)">
+            <span class="material-symbols-rounded">delete</span>
+            删除
+          </button>
+          <div class="spacer"></div>
+          <button class="m3-button text" @click="showDetailDialog = false">关闭</button>
+          <button class="m3-button filled" @click="editExpression(expressionDetail!)">
+            <span class="material-symbols-rounded">edit</span>
+            编辑
+          </button>
+        </div>
+      </div>
+    </div>
 
     <!-- 创建/编辑对话框 -->
-    <Teleport to="body">
-      <Transition name="dialog-fade">
-        <div v-if="showEditDialog" class="dialog-overlay" @click.self="showEditDialog = false">
-          <div class="dialog edit-dialog">
-            <div class="dialog-header">
-              <h3>{{ editMode === 'create' ? '创建表达方式' : '编辑表达方式' }}</h3>
-              <button class="close-button" @click="showEditDialog = false">
-                <Icon icon="mdi:close" />
+    <div class="m3-dialog-overlay" v-if="showEditDialog" @click="showEditDialog = false">
+      <div class="m3-dialog edit-dialog" @click.stop>
+        <div class="dialog-header">
+          <h3>{{ editMode === 'create' ? '创建表达方式' : '编辑表达方式' }}</h3>
+          <button class="m3-icon-button" @click="showEditDialog = false">
+            <span class="material-symbols-rounded">close</span>
+          </button>
+        </div>
+        
+        <div class="dialog-content">
+          <div class="form-group">
+            <label>类型</label>
+            <div class="select-wrapper full-width">
+              <select v-model="editForm.type" class="m3-input">
+                <option value="style">语言风格</option>
+                <option value="grammar">句法特点</option>
+              </select>
+              <span class="material-symbols-rounded select-arrow">arrow_drop_down</span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>情境描述</label>
+            <input
+              v-model="editForm.situation"
+              type="text"
+              class="m3-input"
+              placeholder="如：对某件事表示十分惊叹，有些意外"
+              maxlength="200"
+            />
+          </div>
+
+          <div class="form-group">
+            <label>表达风格</label>
+            <textarea
+              v-model="editForm.style"
+              class="m3-input textarea"
+              placeholder="如：我嘞个xxxx"
+              rows="3"
+              maxlength="200"
+            ></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>权重 ({{ editForm.count.toFixed(1) }})</label>
+            <input
+              v-model.number="editForm.count"
+              type="range"
+              min="0"
+              max="5"
+              step="0.1"
+              class="m3-range"
+            />
+          </div>
+
+          <div v-if="editMode === 'create'" class="form-group">
+            <div class="label-row">
+              <label>聊天流</label>
+              <button class="m3-button text small" @click="inputType = inputType === 'select' ? 'manual' : 'select'">
+                {{ inputType === 'select' ? '切换手动输入' : '切换列表选择' }}
               </button>
             </div>
-            <div class="dialog-body">
-              <div class="form-group">
-                <label>类型</label>
-                <select v-model="editForm.type">
-                  <option value="style">语言风格</option>
-                  <option value="grammar">句法特点</option>
-                </select>
-              </div>
-
-              <div class="form-group">
-                <label>情境描述</label>
-                <input
-                  v-model="editForm.situation"
-                  type="text"
-                  class="form-input"
-                  placeholder="如：对某件事表示十分惊叹，有些意外"
-                  maxlength="200"
-                />
-              </div>
-
-              <div class="form-group">
-                <label>表达风格</label>
-                <input
-                  v-model="editForm.style"
-                  type="text"
-                  class="form-input"
-                  placeholder="如：我嘞个xxxx"
-                  maxlength="200"
-                />
-              </div>
-
-              <div class="form-group">
-                <label>权重 ({{ editForm.count.toFixed(1) }})</label>
-                <input
-                  v-model.number="editForm.count"
-                  type="range"
-                  min="0"
-                  max="5"
-                  step="0.1"
-                  class="form-range"
-                />
-              </div>
-
-              <div v-if="editMode === 'create'" class="form-group">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                  <label style="margin-bottom: 0;">聊天流</label>
-                  <button 
-                    class="text-button" 
-                    style="font-size: 12px; color: var(--primary-color); background: none; border: none; cursor: pointer;"
-                    @click="inputType = inputType === 'select' ? 'manual' : 'select'"
-                  >
-                    {{ inputType === 'select' ? '手动输入' : '从列表选择' }}
-                  </button>
-                </div>
-                
-                <div v-if="inputType === 'select'">
-                  <select v-model="editForm.chat_id" :disabled="loadingChats" style="width: 100%;">
-                    <option value="" disabled>请选择聊天流</option>
-                    <option v-for="chat in chatList" :key="chat.id" :value="chat.id">
-                      {{ chat.name }} ({{ chat.platform }})
-                    </option>
-                  </select>
-                  <div v-if="loadingChats" style="font-size: 12px; color: var(--text-tertiary); margin-top: 4px;">
-                    加载中...
-                  </div>
-                  <div v-else-if="chatList.length === 0" style="font-size: 12px; color: var(--warning); margin-top: 4px;">
-                    未找到活跃的聊天流，请尝试手动输入
-                  </div>
-                </div>
-
-                <div v-else>
-                  <input
-                    v-model="editForm.chat_id"
-                    type="text"
-                    class="form-input"
-                    placeholder="格式: platform:id:type (如 QQ:12345:group) 或哈希值"
-                  />
-                  <small style="color: var(--text-tertiary); font-size: 12px; margin-top: 4px; display: block;">
-                    支持格式：<br>
-                    • platform:raw_id:type (如: QQ:12345:group 或 QQ:67890:private)<br>
-                    • 哈希值 (如: abc123def456...)
-                  </small>
-                </div>
-              </div>
+            
+            <div v-if="inputType === 'select'" class="select-wrapper full-width">
+              <select v-model="editForm.chat_id" :disabled="loadingChats" class="m3-input">
+                <option value="" disabled>请选择聊天流</option>
+                <option v-for="chat in chatList" :key="chat.id" :value="chat.id">
+                  {{ chat.name }} ({{ chat.platform }})
+                </option>
+              </select>
+              <span class="material-symbols-rounded select-arrow">arrow_drop_down</span>
+              <div v-if="loadingChats" class="helper-text">加载中...</div>
+              <div v-else-if="chatList.length === 0" class="helper-text warning">未找到活跃的聊天流，请尝试手动输入</div>
             </div>
-            <div class="dialog-footer">
-              <button class="cancel-button" @click="showEditDialog = false">取消</button>
-              <button class="confirm-button" :disabled="!canSubmitEdit" @click="submitEdit">
-                {{ editMode === 'create' ? '创建' : '保存' }}
-              </button>
+
+            <div v-else>
+              <input
+                v-model="editForm.chat_id"
+                type="text"
+                class="m3-input"
+                placeholder="格式: platform:id:type 或哈希值"
+              />
+              <div class="helper-text">
+                支持格式：platform:raw_id:type (如: QQ:12345:group) 或 哈希值
+              </div>
             </div>
           </div>
         </div>
-      </Transition>
-    </Teleport>
+        
+        <div class="dialog-actions">
+          <button class="m3-button text" @click="showEditDialog = false">取消</button>
+          <button class="m3-button filled" :disabled="!canSubmitEdit" @click="submitEdit">
+            {{ editMode === 'create' ? '创建' : '保存' }}
+          </button>
+        </div>
+      </div>
+    </div>
 
     <!-- 统计信息对话框 -->
-    <Teleport to="body">
-      <Transition name="dialog-fade">
-        <div v-if="showStatisticsDialog" class="dialog-overlay" @click.self="showStatisticsDialog = false">
-          <div class="dialog statistics-dialog">
-            <div class="dialog-header">
-              <h3>统计信息</h3>
-              <button class="close-button" @click="showStatisticsDialog = false">
-                <Icon icon="mdi:close" />
-              </button>
-            </div>
-            <div v-if="statistics" class="dialog-body">
-              <div class="stats-overview">
-                <div class="stat-box">
-                  <Icon icon="mdi:database" />
-                  <div class="stat-content">
-                    <span class="stat-number">{{ statistics.total_count }}</span>
-                    <span class="stat-label">总数</span>
-                  </div>
-                </div>
-                <div class="stat-box">
-                  <Icon icon="mdi:comment-text" />
-                  <div class="stat-content">
-                    <span class="stat-number">{{ statistics.style_count }}</span>
-                    <span class="stat-label">语言风格</span>
-                  </div>
-                </div>
-                <div class="stat-box">
-                  <Icon icon="mdi:text-box" />
-                  <div class="stat-content">
-                    <span class="stat-number">{{ statistics.grammar_count }}</span>
-                    <span class="stat-label">句法特点</span>
-                  </div>
-                </div>
+    <div class="m3-dialog-overlay" v-if="showStatisticsDialog" @click="showStatisticsDialog = false">
+      <div class="m3-dialog stats-dialog" @click.stop>
+        <div class="dialog-header">
+          <h3>统计信息</h3>
+          <button class="m3-icon-button" @click="showStatisticsDialog = false">
+            <span class="material-symbols-rounded">close</span>
+          </button>
+        </div>
+        
+        <div v-if="statistics" class="dialog-content">
+          <div class="stats-overview-cards">
+            <div class="m3-card stat-overview-card">
+              <div class="stat-icon-bg primary">
+                <span class="material-symbols-rounded">database</span>
               </div>
+              <div class="stat-info">
+                <span class="stat-value">{{ statistics.total_count }}</span>
+                <span class="stat-label">总数</span>
+              </div>
+            </div>
+            <div class="m3-card stat-overview-card">
+              <div class="stat-icon-bg secondary">
+                <span class="material-symbols-rounded">format_quote</span>
+              </div>
+              <div class="stat-info">
+                <span class="stat-value">{{ statistics.style_count }}</span>
+                <span class="stat-label">语言风格</span>
+              </div>
+            </div>
+            <div class="m3-card stat-overview-card">
+              <div class="stat-icon-bg tertiary">
+                <span class="material-symbols-rounded">rule</span>
+              </div>
+              <div class="stat-info">
+                <span class="stat-value">{{ statistics.grammar_count }}</span>
+                <span class="stat-label">句法特点</span>
+              </div>
+            </div>
+          </div>
 
-              <div class="top-used-section">
-                <h4>最常用表达方式 Top 10</h4>
-                <div class="top-list">
-                  <div v-for="(expr, idx) in statistics.top_used" :key="expr.id" class="top-item">
-                    <span class="rank">{{ idx + 1 }}</span>
-                    <div class="top-content">
-                      <div class="top-situation">{{ expr.situation }}</div>
-                      <div class="top-style">{{ expr.style }}</div>
-                    </div>
-                    <span class="top-count">{{ expr.count.toFixed(1) }}</span>
-                  </div>
+          <div class="top-list-section">
+            <h4>最常用表达方式 Top 10</h4>
+            <div class="top-list">
+              <div v-for="(expr, idx) in statistics.top_used" :key="expr.id" class="top-item">
+                <div class="rank-badge">{{ idx + 1 }}</div>
+                <div class="top-content">
+                  <div class="top-situation">{{ expr.situation }}</div>
+                  <div class="top-style">{{ expr.style }}</div>
+                </div>
+                <div class="top-count">
+                  <span class="material-symbols-rounded">local_fire_department</span>
+                  {{ expr.count.toFixed(1) }}
                 </div>
               </div>
-            </div>
-            <div class="dialog-footer">
-              <button class="cancel-button" @click="showStatisticsDialog = false">关闭</button>
             </div>
           </div>
         </div>
-      </Transition>
-    </Teleport>
+        
+        <div class="dialog-actions">
+          <button class="m3-button text" @click="showStatisticsDialog = false">关闭</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed, watch } from 'vue'
-import { Icon } from '@iconify/vue'
 import {
   getExpressionList,
   getExpressionDetail,
@@ -493,7 +516,7 @@ async function loadChatList() {
   loadingChats.value = true
   try {
     const res = await getChatList()
-    chatList.value = res.data
+    chatList.value = res.data || []
   } catch (e) {
     console.error('Failed to load chat list', e)
   } finally {
@@ -506,6 +529,11 @@ watch([filterType, sortBy, sortOrder], () => {
   currentPage.value = 1 // 重置到第一页
   loadExpressionList()
 })
+
+// 切换排序顺序
+const toggleSortOrder = () => {
+  sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
+}
 
 // 加载表达方式列表
 const loadExpressionList = async () => {
@@ -561,6 +589,7 @@ const visiblePages = computed(() => {
 
 const clearSearch = () => {
   searchQuery.value = ''
+  handleSearch()
 }
 
 const changePage = async (page: number) => {
@@ -719,281 +748,266 @@ const formatDate = (timestamp: number) => {
 
 <style scoped>
 .expression-view {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 24px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: fadeIn 0.4s cubic-bezier(0.2, 0, 0, 1);
 }
 
-/* 顶部栏 */
-.top-bar {
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* 页面标题 */
+.page-header {
+  padding: 0 8px;
+}
+
+.header-content {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
 }
 
-.title-section h1 {
+.title-group {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.header-icon-container {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-icon {
+  font-size: 24px;
+}
+
+.page-title {
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--md-sys-color-on-surface);
+  margin: 0 0 4px;
+}
+
+.page-description {
+  font-size: 14px;
+  color: var(--md-sys-color-on-surface-variant);
   margin: 0;
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--text-primary);
 }
 
-.subtitle {
-  color: var(--text-tertiary);
-  font-size: 14px;
-}
-
-.action-buttons {
+.header-actions {
   display: flex;
   gap: 12px;
 }
 
-.action-btn {
+/* 工具栏 */
+.toolbar-card {
+  padding: 16px;
+  border-radius: 16px;
+  background: var(--md-sys-color-surface-container);
+}
+
+.toolbar-content {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 18px;
-  border: none;
-  border-radius: var(--radius);
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--transition);
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
-.statistics-btn {
-  background: var(--info-bg);
-  color: var(--info);
-}
-
-.create-btn {
-  background: var(--primary);
-  color: white;
-}
-
-.action-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-/* 搜索栏 */
-.search-bar {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.search-input-wrapper {
+.search-box {
   flex: 1;
+  min-width: 280px;
   position: relative;
-  display: flex;
-  align-items: center;
 }
 
 .search-icon {
   position: absolute;
-  left: 14px;
-  font-size: 20px;
-  color: var(--text-tertiary);
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--md-sys-color-on-surface-variant);
   pointer-events: none;
 }
 
 .search-input {
   width: 100%;
-  padding: 12px 40px 12px 44px;
-  border: 2px solid var(--border-color);
-  border-radius: var(--radius);
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  font-size: 15px;
-  transition: all var(--transition);
+  padding-left: 44px;
+  padding-right: 40px;
 }
 
-.search-input:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.clear-button {
+.clear-btn {
   position: absolute;
   right: 8px;
-  padding: 6px;
-  background: transparent;
-  border: none;
-  color: var(--text-tertiary);
-  cursor: pointer;
-  border-radius: var(--radius-sm);
-  transition: all var(--transition);
+  top: 50%;
+  transform: translateY(-50%);
 }
 
-.clear-button:hover {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
+.filters-group {
+  display: flex;
+  gap: 12px;
+  align-items: center;
 }
 
-.search-button {
+.select-wrapper {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px 24px;
-  background: var(--primary);
-  border: none;
-  border-radius: var(--radius);
-  color: white;
-  font-size: 15px;
-  font-weight: 600;
+}
+
+.filter-select {
+  padding-right: 32px;
+  appearance: none;
   cursor: pointer;
-  transition: all var(--transition);
+  min-width: 120px;
 }
 
-.search-button:hover {
-  background: var(--primary-dark);
-  transform: translateY(-1px);
+.select-arrow {
+  position: absolute;
+  right: 8px;
+  pointer-events: none;
+  color: var(--md-sys-color-on-surface-variant);
 }
 
-/* 筛选器 */
-.filters {
-  display: flex;
-  gap: 16px;
-  margin-bottom: 24px;
-  padding: 16px;
-  background: var(--bg-secondary);
-  border-radius: var(--radius);
+/* 内容区域 */
+.content-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px;
 }
 
-.filter-group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.filter-group label {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
-.filter-group select {
-  padding: 6px 12px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  font-size: 14px;
-  cursor: pointer;
-}
-
-/* 表达方式网格 */
 .expression-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: 20px;
-  margin-bottom: 32px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
 }
 
 .expression-card {
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  padding: 20px;
+  background: var(--md-sys-color-surface-container-low);
+  border-radius: 16px;
+  padding: 16px;
   cursor: pointer;
-  transition: all var(--transition);
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border: 1px solid transparent;
 }
 
 .expression-card:hover {
-  border-color: var(--primary);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+  background: var(--md-sys-color-surface-container-high);
   transform: translateY(-2px);
+  box-shadow: var(--md-sys-elevation-2);
+  border-color: var(--md-sys-color-outline-variant);
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--border-color);
 }
 
-.type-badge {
+.badges {
+  display: flex;
+  gap: 8px;
+}
+
+.m3-badge {
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-weight: 500;
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 12px;
-  border-radius: var(--radius-full);
+}
+
+.m3-badge.primary {
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+}
+
+.m3-badge.secondary {
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.m3-badge.tertiary {
+  background: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
+}
+
+.badge-icon {
+  font-size: 14px;
+}
+
+.last-use-time {
   font-size: 12px;
-  font-weight: 600;
-}
-
-.type-style {
-  background: var(--primary-bg);
-  color: var(--primary);
-}
-
-.type-grammar {
-  background: var(--success-bg);
-  color: var(--success);
-}
-
-.count-badge {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  background: var(--warning-bg);
-  color: var(--warning);
-  border-radius: var(--radius-full);
-  font-size: 13px;
-  font-weight: 700;
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .card-body {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
+  flex: 1;
 }
 
-.situation-section,
-.style-section {
+.info-row {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
-.situation-section label,
-.style-section label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
+.label {
+  font-size: 11px;
+  color: var(--md-sys-color-on-surface-variant);
 }
 
-.situation-text,
-.style-text {
-  margin: 0;
+.text {
   font-size: 14px;
-  line-height: 1.5;
-  color: var(--text-primary);
+  color: var(--md-sys-color-on-surface);
+  line-height: 1.4;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.text.style {
+  font-weight: 500;
 }
 
 .card-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid var(--border-color);
-  font-size: 12px;
-  color: var(--text-tertiary);
+  border-top: 1px solid var(--md-sys-color-outline-variant);
 }
 
-.chat-name,
-.last-use {
+.chat-info {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 12px;
+}
+
+.footer-icon {
+  font-size: 16px;
+}
+
+.chat-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* 分页 */
@@ -1001,66 +1015,40 @@ const formatDate = (timestamp: number) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  margin-top: 32px;
-}
-
-.page-button {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 16px;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius);
-  color: var(--text-primary);
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition);
-}
-
-.page-button:hover:not(:disabled) {
-  border-color: var(--primary);
-  color: var(--primary);
-}
-
-.page-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+  gap: 8px;
+  padding: 16px 0;
 }
 
 .page-numbers {
   display: flex;
-  gap: 8px;
+  gap: 4px;
 }
 
 .page-number {
-  min-width: 40px;
-  height: 40px;
-  padding: 0 12px;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius);
-  color: var(--text-primary);
-  font-size: 14px;
-  font-weight: 500;
+  min-width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  border: none;
+  background: transparent;
+  color: var(--md-sys-color-on-surface);
   cursor: pointer;
-  transition: all var(--transition);
+  font-size: 14px;
+  transition: all 0.2s;
 }
 
 .page-number:hover {
-  border-color: var(--primary);
-  color: var(--primary);
+  background: var(--md-sys-color-surface-container-highest);
 }
 
 .page-number.active {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: white;
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
 }
 
-/* 加载和错误状态 */
+/* 状态提示 */
 .loading-state,
 .error-state,
 .empty-state {
@@ -1069,54 +1057,29 @@ const formatDate = (timestamp: number) => {
   align-items: center;
   justify-content: center;
   padding: 60px 20px;
-  text-align: center;
+  color: var(--md-sys-color-on-surface-variant);
+  gap: 16px;
+  height: 100%;
 }
 
-.spinner {
-  width: 48px;
-  height: 48px;
-  border: 4px solid var(--border-color);
-  border-top-color: var(--primary);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: 16px;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
+.loading-icon,
 .error-icon,
 .empty-icon {
-  font-size: 64px;
-  color: var(--text-tertiary);
-  margin-bottom: 16px;
+  font-size: 48px;
   opacity: 0.5;
 }
 
-.retry-button {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
-  margin-top: 16px;
-  background: var(--primary);
-  border: none;
-  border-radius: var(--radius);
-  color: white;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--transition);
+.spinning {
+  animation: spin 1s linear infinite;
 }
 
-.retry-button:hover {
-  background: var(--primary-dark);
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
-/* 对话框样式 */
-.dialog-overlay {
+/* 弹窗样式 */
+.m3-dialog-overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -1127,110 +1090,85 @@ const formatDate = (timestamp: number) => {
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: 20px;
+  backdrop-filter: blur(4px);
 }
 
-.dialog {
-  width: 100%;
-  max-width: 600px;
-  max-height: 90vh;
-  background: var(--bg-primary);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+.m3-dialog {
+  background: var(--md-sys-color-surface-container);
+  width: 90%;
+  max-width: 500px;
+  max-height: 85vh;
+  border-radius: 28px;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  box-shadow: var(--md-sys-elevation-3);
+  animation: dialogIn 0.3s cubic-bezier(0.2, 0, 0, 1);
 }
 
-.statistics-dialog {
-  max-width: 800px;
+.detail-dialog {
+  max-width: 600px;
+}
+
+.stats-dialog {
+  max-width: 700px;
+}
+
+@keyframes dialogIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 .dialog-header {
+  padding: 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
 }
 
 .dialog-header h3 {
   margin: 0;
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 22px;
+  color: var(--md-sys-color-on-surface);
 }
 
-.close-button {
-  padding: 6px;
-  background: transparent;
-  border: none;
-  color: var(--text-tertiary);
-  cursor: pointer;
-  border-radius: var(--radius-sm);
-  transition: all var(--transition);
-}
-
-.close-button:hover {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-}
-
-.dialog-body {
+.dialog-content {
   padding: 24px;
   overflow-y: auto;
-  flex: 1;
-}
-
-.dialog-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  padding: 16px 24px;
-  border-top: 1px solid var(--border-color);
-}
-
-.cancel-button,
-.confirm-button {
-  padding: 10px 20px;
-  border: none;
-  border-radius: var(--radius);
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--transition);
-}
-
-.cancel-button {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-}
-
-.confirm-button {
-  background: var(--primary);
-  color: white;
-}
-
-.confirm-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* 详情对话框特定样式 */
-.detail-section {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
-.type-badge-large {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border-radius: var(--radius-full);
+.dialog-actions {
+  padding: 16px 24px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  border-top: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.spacer {
+  flex: 1;
+}
+
+/* 详情内容 */
+.detail-header {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.m3-badge.large {
   font-size: 14px;
-  font-weight: 600;
-  width: fit-content;
+  padding: 8px 16px;
+  border-radius: 16px;
+}
+
+.detail-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .detail-item {
@@ -1240,16 +1178,22 @@ const formatDate = (timestamp: number) => {
 }
 
 .detail-item label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
+  font-size: 12px;
+  color: var(--md-sys-color-on-surface-variant);
+  font-weight: 500;
 }
 
 .detail-value {
   font-size: 15px;
-  color: var(--text-primary);
-  line-height: 1.6;
+  color: var(--md-sys-color-on-surface);
+  line-height: 1.5;
+}
+
+.detail-value.highlight {
+  background: var(--md-sys-color-surface-container-high);
+  padding: 12px;
+  border-radius: 12px;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .weight-display {
@@ -1258,124 +1202,196 @@ const formatDate = (timestamp: number) => {
   gap: 12px;
 }
 
-.weight-bar {
+.weight-bar-bg {
   flex: 1;
-  height: 24px;
-  background: var(--bg-tertiary);
-  border-radius: var(--radius-full);
+  height: 8px;
+  background: var(--md-sys-color-surface-container-highest);
+  border-radius: 4px;
   overflow: hidden;
 }
 
-.weight-fill {
+.weight-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--primary) 0%, var(--success) 100%);
-  transition: width 0.3s ease;
+  background: var(--md-sys-color-primary);
+  border-radius: 4px;
 }
 
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
+.weight-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface);
 }
 
-.stat-card {
+.chat-detail-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: var(--md-sys-color-surface-container-high);
+  border-radius: 12px;
+}
+
+.chat-icon {
+  font-size: 24px;
+  color: var(--md-sys-color-primary);
+}
+
+.chat-detail-info {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 16px;
-  background: var(--bg-secondary);
-  border-radius: var(--radius);
-  text-align: center;
 }
 
-.stat-card svg {
-  font-size: 24px;
-  color: var(--primary);
+.chat-detail-name {
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface);
 }
 
-.stat-label {
+.chat-detail-id {
   font-size: 12px;
-  color: var(--text-tertiary);
+  color: var(--md-sys-color-on-surface-variant);
 }
 
-.stat-value {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary);
+.stats-grid-mini {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
 }
 
-/* 表单样式 */
+.mini-stat {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: var(--md-sys-color-surface-container-low);
+  border-radius: 12px;
+}
+
+.mini-stat .material-symbols-rounded {
+  color: var(--md-sys-color-primary);
+  font-size: 20px;
+}
+
+.mini-stat-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.mini-stat-content .label {
+  font-size: 11px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.mini-stat-content .value {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface);
+}
+
+/* 编辑表单 */
 .form-group {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-bottom: 16px;
 }
 
 .form-group label {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-secondary);
+  font-size: 13px;
+  color: var(--md-sys-color-on-surface);
+  font-weight: 500;
 }
 
-.form-input,
-.form-range,
-.form-group select {
-  padding: 10px 14px;
-  border: 2px solid var(--border-color);
-  border-radius: var(--radius);
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  font-size: 15px;
-  transition: all var(--transition);
+.select-wrapper.full-width {
+  width: 100%;
 }
 
-.form-input:focus,
-.form-group select:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+.select-wrapper.full-width select {
+  width: 100%;
 }
 
-/* 统计对话框样式 */
-.stats-overview {
+.textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.m3-range {
+  width: 100%;
+  accent-color: var(--md-sys-color-primary);
+}
+
+.label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.helper-text {
+  font-size: 12px;
+  color: var(--md-sys-color-on-surface-variant);
+  margin-top: 4px;
+}
+
+.helper-text.warning {
+  color: var(--md-sys-color-error);
+}
+
+/* 统计概览 */
+.stats-overview-cards {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 16px;
-  margin-bottom: 24px;
 }
 
-.stat-box {
+.stat-overview-card {
+  padding: 16px;
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 20px;
-  background: var(--bg-secondary);
-  border-radius: var(--radius-lg);
 }
 
-.stat-box svg {
-  font-size: 32px;
-  color: var(--primary);
+.stat-icon-bg {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.stat-content {
+.stat-icon-bg.primary {
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+}
+
+.stat-icon-bg.secondary {
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.stat-icon-bg.tertiary {
+  background: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
+}
+
+.stat-info {
   display: flex;
   flex-direction: column;
 }
 
-.stat-number {
+.stat-value {
   font-size: 24px;
-  font-weight: 700;
-  color: var(--text-primary);
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface);
 }
 
-.top-used-section h4 {
+.stat-label {
+  font-size: 12px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.top-list-section h4 {
   margin: 0 0 16px 0;
   font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
+  color: var(--md-sys-color-on-surface);
 }
 
 .top-list {
@@ -1389,22 +1405,21 @@ const formatDate = (timestamp: number) => {
   align-items: center;
   gap: 12px;
   padding: 12px;
-  background: var(--bg-secondary);
-  border-radius: var(--radius);
+  background: var(--md-sys-color-surface-container-low);
+  border-radius: 12px;
 }
 
-.rank {
+.rank-badge {
+  width: 24px;
+  height: 24px;
+  border-radius: 12px;
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: var(--primary);
-  color: white;
-  border-radius: 50%;
-  font-size: 14px;
-  font-weight: 700;
-  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .top-content {
@@ -1414,100 +1429,70 @@ const formatDate = (timestamp: number) => {
 
 .top-situation {
   font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary);
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface);
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .top-style {
-  font-size: 13px;
-  color: var(--text-tertiary);
+  font-size: 12px;
+  color: var(--md-sys-color-on-surface-variant);
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .top-count {
-  padding: 4px 12px;
-  background: var(--warning-bg);
-  color: var(--warning);
-  border-radius: var(--radius-full);
-  font-size: 13px;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-
-.action-button {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 10px 18px;
-  border: none;
-  border-radius: var(--radius);
-  font-size: 14px;
+  gap: 4px;
+  font-size: 13px;
   font-weight: 600;
-  cursor: pointer;
-  transition: all var(--transition);
+  color: var(--md-sys-color-tertiary);
 }
 
-.edit-btn {
-  background: var(--info-bg);
-  color: var(--info);
-}
-
-.delete-btn {
-  background: var(--danger-bg);
-  color: var(--danger);
-}
-
-.action-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-/* 对话框过渡动画 */
-.dialog-fade-enter-active,
-.dialog-fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-
-.dialog-fade-enter-active .dialog,
-.dialog-fade-leave-active .dialog {
-  transition: transform 0.3s ease;
-}
-
-.dialog-fade-enter-from,
-.dialog-fade-leave-to {
-  opacity: 0;
-}
-
-.dialog-fade-enter-from .dialog,
-.dialog-fade-leave-to .dialog {
-  transform: scale(0.9);
+.top-count .material-symbols-rounded {
+  font-size: 16px;
 }
 
 /* 响应式 */
 @media (max-width: 768px) {
-  .expression-grid {
-    grid-template-columns: 1fr;
+  .header-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
   }
-
-  .stats-overview {
-    grid-template-columns: 1fr;
+  
+  .header-actions {
+    width: 100%;
+    justify-content: flex-end;
   }
-
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .action-buttons {
+  
+  .toolbar-content {
     flex-direction: column;
   }
-
-  .filters {
-    flex-direction: column;
+  
+  .search-box {
+    width: 100%;
+  }
+  
+  .filters-group {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .select-wrapper {
+    flex: 1;
+  }
+  
+  .filter-select {
+    width: 100%;
+  }
+  
+  .stats-grid-mini {
+    grid-template-columns: 1fr;
   }
 }
 </style>

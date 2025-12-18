@@ -52,14 +52,39 @@
           
           <div class="field-row">
             <label>规则类型</label>
-            <select 
-              class="input"
-              :value="rule.rule_type"
-              @change="updateRule(index, 'rule_type', ($event.target as HTMLSelectElement).value)"
+            <div 
+              class="custom-select-container"
+              :class="{ 'is-open': openDropdownId === `rule_type_${index}` }"
             >
-              <option value="keyword">关键词匹配</option>
-              <option value="regex">正则表达式</option>
-            </select>
+              <div 
+                class="custom-select-trigger"
+                @click="toggleDropdown(`rule_type_${index}`)"
+              >
+                <span>{{ rule.rule_type === 'regex' ? '正则表达式' : '关键词匹配' }}</span>
+                <Icon icon="lucide:chevron-down" class="select-arrow" />
+              </div>
+              
+              <transition name="select-fade">
+                <div v-if="openDropdownId === `rule_type_${index}`" class="custom-select-dropdown">
+                  <div 
+                    class="custom-select-option"
+                    :class="{ 'is-selected': rule.rule_type === 'keyword' }"
+                    @click="updateRule(index, 'rule_type', 'keyword'); closeDropdown()"
+                  >
+                    关键词匹配
+                    <Icon v-if="rule.rule_type === 'keyword'" icon="lucide:check" class="check-icon" />
+                  </div>
+                  <div 
+                    class="custom-select-option"
+                    :class="{ 'is-selected': rule.rule_type === 'regex' }"
+                    @click="updateRule(index, 'rule_type', 'regex'); closeDropdown()"
+                  >
+                    正则表达式
+                    <Icon v-if="rule.rule_type === 'regex'" icon="lucide:check" class="check-icon" />
+                  </div>
+                </div>
+              </transition>
+            </div>
           </div>
           
           <div class="field-row">
@@ -124,7 +149,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 
 interface ReactionRule {
@@ -141,6 +166,36 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'update', value: ReactionRule[]): void
 }>()
+
+// Dropdown state
+const openDropdownId = ref<string | null>(null)
+
+const toggleDropdown = (id: string) => {
+  if (openDropdownId.value === id) {
+    openDropdownId.value = null
+  } else {
+    openDropdownId.value = id
+  }
+}
+
+const closeDropdown = () => {
+  openDropdownId.value = null
+}
+
+const handleOutsideClick = (event: MouseEvent) => {
+  const target = event.target as HTMLElement
+  if (!target.closest('.custom-select-container')) {
+    closeDropdown()
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('click', handleOutsideClick)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleOutsideClick)
+})
 
 // 解析规则列表
 const rules = computed(() => {
@@ -397,6 +452,97 @@ function updatePattern(ruleIndex: number, patternIndex: number, value: string) {
 .pattern-item .btn-icon:hover {
   background: var(--danger-bg);
   color: var(--danger);
+}
+
+/* Custom Select Styles */
+.custom-select-container {
+  position: relative;
+  width: 100%;
+}
+
+.custom-select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.custom-select-trigger:hover {
+  border-color: var(--primary);
+  background-color: var(--bg-hover);
+}
+
+.custom-select-container.is-open .custom-select-trigger {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-dim);
+}
+
+.select-arrow {
+  color: var(--text-secondary);
+  transition: transform 0.2s ease;
+}
+
+.custom-select-container.is-open .select-arrow {
+  transform: rotate(180deg);
+  color: var(--primary);
+}
+
+.custom-select-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 100%;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.custom-select-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.15s ease;
+  color: var(--text-primary);
+}
+
+.custom-select-option:hover {
+  background-color: var(--bg-hover);
+}
+
+.custom-select-option.is-selected {
+  background-color: var(--primary-dim);
+  color: var(--primary);
+  font-weight: 500;
+}
+
+.check-icon {
+  font-size: 1.1rem;
+}
+
+.select-fade-enter-active,
+.select-fade-leave-active {
+  transition: all 0.2s ease;
+}
+
+.select-fade-enter-from,
+.select-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
 }
 
 .add-pattern-btn {

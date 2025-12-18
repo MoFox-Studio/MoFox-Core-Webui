@@ -4,11 +4,11 @@
     <aside class="config-sidebar">
       <div class="sidebar-header">
         <h3>
-          <Icon icon="lucide:settings-2" />
+          <span class="material-symbols-rounded">settings_suggest</span>
           配置管理
         </h3>
-        <button class="btn-icon" @click="refreshConfigList" :disabled="loading" title="刷新">
-          <Icon icon="lucide:refresh-cw" :class="{ spinning: loading }" />
+        <button class="m3-icon-button" @click="refreshConfigList" :disabled="loading" title="刷新">
+          <span class="material-symbols-rounded" :class="{ spinning: loading }">refresh</span>
         </button>
       </div>
       
@@ -17,7 +17,7 @@
         <!-- 核心配置 -->
         <div class="category-section">
           <div class="category-title">
-            <Icon icon="lucide:star" />
+            <span class="material-symbols-rounded">star</span>
             核心配置
           </div>
           <div 
@@ -27,7 +27,7 @@
             @click="selectConfig(config)"
           >
             <div class="config-item-icon" :class="config.type">
-              <Icon :icon="getConfigIcon(config.type)" />
+              <span class="material-symbols-rounded">{{ getConfigIcon(config.type) }}</span>
             </div>
             <div class="config-item-info">
               <span class="config-name">{{ config.display_name }}</span>
@@ -39,7 +39,7 @@
         <!-- 插件配置 -->
         <div class="category-section" v-if="pluginConfigs.length > 0">
           <div class="category-title">
-            <Icon icon="lucide:puzzle" />
+            <span class="material-symbols-rounded">extension</span>
             插件配置
             <span class="count">{{ pluginConfigs.length }}</span>
           </div>
@@ -51,7 +51,7 @@
               @click="selectConfig(config)"
             >
               <div class="config-item-icon plugin">
-                <Icon icon="lucide:puzzle" />
+                <span class="material-symbols-rounded">extension</span>
               </div>
               <div class="config-item-info">
                 <span class="config-name">{{ config.display_name }}</span>
@@ -62,10 +62,10 @@
       </div>
     </aside>
 
-    <!-- 配置编辑区（全屏展开） -->
+    <!-- 配置编辑区 -->
     <main class="config-editor-area">
       <div v-if="!selectedConfig" class="no-selection">
-        <Icon icon="lucide:file-cog" />
+        <span class="material-symbols-rounded empty-icon">settings_applications</span>
         <h3>选择配置文件开始编辑</h3>
         <p>从左侧选择一个配置文件，可以进行可视化编辑或源码编辑</p>
       </div>
@@ -74,40 +74,42 @@
         <!-- 编辑器头部 -->
         <div class="editor-header">
           <div class="editor-title">
-            <Icon :icon="getConfigIcon(selectedConfig.type)" />
+            <span class="material-symbols-rounded header-icon">{{ getConfigIcon(selectedConfig.type) }}</span>
             <h2>{{ selectedConfig.display_name }}</h2>
-            <span class="config-type-badge" :class="selectedConfig.type">
+            <span class="m3-assist-chip" :class="selectedConfig.type">
               {{ getConfigTypeLabel(selectedConfig.type) }}
             </span>
           </div>
           <div class="editor-controls">
-            <div class="editor-tabs">
+            <div class="m3-segmented-button">
               <button 
-                :class="['tab-btn', { active: editorMode === 'visual' }]"
+                :class="['segment', { selected: editorMode === 'visual' }]"
                 @click="editorMode = 'visual'"
               >
-                <Icon icon="lucide:layout-grid" />
+                <span class="material-symbols-rounded">grid_view</span>
                 可视化
               </button>
               <button 
-                :class="['tab-btn', { active: editorMode === 'source' }]"
+                :class="['segment', { selected: editorMode === 'source' }]"
                 @click="editorMode = 'source'"
               >
-                <Icon icon="lucide:code" />
+                <span class="material-symbols-rounded">code</span>
                 源码
               </button>
             </div>
             <div class="editor-actions">
-              <button class="btn btn-ghost" @click="showBackupsModal = true">
-                <Icon icon="lucide:history" />
+              <button class="m3-button text" @click="showBackupsModal = true">
+                <span class="material-symbols-rounded">history</span>
                 备份
               </button>
               <button 
-                class="btn btn-primary" 
+                class="m3-button filled" 
                 @click="saveCurrentConfig" 
                 :disabled="saving || !hasChanges"
               >
-                <Icon :icon="saving ? 'lucide:loader-2' : 'lucide:save'" :class="{ spinning: saving }" />
+                <span class="material-symbols-rounded" :class="{ spinning: saving }">
+                  {{ saving ? 'progress_activity' : 'save' }}
+                </span>
                 {{ saving ? '保存中...' : '保存配置' }}
               </button>
             </div>
@@ -117,11 +119,11 @@
         <!-- 可视化编辑模式 -->
         <div v-if="editorMode === 'visual'" class="visual-editor">
           <div v-if="schemaLoading" class="loading-state">
-            <Icon icon="lucide:loader-2" class="spinning" />
+            <span class="material-symbols-rounded spinning loading-icon">progress_activity</span>
             加载配置结构...
           </div>
           <div v-else-if="schemaError" class="error-state">
-            <Icon icon="lucide:alert-circle" />
+            <span class="material-symbols-rounded error-icon">error</span>
             {{ schemaError }}
           </div>
           
@@ -150,7 +152,7 @@
               <div 
                 v-for="section in configSchema" 
                 :key="section.name" 
-                class="config-section"
+                class="m3-card config-section"
               >
                 <div class="section-header">
                   <h3>{{ section.display_name }}</h3>
@@ -187,12 +189,12 @@
         <div v-else class="source-editor">
           <div class="source-toolbar">
             <span class="file-path">
-              <Icon icon="lucide:file-text" />
+              <span class="material-symbols-rounded">description</span>
               {{ selectedConfig.path }}
             </span>
             <div class="toolbar-actions">
-              <button class="btn btn-sm btn-ghost" @click="formatSource">
-                <Icon icon="lucide:align-left" />
+              <button class="m3-button text small" @click="formatSource">
+                <span class="material-symbols-rounded">format_align_left</span>
                 格式化
               </button>
             </div>
@@ -207,7 +209,7 @@
             />
           </div>
           <div v-if="validationError" class="validation-error">
-            <Icon icon="lucide:alert-triangle" />
+            <span class="material-symbols-rounded">warning</span>
             {{ validationError }}
           </div>
         </div>
@@ -215,60 +217,66 @@
     </main>
 
     <!-- 备份管理弹窗 -->
-    <div v-if="showBackupsModal" class="modal-overlay" @click.self="showBackupsModal = false">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>
-            <Icon icon="lucide:history" />
-            备份管理
-          </h3>
-          <button class="close-btn" @click="showBackupsModal = false">
-            <Icon icon="lucide:x" />
-          </button>
-        </div>
-        <div class="modal-body">
-          <div v-if="backupsLoading" class="loading-state">
-            <Icon icon="lucide:loader-2" class="spinning" />
-            加载备份列表...
+    <Transition name="dialog">
+      <div v-if="showBackupsModal" class="m3-dialog-overlay" @click.self="showBackupsModal = false">
+        <div class="m3-dialog large">
+          <div class="dialog-header">
+            <h3>
+              <span class="material-symbols-rounded">history</span>
+              备份管理
+            </h3>
+            <button class="m3-icon-button" @click="showBackupsModal = false">
+              <span class="material-symbols-rounded">close</span>
+            </button>
           </div>
-          <div v-else-if="backups.length === 0" class="empty-state">
-            <Icon icon="lucide:archive-x" />
-            暂无备份
-          </div>
-          <div v-else class="backup-list">
-            <div v-for="backup in backups" :key="backup.name" class="backup-item">
-              <div class="backup-info">
-                <span class="backup-name">{{ backup.name }}</span>
-                <span class="backup-meta">
-                  {{ backup.created_at }} · {{ formatSize(backup.size) }}
-                </span>
+          <div class="dialog-body">
+            <div v-if="backupsLoading" class="loading-state">
+              <span class="material-symbols-rounded spinning loading-icon">progress_activity</span>
+              加载备份列表...
+            </div>
+            <div v-else-if="backups.length === 0" class="empty-state">
+              <span class="material-symbols-rounded empty-icon">history_toggle_off</span>
+              暂无备份
+            </div>
+            <div v-else class="backup-list">
+              <div v-for="backup in backups" :key="backup.name" class="backup-item">
+                <div class="backup-info">
+                  <span class="backup-name">{{ backup.name }}</span>
+                  <span class="backup-meta">
+                    {{ backup.created_at }} · {{ formatSize(backup.size) }}
+                  </span>
+                </div>
+                <button 
+                  class="m3-button text" 
+                  @click="restoreBackup(backup.name)"
+                  :disabled="restoringBackup === backup.name"
+                >
+                  <span class="material-symbols-rounded" :class="{ spinning: restoringBackup === backup.name }">
+                    {{ restoringBackup === backup.name ? 'progress_activity' : 'restore' }}
+                  </span>
+                  恢复
+                </button>
               </div>
-              <button 
-                class="btn btn-sm btn-ghost" 
-                @click="restoreBackup(backup.name)"
-                :disabled="restoringBackup === backup.name"
-              >
-                <Icon :icon="restoringBackup === backup.name ? 'lucide:loader-2' : 'lucide:rotate-ccw'" 
-                      :class="{ spinning: restoringBackup === backup.name }" />
-                恢复
-              </button>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </Transition>
 
     <!-- Toast 提示 -->
-    <div v-if="toast.show" :class="['toast', toast.type]">
-      <Icon :icon="toast.type === 'success' ? 'lucide:check-circle' : 'lucide:alert-circle'" />
-      {{ toast.message }}
-    </div>
+    <Transition name="toast">
+      <div v-if="toast.show" class="m3-snackbar" :class="toast.type">
+        <span class="material-symbols-rounded">
+          {{ toast.type === 'success' ? 'check_circle' : 'error' }}
+        </span>
+        {{ toast.message }}
+      </div>
+    </Transition>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, shallowRef } from 'vue'
-import { Icon } from '@iconify/vue'
 import { VueMonacoEditor } from '@guolao/vue-monaco-editor'
 import type { editor } from 'monaco-editor'
 import {
@@ -358,11 +366,11 @@ const hasChanges = computed(() => {
 // 方法
 function getConfigIcon(type: string): string {
   const icons: Record<string, string> = {
-    main: 'lucide:bot',
-    model: 'lucide:brain',
-    plugin: 'lucide:puzzle'
+    main: 'smart_toy',
+    model: 'psychology',
+    plugin: 'extension'
   }
-  return icons[type] || 'lucide:file-cog'
+  return icons[type] || 'settings_applications'
 }
 
 function getConfigTypeLabel(type: string): string {
@@ -625,8 +633,8 @@ onMounted(() => {
 .config-sidebar {
   width: 280px;
   min-width: 280px;
-  background: var(--bg-primary);
-  border-right: 1px solid var(--border-color);
+  background: var(--md-sys-color-surface-container-low);
+  border-right: 1px solid var(--md-sys-color-outline-variant);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -637,7 +645,7 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 16px;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
 }
 
 .sidebar-header h3 {
@@ -645,37 +653,13 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface);
   margin: 0;
 }
 
-.sidebar-header h3 svg {
-  color: var(--primary);
-}
-
-.btn-icon {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  background: transparent;
-  border-radius: var(--radius);
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.btn-icon:hover {
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-}
-
-.btn-icon:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.sidebar-header h3 .material-symbols-rounded {
+  color: var(--md-sys-color-primary);
 }
 
 /* 配置分类 */
@@ -694,8 +678,8 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   font-size: 12px;
-  font-weight: 600;
-  color: var(--text-tertiary);
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface-variant);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   padding: 8px 12px;
@@ -704,8 +688,8 @@ onMounted(() => {
 .category-title .count {
   margin-left: auto;
   padding: 2px 8px;
-  background: var(--bg-secondary);
-  border-radius: var(--radius-full);
+  background: var(--md-sys-color-surface-container-highest);
+  border-radius: 12px;
   font-size: 11px;
 }
 
@@ -714,18 +698,19 @@ onMounted(() => {
   align-items: center;
   gap: 12px;
   padding: 12px;
-  border-radius: var(--radius);
+  border-radius: 12px;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 0.2s;
   margin-bottom: 4px;
 }
 
 .config-item:hover {
-  background: var(--bg-secondary);
+  background: var(--md-sys-color-surface-container-highest);
 }
 
 .config-item.active {
-  background: var(--primary-bg);
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
 }
 
 .config-item.compact {
@@ -738,24 +723,24 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius);
-  color: white;
+  border-radius: 12px;
+  color: var(--md-sys-color-on-primary-container);
+  background: var(--md-sys-color-primary-container);
 }
 
 .config-item-icon.main {
-  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
 }
 
 .config-item-icon.model {
-  background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+  background: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
 }
 
 .config-item-icon.plugin {
-  background: linear-gradient(135deg, #10b981, #059669);
-}
-
-.config-item.active .config-item-icon {
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
 }
 
 .config-item-info {
@@ -767,17 +752,17 @@ onMounted(() => {
 }
 
 .config-name {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
-  color: var(--text-primary);
+  color: var(--md-sys-color-on-surface);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .config-desc {
-  font-size: 11px;
-  color: var(--text-tertiary);
+  font-size: 12px;
+  color: var(--md-sys-color-on-surface-variant);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -794,7 +779,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--bg-secondary);
+  background: var(--md-sys-color-surface);
 }
 
 .no-selection {
@@ -804,10 +789,10 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   gap: 16px;
-  color: var(--text-tertiary);
+  color: var(--md-sys-color-on-surface-variant);
 }
 
-.no-selection svg {
+.no-selection .empty-icon {
   font-size: 64px;
   opacity: 0.3;
 }
@@ -816,7 +801,7 @@ onMounted(() => {
   font-size: 18px;
   font-weight: 500;
   margin: 0;
-  color: var(--text-secondary);
+  color: var(--md-sys-color-on-surface);
 }
 
 .no-selection p {
@@ -830,8 +815,8 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 16px 24px;
-  background: var(--bg-primary);
-  border-bottom: 1px solid var(--border-color);
+  background: var(--md-sys-color-surface);
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
 }
 
 .editor-title {
@@ -840,38 +825,44 @@ onMounted(() => {
   gap: 12px;
 }
 
-.editor-title svg {
+.editor-title .header-icon {
   font-size: 24px;
-  color: var(--primary);
+  color: var(--md-sys-color-primary);
 }
 
 .editor-title h2 {
   font-size: 18px;
-  font-weight: 600;
-  color: var(--text-primary);
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface);
   margin: 0;
 }
 
-.config-type-badge {
+.m3-assist-chip {
+  height: 24px;
+  padding: 0 8px;
   font-size: 11px;
-  font-weight: 500;
-  padding: 4px 10px;
-  border-radius: var(--radius-full);
+  border: 1px solid var(--md-sys-color-outline);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
 }
 
-.config-type-badge.main {
-  background: rgba(59, 130, 246, 0.1);
-  color: #3b82f6;
+.m3-assist-chip.main {
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  border: none;
 }
 
-.config-type-badge.model {
-  background: rgba(139, 92, 246, 0.1);
-  color: #8b5cf6;
+.m3-assist-chip.model {
+  background: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
+  border: none;
 }
 
-.config-type-badge.plugin {
-  background: rgba(16, 185, 129, 0.1);
-  color: #10b981;
+.m3-assist-chip.plugin {
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  border: none;
 }
 
 .editor-controls {
@@ -880,36 +871,38 @@ onMounted(() => {
   gap: 16px;
 }
 
-.editor-tabs {
+.m3-segmented-button {
   display: flex;
-  gap: 4px;
-  background: var(--bg-secondary);
-  padding: 4px;
-  border-radius: var(--radius);
+  border: 1px solid var(--md-sys-color-outline);
+  border-radius: 20px;
+  overflow: hidden;
 }
 
-.tab-btn {
+.m3-segmented-button .segment {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   padding: 8px 16px;
   border: none;
   background: transparent;
-  border-radius: var(--radius-sm);
-  font-size: 13px;
-  color: var(--text-secondary);
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  border-right: 1px solid var(--md-sys-color-outline);
 }
 
-.tab-btn:hover {
-  color: var(--text-primary);
+.m3-segmented-button .segment:last-child {
+  border-right: none;
 }
 
-.tab-btn.active {
-  background: var(--bg-primary);
-  color: var(--primary);
-  box-shadow: var(--shadow-sm);
+.m3-segmented-button .segment.selected {
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.m3-segmented-button .segment .material-symbols-rounded {
+  font-size: 18px;
 }
 
 .editor-actions {
@@ -930,10 +923,8 @@ onMounted(() => {
 }
 
 .config-section {
-  background: var(--bg-primary);
-  border-radius: var(--radius-lg);
+  padding: 0;
   overflow: hidden;
-  border: 1px solid var(--border-color);
 }
 
 .section-header {
@@ -941,20 +932,20 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-color);
+  background: var(--md-sys-color-surface-container-low);
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
 }
 
 .section-header h3 {
   font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary);
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface);
   margin: 0;
 }
 
 .field-count {
   font-size: 12px;
-  color: var(--text-tertiary);
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .section-content {
@@ -978,20 +969,20 @@ onMounted(() => {
 .field-name {
   font-size: 14px;
   font-weight: 500;
-  color: var(--text-primary);
+  color: var(--md-sys-color-on-surface);
 }
 
 .field-type {
   font-size: 11px;
   padding: 2px 8px;
-  background: var(--bg-secondary);
-  border-radius: var(--radius-sm);
-  color: var(--text-tertiary);
+  background: var(--md-sys-color-surface-container-highest);
+  border-radius: 4px;
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .field-description {
   font-size: 12px;
-  color: var(--text-tertiary);
+  color: var(--md-sys-color-on-surface-variant);
   line-height: 1.5;
 }
 
@@ -1012,8 +1003,8 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 12px 20px;
-  background: var(--bg-primary);
-  border-bottom: 1px solid var(--border-color);
+  background: var(--md-sys-color-surface);
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
 }
 
 .file-path {
@@ -1022,7 +1013,7 @@ onMounted(() => {
   gap: 8px;
   font-size: 13px;
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  color: var(--text-secondary);
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .toolbar-actions {
@@ -1037,131 +1028,63 @@ onMounted(() => {
 
 .validation-error {
   padding: 12px 20px;
-  background: rgba(239, 68, 68, 0.1);
-  border-top: 1px solid rgba(239, 68, 68, 0.3);
-  color: #ef4444;
+  background: var(--md-sys-color-error-container);
+  color: var(--md-sys-color-on-error-container);
   font-size: 13px;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-/* 按钮样式 */
-.btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border: none;
-  border-radius: var(--radius);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-primary {
-  background: var(--primary);
-  color: white;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: var(--primary-hover);
-}
-
-.btn-ghost {
-  background: transparent;
-  color: var(--text-secondary);
-}
-
-.btn-ghost:hover:not(:disabled) {
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-}
-
-.btn-sm {
-  padding: 6px 12px;
-  font-size: 12px;
-}
-
 /* 弹窗样式 */
-.modal-overlay {
+.m3-dialog-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.32);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(2px);
 }
 
-.modal-content {
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
+.m3-dialog {
+  background: var(--md-sys-color-surface-container-high);
+  border-radius: 28px;
+  padding: 24px;
   width: 90%;
-  max-width: 500px;
-  max-height: 80vh;
-  overflow: hidden;
-  animation: modalIn 0.2s ease;
+  max-width: 320px;
+  box-shadow: var(--md-sys-elevation-3);
   display: flex;
   flex-direction: column;
+  gap: 16px;
 }
 
-@keyframes modalIn {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
+.m3-dialog.large {
+  max-width: 500px;
+  max-height: 80vh;
 }
 
-.modal-header {
+.dialog-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border-color);
 }
 
-.modal-header h3 {
+.dialog-header h3 {
   display: flex;
   align-items: center;
   gap: 8px;
   margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
+  font-size: 20px;
+  font-weight: 400;
+  color: var(--md-sys-color-on-surface);
 }
 
-.close-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: none;
-  background: transparent;
-  border-radius: var(--radius);
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.close-btn:hover {
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-}
-
-.modal-body {
-  padding: 20px;
+.dialog-body {
   overflow-y: auto;
   flex: 1;
 }
@@ -1178,8 +1101,8 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 12px;
-  background: var(--bg-secondary);
-  border-radius: var(--radius);
+  background: var(--md-sys-color-surface-container-highest);
+  border-radius: 12px;
 }
 
 .backup-info {
@@ -1189,14 +1112,14 @@ onMounted(() => {
 }
 
 .backup-name {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
-  color: var(--text-primary);
+  color: var(--md-sys-color-on-surface);
 }
 
 .backup-meta {
   font-size: 12px;
-  color: var(--text-tertiary);
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 /* 加载和空状态 */
@@ -1208,7 +1131,14 @@ onMounted(() => {
   justify-content: center;
   gap: 12px;
   padding: 60px;
-  color: var(--text-tertiary);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.loading-icon,
+.error-icon,
+.empty-icon {
+  font-size: 48px;
+  opacity: 0.5;
 }
 
 .error-state {
@@ -1216,47 +1146,54 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   padding: 20px;
-  color: #ef4444;
-  background: rgba(239, 68, 68, 0.1);
-  border-radius: var(--radius);
+  color: var(--md-sys-color-error);
+  background: var(--md-sys-color-error-container);
+  border-radius: 12px;
 }
 
 /* Toast */
-.toast {
+.m3-snackbar {
   position: fixed;
   bottom: 24px;
-  right: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--md-sys-color-inverse-surface);
+  color: var(--md-sys-color-inverse-on-surface);
+  padding: 14px 24px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px 20px;
-  border-radius: var(--radius);
-  font-size: 14px;
-  font-weight: 500;
-  box-shadow: var(--shadow-lg);
-  animation: toastIn 0.3s ease;
+  gap: 12px;
+  box-shadow: var(--md-sys-elevation-3);
   z-index: 2000;
+  min-width: 300px;
 }
 
-.toast.success {
-  background: #10b981;
-  color: white;
+.m3-snackbar.error {
+  background: var(--md-sys-color-error-container);
+  color: var(--md-sys-color-on-error-container);
 }
 
-.toast.error {
-  background: #ef4444;
-  color: white;
+.toast-enter-active,
+.toast-leave-active {
+  transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
 }
 
-@keyframes toastIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.toast-enter-from,
+.toast-leave-to {
+  opacity: 0;
+  transform: translate(-50%, 20px);
+}
+
+.dialog-enter-active,
+.dialog-leave-active {
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.dialog-enter-from,
+.dialog-leave-to {
+  opacity: 0;
+  transform: scale(0.95);
 }
 
 /* 响应式 */
@@ -1270,7 +1207,7 @@ onMounted(() => {
     min-width: auto;
     max-height: 40vh;
     border-right: none;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--md-sys-color-outline-variant);
   }
   
   .editor-header {
@@ -1284,11 +1221,11 @@ onMounted(() => {
     flex-direction: column;
   }
   
-  .editor-tabs {
+  .m3-segmented-button {
     width: 100%;
   }
   
-  .tab-btn {
+  .m3-segmented-button .segment {
     flex: 1;
     justify-content: center;
   }
@@ -1297,7 +1234,7 @@ onMounted(() => {
     width: 100%;
   }
   
-  .editor-actions .btn {
+  .editor-actions button {
     flex: 1;
   }
 }

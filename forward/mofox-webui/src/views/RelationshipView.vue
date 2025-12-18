@@ -2,8 +2,8 @@
   <div class="relationship-view">
     <!-- 返回按钮 (详情页时) -->
     <div v-if="personDetail" class="top-bar">
-      <button class="back-button" @click="backToList">
-        <Icon icon="lucide:arrow-left" />
+      <button class="m3-button tonal" @click="backToList">
+        <span class="material-symbols-rounded">arrow_back</span>
         <span>返回列表</span>
       </button>
     </div>
@@ -11,41 +11,41 @@
     <!-- 搜索栏 (列表页时) -->
     <div v-else class="search-bar">
       <div class="search-input-wrapper">
-        <Icon icon="lucide:search" class="search-icon" />
+        <span class="material-symbols-rounded search-icon">search</span>
         <input 
           v-model="searchQuery" 
           type="text" 
-          class="search-input" 
+          class="m3-input search-input" 
           placeholder="搜索用户名..."
           @keyup.enter="handleSearch"
         />
         <button 
           v-if="searchQuery" 
-          class="clear-button" 
+          class="m3-icon-button clear-button" 
           @click="clearSearch"
         >
-          <Icon icon="lucide:x" />
+          <span class="material-symbols-rounded">close</span>
         </button>
       </div>
-      <button class="search-button" @click="handleSearch">
-        <Icon icon="lucide:search" />
+      <button class="m3-button filled" @click="handleSearch">
+        <span class="material-symbols-rounded">search</span>
         <span>搜索</span>
       </button>
     </div>
 
     <!-- 加载状态 -->
     <div v-if="loading" class="loading-state">
-      <div class="spinner"></div>
+      <span class="material-symbols-rounded spinning loading-icon">progress_activity</span>
       <p>加载中...</p>
     </div>
 
     <!-- 错误状态 -->
     <div v-else-if="error" class="error-state">
-      <Icon icon="lucide:alert-circle" class="error-icon" />
+      <span class="material-symbols-rounded error-icon">error</span>
       <h3>加载失败</h3>
       <p>{{ error }}</p>
-      <button class="retry-button" @click="loadPersonDetail">
-        <Icon icon="lucide:refresh-cw" />
+      <button class="m3-button filled" @click="loadPersonDetail">
+        <span class="material-symbols-rounded">refresh</span>
         <span>重试</span>
       </button>
     </div>
@@ -53,10 +53,12 @@
     <!-- 用户详情 -->
     <div v-else-if="personDetail" class="person-detail">
       <!-- 基础信息卡片 -->
-      <div class="info-card">
+      <div class="m3-card info-card">
         <div class="card-header">
-          <Icon icon="lucide:user" class="header-icon" />
-          <h2>基础信息</h2>
+          <div class="header-title">
+            <span class="material-symbols-rounded header-icon">person</span>
+            <h2>基础信息</h2>
+          </div>
         </div>
         <div class="card-body">
           <div class="info-grid">
@@ -89,23 +91,27 @@
       </div>
 
       <!-- 关系信息卡片 -->
-      <div class="info-card">
+      <div class="m3-card info-card">
         <div class="card-header">
-          <Icon icon="lucide:heart" class="header-icon" />
-          <h2>关系信息</h2>
-          <button class="edit-button" @click="openEditRelationshipDialog">
-            <Icon icon="lucide:edit-2" />
+          <div class="header-title">
+            <span class="material-symbols-rounded header-icon">favorite</span>
+            <h2>关系信息</h2>
+          </div>
+          <button class="m3-button text" @click="openEditRelationshipDialog">
+            <span class="material-symbols-rounded">edit</span>
             <span>编辑</span>
           </button>
         </div>
         <div class="card-body">
           <div class="relationship-score">
             <label>关系分数</label>
-            <div class="score-bar">
-              <div 
-                class="score-fill" 
-                :style="{ width: `${personDetail.relationship.relationship_score * 100}%` }"
-              ></div>
+            <div class="score-bar-container">
+              <div class="score-bar">
+                <div 
+                  class="score-fill" 
+                  :style="{ width: `${personDetail.relationship.relationship_score * 100}%` }"
+                ></div>
+              </div>
               <span class="score-text">{{ (personDetail.relationship.relationship_score * 100).toFixed(1) }}%</span>
             </div>
           </div>
@@ -117,12 +123,14 @@
       </div>
 
       <!-- 印象卡片 -->
-      <div class="info-card">
+      <div class="m3-card info-card">
         <div class="card-header">
-          <Icon icon="lucide:message-circle" class="header-icon" />
-          <h2>我的印象</h2>
-          <button class="edit-button" @click="openEditImpressionDialog">
-            <Icon icon="lucide:edit-2" />
+          <div class="header-title">
+            <span class="material-symbols-rounded header-icon">psychology</span>
+            <h2>我的印象</h2>
+          </div>
+          <button class="m3-button text" @click="openEditImpressionDialog">
+            <span class="material-symbols-rounded">edit</span>
             <span>编辑</span>
           </button>
         </div>
@@ -139,12 +147,14 @@
       </div>
 
       <!-- 记忆点卡片 -->
-      <div class="info-card">
+      <div class="m3-card info-card">
         <div class="card-header">
-          <Icon icon="lucide:bookmark" class="header-icon" />
-          <h2>重要记忆点</h2>
-          <button class="edit-button" @click="openEditMemoryPointsDialog">
-            <Icon icon="lucide:edit-2" />
+          <div class="header-title">
+            <span class="material-symbols-rounded header-icon">bookmark</span>
+            <h2>重要记忆点</h2>
+          </div>
+          <button class="m3-button text" @click="openEditMemoryPointsDialog">
+            <span class="material-symbols-rounded">edit</span>
             <span>编辑</span>
           </button>
         </div>
@@ -175,12 +185,12 @@
       <!-- 列表统计 -->
       <div class="list-header">
         <h2>用户列表</h2>
-        <span class="count-badge">共 {{ totalCount }} 人</span>
+        <span class="m3-badge secondary">共 {{ totalCount }} 人</span>
       </div>
 
       <!-- 加载状态 -->
       <div v-if="listLoading" class="loading-state">
-        <div class="spinner"></div>
+        <span class="material-symbols-rounded spinning loading-icon">progress_activity</span>
         <p>加载中...</p>
       </div>
 
@@ -189,12 +199,12 @@
         <div 
           v-for="person in personList" 
           :key="person.person_id"
-          class="person-card"
+          class="m3-card person-card clickable"
           @click="viewPersonDetail(person.person_id)"
         >
-          <div class="card-header">
+          <div class="card-header-mini">
             <div class="person-avatar">
-              <Icon icon="lucide:user" />
+              <span class="material-symbols-rounded">person</span>
             </div>
             <div class="person-info">
               <h3 class="person-name">{{ person.person_name }}</h3>
@@ -202,35 +212,37 @@
             </div>
           </div>
 
-          <div class="card-body">
+          <div class="card-body-mini">
             <div class="relation-score-mini">
               <label>关系分数</label>
-              <div class="score-bar-mini">
-                <div 
-                  class="score-fill-mini" 
-                  :style="{ width: `${person.relationship_score * 100}%` }"
-                ></div>
+              <div class="score-bar-mini-container">
+                <div class="score-bar-mini">
+                  <div 
+                    class="score-fill-mini" 
+                    :style="{ width: `${person.relationship_score * 100}%` }"
+                  ></div>
+                </div>
                 <span class="score-text-mini">{{ (person.relationship_score * 100).toFixed(0) }}%</span>
               </div>
             </div>
 
             <div v-if="person.relationship_text" class="relation-text-mini">
-              <Icon icon="lucide:message-circle" class="mini-icon" />
-              <span>{{ person.relationship_text }}</span>
+              <span class="material-symbols-rounded mini-icon">chat_bubble_outline</span>
+              <span class="text-truncate">{{ person.relationship_text }}</span>
             </div>
 
             <div v-if="person.short_impression" class="impression-mini">
-              <Icon icon="lucide:sparkles" class="mini-icon" />
-              <span>{{ person.short_impression }}</span>
+              <span class="material-symbols-rounded mini-icon">auto_awesome</span>
+              <span class="text-truncate">{{ person.short_impression }}</span>
             </div>
 
-            <div class="card-footer">
+            <div class="card-footer-mini">
               <div class="stat-item">
-                <Icon icon="lucide:message-square" />
+                <span class="material-symbols-rounded stat-icon">forum</span>
                 <span>交互 {{ person.know_times }} 次</span>
               </div>
               <div v-if="person.last_know" class="stat-item">
-                <Icon icon="lucide:clock" />
+                <span class="material-symbols-rounded stat-icon">schedule</span>
                 <span>{{ formatDate(person.last_know) }}</span>
               </div>
             </div>
@@ -240,7 +252,7 @@
 
       <!-- 空状态 -->
       <div v-else class="empty-state">
-        <Icon icon="lucide:users" class="empty-icon" />
+        <span class="material-symbols-rounded empty-icon">group_off</span>
         <h3>暂无用户</h3>
         <p>还没有认识的用户</p>
       </div>
@@ -248,11 +260,11 @@
       <!-- 分页 -->
       <div v-if="totalPages > 1" class="pagination">
         <button 
-          class="page-button" 
+          class="m3-button tonal" 
           :disabled="currentPage === 1"
           @click="changePage(currentPage - 1)"
         >
-          <Icon icon="lucide:chevron-left" />
+          <span class="material-symbols-rounded">chevron_left</span>
           <span>上一页</span>
         </button>
         
@@ -260,7 +272,7 @@
           <button
             v-for="page in visiblePages"
             :key="page"
-            class="page-number"
+            class="page-number-btn"
             :class="{ active: page === currentPage }"
             @click="changePage(page)"
           >
@@ -269,191 +281,178 @@
         </div>
 
         <button 
-          class="page-button" 
+          class="m3-button tonal" 
           :disabled="currentPage === totalPages"
           @click="changePage(currentPage + 1)"
         >
           <span>下一页</span>
-          <Icon icon="lucide:chevron-right" />
+          <span class="material-symbols-rounded">chevron_right</span>
         </button>
       </div>
     </div>
 
     <!-- 编辑关系信息对话框 -->
-    <Teleport to="body">
-      <Transition name="dialog-fade">
-        <div v-if="showEditRelationshipDialog" class="dialog-overlay" @click="showEditRelationshipDialog = false">
-          <div class="dialog edit-dialog" @click.stop>
-            <div class="dialog-header">
-              <h3>编辑关系信息</h3>
-              <button class="close-button" @click="showEditRelationshipDialog = false">
-                <Icon icon="lucide:x" />
-              </button>
-            </div>
-            <div class="dialog-body">
-              <div class="form-section">
-                <div class="form-group">
-                  <label>关系分数 (0-100)</label>
-                  <input 
-                    v-model.number="editForm.score" 
-                    type="number" 
-                    min="0" 
-                    max="100" 
-                    step="1"
-                    class="form-input"
-                  />
-                  <div class="score-preview">
-                    <div 
-                      class="score-fill" 
-                      :style="{ width: `${editForm.score}%` }"
-                    ></div>
-                  </div>
-                </div>
-                <div class="form-group">
-                  <label>关系描述</label>
-                  <textarea 
-                    v-model="editForm.text" 
-                    class="form-textarea"
-                    rows="3"
-                    placeholder="描述你与该用户的关系..."
-                  ></textarea>
-                </div>
+    <div class="m3-dialog-overlay" v-if="showEditRelationshipDialog" @click="showEditRelationshipDialog = false">
+      <div class="m3-dialog" @click.stop>
+        <div class="dialog-header">
+          <h3>编辑关系信息</h3>
+          <button class="m3-icon-button" @click="showEditRelationshipDialog = false">
+            <span class="material-symbols-rounded">close</span>
+          </button>
+        </div>
+        <div class="dialog-content">
+          <div class="form-section">
+            <div class="form-group">
+              <label class="m3-label">关系分数 (0-100)</label>
+              <input 
+                v-model.number="editForm.score" 
+                type="number" 
+                min="0" 
+                max="100" 
+                step="1"
+                class="m3-input"
+              />
+              <div class="score-preview">
+                <div 
+                  class="score-fill" 
+                  :style="{ width: `${editForm.score}%` }"
+                ></div>
               </div>
             </div>
-            <div class="dialog-footer">
-              <button class="cancel-button" @click="showEditRelationshipDialog = false">
-                取消
-              </button>
-              <button class="confirm-button" @click="saveRelationship" :disabled="saving">
-                {{ saving ? '保存中...' : '保存' }}
-              </button>
+            <div class="form-group">
+              <label class="m3-label">关系描述</label>
+              <textarea 
+                v-model="editForm.text" 
+                class="m3-input textarea"
+                rows="3"
+                placeholder="描述你与该用户的关系..."
+              ></textarea>
             </div>
           </div>
         </div>
-      </Transition>
-    </Teleport>
+        <div class="dialog-actions">
+          <button class="m3-button text" @click="showEditRelationshipDialog = false">
+            取消
+          </button>
+          <button class="m3-button filled" @click="saveRelationship" :disabled="saving">
+            {{ saving ? '保存中...' : '保存' }}
+          </button>
+        </div>
+      </div>
+    </div>
 
     <!-- 编辑印象对话框 -->
-    <Teleport to="body">
-      <Transition name="dialog-fade">
-        <div v-if="showEditImpressionDialog" class="dialog-overlay" @click="showEditImpressionDialog = false">
-          <div class="dialog edit-dialog" @click.stop>
-            <div class="dialog-header">
-              <h3>编辑印象</h3>
-              <button class="close-button" @click="showEditImpressionDialog = false">
-                <Icon icon="lucide:x" />
-              </button>
+    <div class="m3-dialog-overlay" v-if="showEditImpressionDialog" @click="showEditImpressionDialog = false">
+      <div class="m3-dialog" @click.stop>
+        <div class="dialog-header">
+          <h3>编辑印象</h3>
+          <button class="m3-icon-button" @click="showEditImpressionDialog = false">
+            <span class="material-symbols-rounded">close</span>
+          </button>
+        </div>
+        <div class="dialog-content">
+          <div class="form-section">
+            <div class="form-group">
+              <label class="m3-label">详细印象</label>
+              <textarea 
+                v-model="editForm.impression" 
+                class="m3-input textarea"
+                rows="4"
+                placeholder="详细描述你对该用户的印象..."
+              ></textarea>
             </div>
-            <div class="dialog-body">
-              <div class="form-section">
-                <div class="form-group">
-                  <label>详细印象</label>
-                  <textarea 
-                    v-model="editForm.impression" 
-                    class="form-textarea"
-                    rows="4"
-                    placeholder="详细描述你对该用户的印象..."
-                  ></textarea>
-                </div>
-                <div class="form-group">
-                  <label>简短印象</label>
-                  <textarea 
-                    v-model="editForm.shortImpression" 
-                    class="form-textarea"
-                    rows="2"
-                    placeholder="一句话概括你的印象..."
-                  ></textarea>
-                </div>
-              </div>
-            </div>
-            <div class="dialog-footer">
-              <button class="cancel-button" @click="showEditImpressionDialog = false">
-                取消
-              </button>
-              <button class="confirm-button" @click="saveImpression" :disabled="saving">
-                {{ saving ? '保存中...' : '保存' }}
-              </button>
+            <div class="form-group">
+              <label class="m3-label">简短印象</label>
+              <textarea 
+                v-model="editForm.shortImpression" 
+                class="m3-input textarea"
+                rows="2"
+                placeholder="一句话概括你的印象..."
+              ></textarea>
             </div>
           </div>
         </div>
-      </Transition>
-    </Teleport>
+        <div class="dialog-actions">
+          <button class="m3-button text" @click="showEditImpressionDialog = false">
+            取消
+          </button>
+          <button class="m3-button filled" @click="saveImpression" :disabled="saving">
+            {{ saving ? '保存中...' : '保存' }}
+          </button>
+        </div>
+      </div>
+    </div>
 
     <!-- 编辑记忆点对话框 -->
-    <Teleport to="body">
-      <Transition name="dialog-fade">
-        <div v-if="showEditMemoryPointsDialog" class="dialog-overlay" @click="showEditMemoryPointsDialog = false">
-          <div class="dialog edit-dialog memory-dialog" @click.stop>
-            <div class="dialog-header">
-              <h3>编辑记忆点</h3>
-              <button class="close-button" @click="showEditMemoryPointsDialog = false">
-                <Icon icon="lucide:x" />
+    <div class="m3-dialog-overlay" v-if="showEditMemoryPointsDialog" @click="showEditMemoryPointsDialog = false">
+      <div class="m3-dialog large" @click.stop>
+        <div class="dialog-header">
+          <h3>编辑记忆点</h3>
+          <button class="m3-icon-button" @click="showEditMemoryPointsDialog = false">
+            <span class="material-symbols-rounded">close</span>
+          </button>
+        </div>
+        <div class="dialog-content">
+          <div class="form-section">
+            <div class="section-header">
+              <h4><span class="material-symbols-rounded">bookmark</span> 记忆点列表</h4>
+              <button class="m3-button tonal small" @click="addMemoryPoint" type="button">
+                <span class="material-symbols-rounded">add</span>
+                添加
               </button>
             </div>
-            <div class="dialog-body">
-              <div class="form-section">
-                <div class="section-header">
-                  <h4><Icon icon="lucide:bookmark" /> 记忆点列表</h4>
-                  <button class="add-point-btn" @click="addMemoryPoint" type="button">
-                    <Icon icon="lucide:plus" />
-                    添加
+            <div v-if="editForm.memoryPoints.length === 0" class="empty-hint">
+              暂无记忆点，点击"添加"按钮创建新记忆点
+            </div>
+            <div v-else class="memory-points-edit-list">
+              <div 
+                v-for="(point, index) in editForm.memoryPoints" 
+                :key="index"
+                class="memory-point-edit"
+              >
+                <div class="point-edit-header">
+                  <label class="m3-label">重要性 (0-1)</label>
+                  <input 
+                    v-model.number="point.weight" 
+                    type="number" 
+                    min="0" 
+                    max="1" 
+                    step="0.01"
+                    class="m3-input weight-input"
+                  />
+                  <button 
+                    class="m3-icon-button error" 
+                    @click="deleteMemoryPoint(index)"
+                    type="button"
+                  >
+                    <span class="material-symbols-rounded">delete</span>
                   </button>
                 </div>
-                <div v-if="editForm.memoryPoints.length === 0" class="empty-hint">
-                  暂无记忆点，点击"添加"按钮创建新记忆点
-                </div>
-                <div v-else class="memory-points-edit-list">
-                  <div 
-                    v-for="(point, index) in editForm.memoryPoints" 
-                    :key="index"
-                    class="memory-point-edit"
-                  >
-                    <div class="point-edit-header">
-                      <label>重要性 (0-1)</label>
-                      <input 
-                        v-model.number="point.weight" 
-                        type="number" 
-                        min="0" 
-                        max="1" 
-                        step="0.01"
-                        class="weight-input"
-                      />
-                      <button 
-                        class="delete-point-btn" 
-                        @click="deleteMemoryPoint(index)"
-                        type="button"
-                      >
-                        <Icon icon="lucide:trash-2" />
-                      </button>
-                    </div>
-                    <textarea 
-                      v-model="point.content" 
-                      class="form-textarea"
-                      rows="2"
-                      placeholder="描述这个记忆点..."
-                    ></textarea>
-                  </div>
-                </div>
+                <textarea 
+                  v-model="point.content" 
+                  class="m3-input textarea"
+                  rows="2"
+                  placeholder="描述这个记忆点..."
+                ></textarea>
               </div>
-            </div>
-            <div class="dialog-footer">
-              <button class="cancel-button" @click="showEditMemoryPointsDialog = false">
-                取消
-              </button>
-              <button class="confirm-button" @click="saveMemoryPoints" :disabled="saving">
-                {{ saving ? '保存中...' : '保存' }}
-              </button>
             </div>
           </div>
         </div>
-      </Transition>
-    </Teleport>
+        <div class="dialog-actions">
+          <button class="m3-button text" @click="showEditMemoryPointsDialog = false">
+            取消
+          </button>
+          <button class="m3-button filled" @click="saveMemoryPoints" :disabled="saving">
+            {{ saving ? '保存中...' : '保存' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
-import { Icon } from '@iconify/vue'
 import { 
   getPersonList,
   getPersonDetail, 
@@ -773,6 +772,12 @@ const formatDate = (dateStr?: string) => {
   max-width: 1200px;
   margin: 0 auto;
   padding: 24px;
+  animation: fadeIn 0.4s cubic-bezier(0.2, 0, 0, 1);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* 顶部栏 */
@@ -796,77 +801,23 @@ const formatDate = (dateStr?: string) => {
 
 .search-icon {
   position: absolute;
-  left: 14px;
+  left: 12px;
   font-size: 20px;
-  color: var(--text-tertiary);
+  color: var(--md-sys-color-on-surface-variant);
   pointer-events: none;
 }
 
 .search-input {
+  padding-left: 40px;
+  padding-right: 40px;
   width: 100%;
-  padding: 12px 40px 12px 44px;
-  border: 2px solid var(--border-color);
-  border-radius: var(--radius);
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  font-size: 15px;
-  transition: all var(--transition);
-}
-
-.search-input:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .clear-button {
   position: absolute;
   right: 8px;
-  padding: 6px;
-  background: transparent;
-  border: none;
-  color: var(--text-tertiary);
-  cursor: pointer;
-  border-radius: var(--radius-sm);
-  transition: all var(--transition);
-}
-
-.clear-button:hover {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-}
-
-.search-button,
-.back-button {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 24px;
-  background: var(--primary);
-  border: none;
-  border-radius: var(--radius);
-  color: white;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--transition);
-}
-
-.back-button {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
-}
-
-.search-button:hover {
-  background: var(--primary-dark);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-}
-
-.back-button:hover {
-  background: var(--bg-quaternary);
-  border-color: var(--primary);
+  width: 32px;
+  height: 32px;
 }
 
 /* 用户列表 */
@@ -884,60 +835,47 @@ const formatDate = (dateStr?: string) => {
 .list-header h2 {
   margin: 0;
   font-size: 22px;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.count-badge {
-  padding: 6px 14px;
-  background: var(--primary-bg);
-  color: var(--primary);
-  border-radius: var(--radius-full);
-  font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface);
 }
 
 /* 用户卡片网格 */
 .person-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
   margin-bottom: 32px;
 }
 
 .person-card {
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  padding: 20px;
-  cursor: pointer;
-  transition: all var(--transition);
+  padding: 0;
+  overflow: hidden;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .person-card:hover {
-  border-color: var(--primary);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
   transform: translateY(-2px);
+  box-shadow: var(--md-sys-elevation-2);
 }
 
-.card-header {
+.card-header-mini {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--border-color);
+  gap: 16px;
+  padding: 16px;
+  background: var(--md-sys-color-surface-container-high);
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
 }
 
 .person-avatar {
   width: 48px;
   height: 48px;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
   font-size: 24px;
   flex-shrink: 0;
 }
@@ -951,22 +889,23 @@ const formatDate = (dateStr?: string) => {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--md-sys-color-on-surface);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .person-nickname {
-  margin: 4px 0 0 0;
+  margin: 2px 0 0 0;
   font-size: 13px;
-  color: var(--text-tertiary);
+  color: var(--md-sys-color-on-surface-variant);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.card-body {
+.card-body-mini {
+  padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -975,63 +914,70 @@ const formatDate = (dateStr?: string) => {
 .relation-score-mini label {
   display: block;
   margin-bottom: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface-variant);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
+.score-bar-mini-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .score-bar-mini {
-  position: relative;
-  height: 24px;
-  background: var(--bg-tertiary);
-  border-radius: var(--radius-full);
+  flex: 1;
+  height: 8px;
+  background: var(--md-sys-color-surface-container-highest);
+  border-radius: 4px;
   overflow: hidden;
 }
 
 .score-fill-mini {
   height: 100%;
-  background: linear-gradient(90deg, var(--primary) 0%, var(--success) 100%);
-  transition: width 0.3s ease;
+  background: var(--md-sys-color-primary);
+  border-radius: 4px;
 }
 
 .score-text-mini {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
   font-size: 12px;
-  font-weight: 700;
-  color: white;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  font-weight: 600;
+  color: var(--md-sys-color-primary);
+  min-width: 32px;
+  text-align: right;
 }
 
 .relation-text-mini,
 .impression-mini {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: var(--text-secondary);
-  line-height: 1.5;
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .mini-icon {
-  font-size: 16px;
-  color: var(--text-tertiary);
+  font-size: 18px;
+  color: var(--md-sys-color-primary);
   flex-shrink: 0;
-  margin-top: 2px;
 }
 
-.card-footer {
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card-footer-mini {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-top: 8px;
+  margin-top: 4px;
   padding-top: 12px;
-  border-top: 1px solid var(--border-color);
+  border-top: 1px solid var(--md-sys-color-outline-variant);
 }
 
 .stat-item {
@@ -1039,11 +985,11 @@ const formatDate = (dateStr?: string) => {
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: var(--text-tertiary);
+  color: var(--md-sys-color-on-surface-variant);
 }
 
-.stat-item svg {
-  font-size: 14px;
+.stat-icon {
+  font-size: 16px;
 }
 
 /* 分页 */
@@ -1055,61 +1001,32 @@ const formatDate = (dateStr?: string) => {
   margin-top: 32px;
 }
 
-.page-button {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 16px;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius);
-  color: var(--text-primary);
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition);
-}
-
-.page-button:hover:not(:disabled) {
-  border-color: var(--primary);
-  color: var(--primary);
-  background: rgba(59, 130, 246, 0.05);
-}
-
-.page-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
 .page-numbers {
   display: flex;
   gap: 8px;
 }
 
-.page-number {
+.page-number-btn {
   min-width: 40px;
   height: 40px;
-  padding: 0 12px;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius);
-  color: var(--text-primary);
+  padding: 0 8px;
+  border-radius: 20px;
+  border: none;
+  background: transparent;
+  color: var(--md-sys-color-on-surface);
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition: all var(--transition);
+  transition: all 0.2s;
 }
 
-.page-number:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-  background: rgba(59, 130, 246, 0.05);
+.page-number-btn:hover {
+  background: var(--md-sys-color-surface-container-highest);
 }
 
-.page-number.active {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: white;
+.page-number-btn.active {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
 }
 
 /* 加载和错误状态 */
@@ -1121,112 +1038,64 @@ const formatDate = (dateStr?: string) => {
   justify-content: center;
   padding: 60px 20px;
   text-align: center;
+  color: var(--md-sys-color-on-surface-variant);
 }
 
-.spinner {
-  width: 48px;
-  height: 48px;
-  border: 4px solid var(--border-color);
-  border-top-color: var(--primary);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
+.loading-icon,
+.error-icon,
+.empty-icon {
+  font-size: 48px;
   margin-bottom: 16px;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
+  color: var(--md-sys-color-primary);
 }
 
 .error-icon {
-  font-size: 48px;
-  color: var(--danger);
-  margin-bottom: 16px;
-}
-
-.retry-button {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
-  margin-top: 16px;
-  background: var(--primary);
-  border: none;
-  border-radius: var(--radius);
-  color: white;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--transition);
-}
-
-.retry-button:hover {
-  background: var(--primary-dark);
-}
-
-/* 空状态 */
-.empty-state-main {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 80px 20px;
-  text-align: center;
+  color: var(--md-sys-color-error);
 }
 
 .empty-icon {
-  font-size: 64px;
-  color: var(--text-tertiary);
-  margin-bottom: 16px;
-  opacity: 0.5;
+  color: var(--md-sys-color-outline);
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 /* 信息卡片 */
 .info-card {
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
   margin-bottom: 20px;
-  overflow: hidden;
+  padding: 0;
 }
 
 .card-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.header-title {
+  display: flex;
+  align-items: center;
   gap: 12px;
-  padding: 20px 24px;
-  border-bottom: 1px solid var(--border-color);
-  background: var(--bg-secondary);
 }
 
 .header-icon {
   font-size: 24px;
-  color: var(--primary);
+  color: var(--md-sys-color-primary);
 }
 
 .card-header h2 {
-  flex: 1;
   margin: 0;
   font-size: 18px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.edit-button {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  background: var(--primary);
-  border: none;
-  border-radius: var(--radius);
-  color: white;
-  font-size: 14px;
   font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition);
-}
-
-.edit-button:hover {
-  background: var(--primary-dark);
+  color: var(--md-sys-color-on-surface);
 }
 
 .card-body {
@@ -1237,13 +1106,13 @@ const formatDate = (dateStr?: string) => {
 .info-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
+  gap: 24px;
 }
 
 .info-item {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .info-item.full-width {
@@ -1251,17 +1120,14 @@ const formatDate = (dateStr?: string) => {
 }
 
 .info-item label {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .info-item .value {
   font-size: 16px;
-  color: var(--text-primary);
-  font-weight: 500;
+  color: var(--md-sys-color-on-surface);
 }
 
 /* 关系分数 */
@@ -1271,55 +1137,59 @@ const formatDate = (dateStr?: string) => {
 
 .relationship-score label {
   display: block;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   font-size: 14px;
-  font-weight: 600;
-  color: var(--text-secondary);
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.score-bar-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .score-bar {
-  position: relative;
-  height: 32px;
-  background: var(--bg-tertiary);
-  border-radius: var(--radius-full);
+  flex: 1;
+  height: 12px;
+  background: var(--md-sys-color-surface-container-highest);
+  border-radius: 6px;
   overflow: hidden;
 }
 
 .score-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--primary) 0%, var(--success) 100%);
+  background: var(--md-sys-color-primary);
+  border-radius: 6px;
   transition: width 0.3s ease;
 }
 
 .score-text {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
   font-size: 14px;
-  font-weight: 700;
-  color: white;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  font-weight: 600;
+  color: var(--md-sys-color-primary);
+  min-width: 48px;
+  text-align: right;
 }
 
 .relationship-text label {
   display: block;
   margin-bottom: 8px;
   font-size: 14px;
-  font-weight: 600;
-  color: var(--text-secondary);
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .relationship-text p {
   margin: 0;
   font-size: 15px;
   line-height: 1.6;
-  color: var(--text-primary);
+  color: var(--md-sys-color-on-surface);
 }
 
 /* 印象 */
 .impression-section {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .impression-section:last-child {
@@ -1327,37 +1197,37 @@ const formatDate = (dateStr?: string) => {
 }
 
 .impression-section h3 {
-  margin: 0 0 10px 0;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-secondary);
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .impression-text {
   margin: 0;
   font-size: 15px;
-  line-height: 1.7;
-  color: var(--text-primary);
+  line-height: 1.6;
+  color: var(--md-sys-color-on-surface);
   white-space: pre-wrap;
 }
 
 .impression-text.short {
   font-style: italic;
-  color: var(--text-secondary);
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 /* 记忆点 */
 .memory-points-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .memory-point {
   padding: 16px;
-  background: var(--bg-secondary);
-  border-radius: var(--radius);
-  border-left: 3px solid var(--primary);
+  background: var(--md-sys-color-surface-container-low);
+  border-radius: 12px;
+  border-left: 4px solid var(--md-sys-color-primary);
 }
 
 .point-header {
@@ -1365,238 +1235,64 @@ const formatDate = (dateStr?: string) => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 8px;
-  font-size: 13px;
-  color: var(--text-tertiary);
+  font-size: 12px;
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .point-weight {
   font-weight: 600;
-  color: var(--primary);
+  color: var(--md-sys-color-primary);
 }
 
 .point-content {
   margin: 0;
-  font-size: 15px;
-  line-height: 1.6;
-  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--md-sys-color-on-surface);
 }
 
 .empty-state {
   padding: 40px;
   text-align: center;
-  color: var(--text-tertiary);
+  color: var(--md-sys-color-on-surface-variant);
 }
 
-/* 操作按钮 */
-.action-buttons {
-  display: flex;
-  gap: 12px;
-  margin-top: 24px;
-}
-
-.action-button {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 14px 20px;
-  border: 2px solid var(--border-color);
-  border-radius: var(--radius);
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--transition);
-}
-
-.action-button:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-  background: rgba(59, 130, 246, 0.05);
-}
-
-.report-button:hover {
-  border-color: var(--success);
-  color: var(--success);
-  background: rgba(34, 197, 94, 0.05);
-}
-
-.cache-button:hover {
-  border-color: var(--danger);
-  color: var(--danger);
-  background: rgba(239, 68, 68, 0.05);
-}
-
-/* 对话框 */
-.dialog-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 20px;
-}
-
-.dialog {
-  width: 100%;
-  max-width: 500px;
-  background: var(--bg-primary);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  overflow: hidden;
-}
-
-.edit-dialog {
-  max-width: 600px;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-}
-
-.edit-dialog .dialog-body {
-  overflow-y: auto;
-  max-height: calc(90vh - 140px);
-}
-
-.memory-dialog {
+/* 弹窗内容 */
+.m3-dialog.large {
   max-width: 700px;
 }
 
-.memory-dialog .dialog-body {
-  max-height: calc(90vh - 140px);
-}
-
-.dialog-header {
+.form-section {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 20px 24px;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.dialog-header h3 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.close-button {
-  padding: 6px;
-  background: transparent;
-  border: none;
-  color: var(--text-tertiary);
-  cursor: pointer;
-  border-radius: var(--radius-sm);
-  transition: all var(--transition);
-}
-
-.close-button:hover {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-}
-
-.dialog-body {
-  padding: 24px;
-  max-height: 60vh;
-  overflow-y: auto;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .form-group {
-  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.form-group:last-child {
-  margin-bottom: 0;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 8px;
+.m3-label {
   font-size: 14px;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
-.form-input {
-  width: 100%;
-  padding: 10px 14px;
-  border: 2px solid var(--border-color);
-  border-radius: var(--radius);
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  font-size: 15px;
-  transition: all var(--transition);
-}
-
-.form-input:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.form-textarea {
-  width: 100%;
-  padding: 10px 14px;
-  border: 2px solid var(--border-color);
-  border-radius: var(--radius);
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  font-size: 15px;
-  font-family: inherit;
-  resize: vertical;
-  transition: all var(--transition);
-}
-
-.form-textarea:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .score-preview {
-  margin-top: 12px;
+  margin-top: 8px;
   height: 8px;
-  background: var(--bg-tertiary);
-  border-radius: var(--radius-full);
+  background: var(--md-sys-color-surface-container-highest);
+  border-radius: 4px;
   overflow: hidden;
-}
-
-/* 表单分区 */
-.form-section {
-  margin-bottom: 32px;
-  padding-bottom: 24px;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.form-section:last-child {
-  border-bottom: none;
-  margin-bottom: 0;
-  padding-bottom: 0;
-}
-
-.form-section h4 {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 16px 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
 }
 
 .section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 8px;
 }
 
 .section-header h4 {
@@ -1605,39 +1301,19 @@ const formatDate = (dateStr?: string) => {
   gap: 8px;
   margin: 0;
   font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.add-point-btn {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 6px 12px;
-  background: var(--primary);
-  border: none;
-  border-radius: var(--radius);
-  color: white;
-  font-size: 13px;
   font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition);
-}
-
-.add-point-btn:hover {
-  background: var(--primary-dark);
+  color: var(--md-sys-color-on-surface);
 }
 
 .empty-hint {
-  padding: 20px;
+  padding: 24px;
   text-align: center;
-  color: var(--text-tertiary);
+  color: var(--md-sys-color-on-surface-variant);
+  background: var(--md-sys-color-surface-container-highest);
+  border-radius: 12px;
   font-size: 14px;
-  background: var(--bg-tertiary);
-  border-radius: var(--radius);
 }
 
-/* 记忆点编辑列表 */
 .memory-points-edit-list {
   display: flex;
   flex-direction: column;
@@ -1646,9 +1322,9 @@ const formatDate = (dateStr?: string) => {
 
 .memory-point-edit {
   padding: 16px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius);
+  background: var(--md-sys-color-surface-container-low);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: 12px;
 }
 
 .point-edit-header {
@@ -1658,129 +1334,13 @@ const formatDate = (dateStr?: string) => {
   margin-bottom: 12px;
 }
 
-.point-edit-header label {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-tertiary);
-}
-
 .weight-input {
   width: 100px;
-  padding: 6px 10px;
-  border: 2px solid var(--border-color);
-  border-radius: var(--radius);
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  font-size: 14px;
-  transition: all var(--transition);
 }
 
-.weight-input:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.delete-point-btn {
+.m3-icon-button.error {
+  color: var(--md-sys-color-error);
   margin-left: auto;
-  display: flex;
-  align-items: center;
-  padding: 6px;
-  background: transparent;
-  border: 1px solid var(--danger);
-  border-radius: var(--radius);
-  color: var(--danger);
-  cursor: pointer;
-  transition: all var(--transition);
-}
-
-.delete-point-btn:hover {
-  background: var(--danger);
-  color: white;
-}
-
-.score-preview .score-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--primary) 0%, var(--success) 100%);
-  transition: width 0.3s ease;
-}
-
-.report-content {
-  margin: 0;
-  padding: 16px;
-  background: var(--bg-secondary);
-  border-radius: var(--radius);
-  font-family: 'Courier New', monospace;
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--text-primary);
-  white-space: pre-wrap;
-  word-wrap: break-word;
-}
-
-.dialog-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  padding: 16px 24px;
-  border-top: 1px solid var(--border-color);
-  background: var(--bg-secondary);
-}
-
-.cancel-button,
-.confirm-button {
-  padding: 10px 20px;
-  border: none;
-  border-radius: var(--radius);
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--transition);
-}
-
-.cancel-button {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-}
-
-.cancel-button:hover {
-  background: var(--bg-quaternary);
-}
-
-.confirm-button {
-  background: var(--primary);
-  color: white;
-}
-
-.confirm-button:hover:not(:disabled) {
-  background: var(--primary-dark);
-}
-
-.confirm-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-/* 对话框过渡动画 */
-.dialog-fade-enter-active,
-.dialog-fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-
-.dialog-fade-enter-active .dialog,
-.dialog-fade-leave-active .dialog {
-  transition: transform 0.3s ease;
-}
-
-.dialog-fade-enter-from,
-.dialog-fade-leave-to {
-  opacity: 0;
-}
-
-.dialog-fade-enter-from .dialog,
-.dialog-fade-leave-to .dialog {
-  transform: scale(0.9) translateY(-20px);
 }
 
 /* 响应式 */
@@ -1791,46 +1351,19 @@ const formatDate = (dateStr?: string) => {
 
   .search-bar {
     flex-direction: column;
-    gap: 8px;
+    gap: 12px;
   }
 
-  .back-button span,
-  .search-button span {
-    display: none;
+  .search-input-wrapper {
+    width: 100%;
   }
 
   .person-grid {
     grid-template-columns: 1fr;
-    gap: 16px;
-  }
-
-  .list-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
-
-  .pagination {
-    flex-wrap: wrap;
-  }
-
-  .page-numbers {
-    order: 3;
-    width: 100%;
-    justify-content: center;
-    margin-top: 8px;
   }
 
   .info-grid {
     grid-template-columns: 1fr;
-  }
-
-  .action-buttons {
-    flex-direction: column;
-  }
-
-  .dialog {
-    max-width: 100%;
   }
 }
 </style>

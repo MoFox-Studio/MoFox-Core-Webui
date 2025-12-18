@@ -146,21 +146,34 @@
                 
                 <div class="field-input">
                   <!-- Select 类型 -->
-                  <select 
+                  <div 
                     v-if="field.type === 'select'"
-                    class="input"
-                    :value="getFieldValue(field.key) ?? field.default"
-                    :disabled="field.readonly"
-                    @change="emit('update', field.key, ($event.target as HTMLSelectElement).value)"
+                    class="custom-select-container"
+                    :class="{ 'is-open': openDropdownId === field.key, 'is-disabled': field.readonly }"
                   >
-                    <option 
-                      v-for="opt in field.options" 
-                      :key="opt.value" 
-                      :value="opt.value"
+                    <div 
+                      class="custom-select-trigger"
+                      @click="!field.readonly && toggleDropdown(field.key)"
                     >
-                      {{ opt.label }}
-                    </option>
-                  </select>
+                      <span>{{ getOptionLabel(field.options || [], getFieldValue(field.key) ?? field.default) }}</span>
+                      <Icon icon="lucide:chevron-down" class="select-arrow" />
+                    </div>
+                    
+                    <transition name="select-fade">
+                      <div v-if="openDropdownId === field.key" class="custom-select-dropdown">
+                        <div 
+                          v-for="opt in field.options" 
+                          :key="opt.value" 
+                          class="custom-select-option"
+                          :class="{ 'is-selected': (getFieldValue(field.key) ?? field.default) === opt.value }"
+                          @click="emit('update', field.key, opt.value); closeDropdown()"
+                        >
+                          {{ opt.label }}
+                          <Icon v-if="(getFieldValue(field.key) ?? field.default) === opt.value" icon="lucide:check" class="check-icon" />
+                        </div>
+                      </div>
+                    </transition>
+                  </div>
 
                   <!-- Textarea 类型 -->
                   <textarea 
@@ -321,7 +334,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import type { ConfigSection } from '@/api'
 import FieldEditor from './FieldEditor.vue'
@@ -340,6 +353,41 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'update', key: string, value: unknown): void
 }>()
+
+// Dropdown state
+const openDropdownId = ref<string | null>(null)
+
+const toggleDropdown = (id: string) => {
+  if (openDropdownId.value === id) {
+    openDropdownId.value = null
+  } else {
+    openDropdownId.value = id
+  }
+}
+
+const closeDropdown = () => {
+  openDropdownId.value = null
+}
+
+const handleOutsideClick = (event: MouseEvent) => {
+  const target = event.target as HTMLElement
+  if (!target.closest('.custom-select-container')) {
+    closeDropdown()
+  }
+}
+
+const getOptionLabel = (options: { value: any, label: string }[], value: any) => {
+  const option = options.find(opt => opt.value === value)
+  return option ? option.label : value
+}
+
+onMounted(() => {
+  document.addEventListener('click', handleOutsideClick)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleOutsideClick)
+})
 
 // 导航栏标签页定义
 interface NavTab {
@@ -591,6 +639,28 @@ function parseArrayValue(value: string): string[] {
 
 <style scoped>
 .main-config-editor {
+  /* Map MD3 variables to component variables */
+  --bg-primary: var(--md-sys-color-surface);
+  --bg-secondary: var(--md-sys-color-surface-container);
+  --bg-tertiary: var(--md-sys-color-surface-container-high);
+  --bg-hover: var(--md-sys-color-surface-container-highest);
+  
+  --text-primary: var(--md-sys-color-on-surface);
+  --text-secondary: var(--md-sys-color-on-surface-variant);
+  --text-tertiary: var(--md-sys-color-outline);
+  
+  --border-color: var(--md-sys-color-outline-variant);
+  
+  --primary: var(--md-sys-color-primary);
+  --primary-bg: var(--md-sys-color-primary-container);
+  
+  --radius-sm: var(--md-sys-shape-corner-extra-small);
+  --radius: var(--md-sys-shape-corner-medium);
+  --radius-lg: var(--md-sys-shape-corner-large);
+  
+  --transition-fast: 0.2s ease;
+  --warning: #f59e0b;
+
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -806,7 +876,6 @@ function parseArrayValue(value: string): string[] {
   background: var(--bg-primary);
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-color);
-  overflow: hidden;
 }
 
 .config-group.single-group {
@@ -836,6 +905,8 @@ function parseArrayValue(value: string): string[] {
   border-bottom: 1px solid var(--border-color);
   cursor: pointer;
   transition: background var(--transition-fast);
+  border-top-left-radius: var(--radius-lg);
+  border-top-right-radius: var(--radius-lg);
 }
 
 .group-header:hover {
@@ -1194,5 +1265,102 @@ select.input:disabled {
   margin: 0 0 12px 0;
   padding-bottom: 8px;
   border-bottom: 1px solid var(--border-color);
+}
+
+/* Custom Select Styles */
+.custom-select-container {
+  position: relative;
+  width: 100%;
+}
+
+.custom-select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.custom-select-trigger:hover {
+  border-color: var(--primary);
+  background-color: var(--bg-hover);
+}
+
+.custom-select-container.is-open .custom-select-trigger {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-dim);
+}
+
+.custom-select-container.is-disabled .custom-select-trigger {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: var(--bg-tertiary);
+}
+
+.select-arrow {
+  color: var(--text-secondary);
+  transition: transform 0.2s ease;
+}
+
+.custom-select-container.is-open .select-arrow {
+  transform: rotate(180deg);
+  color: var(--primary);
+}
+
+.custom-select-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 100%;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.custom-select-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.15s ease;
+  color: var(--text-primary);
+}
+
+.custom-select-option:hover {
+  background-color: var(--bg-hover);
+}
+
+.custom-select-option.is-selected {
+  background-color: var(--primary-dim);
+  color: var(--primary);
+  font-weight: 500;
+}
+
+.check-icon {
+  font-size: 1.1rem;
+}
+
+.select-fade-enter-active,
+.select-fade-leave-active {
+  transition: all 0.2s ease;
+}
+
+.select-fade-enter-from,
+.select-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
 }
 </style>

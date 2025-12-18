@@ -3,39 +3,42 @@
     <!-- 顶部操作栏 -->
     <header class="config-header">
       <div class="header-left">
-        <Icon icon="lucide:brain" class="header-icon" />
+        <div class="header-icon-container">
+          <span class="material-symbols-rounded header-icon">psychology</span>
+        </div>
         <div class="header-info">
           <h1>模型配置</h1>
           <p>配置 AI 模型提供商、API 密钥和模型参数</p>
         </div>
       </div>
       <div class="header-actions">
-        <div class="editor-tabs">
+        <div class="m3-segmented-button">
           <button 
-            :class="['tab-btn', { active: editorMode === 'visual' }]"
+            :class="['segment', { active: editorMode === 'visual' }]"
             @click="editorMode = 'visual'"
           >
-            <Icon icon="lucide:layout-grid" />
+            <span class="material-symbols-rounded">grid_view</span>
             可视化
           </button>
           <button 
-            :class="['tab-btn', { active: editorMode === 'source' }]"
+            :class="['segment', { active: editorMode === 'source' }]"
             @click="editorMode = 'source'"
           >
-            <Icon icon="lucide:code" />
+            <span class="material-symbols-rounded">code</span>
             源码
           </button>
         </div>
-        <button class="btn btn-ghost" @click="showBackupsModal = true">
-          <Icon icon="lucide:history" />
-          备份
+        <button class="m3-icon-button" @click="showBackupsModal = true" title="备份历史">
+          <span class="material-symbols-rounded">history</span>
         </button>
         <button 
-          class="btn btn-primary" 
+          class="m3-button filled" 
           @click="saveCurrentConfig" 
           :disabled="saving || !hasChanges"
         >
-          <Icon :icon="saving ? 'lucide:loader-2' : 'lucide:save'" :class="{ spinning: saving }" />
+          <span class="material-symbols-rounded" :class="{ spinning: saving }">
+            {{ saving ? 'progress_activity' : 'save' }}
+          </span>
           {{ saving ? '保存中...' : '保存配置' }}
         </button>
       </div>
@@ -44,11 +47,11 @@
     <!-- 可视化编辑模式 -->
     <div v-if="editorMode === 'visual'" class="visual-editor">
       <div v-if="loading" class="loading-state">
-        <Icon icon="lucide:loader-2" class="spinning" />
+        <span class="material-symbols-rounded spinning">progress_activity</span>
         加载配置中...
       </div>
       <div v-else-if="loadError" class="error-state">
-        <Icon icon="lucide:alert-circle" />
+        <span class="material-symbols-rounded">error</span>
         {{ loadError }}
       </div>
       <template v-else>
@@ -64,12 +67,12 @@
     <div v-else class="source-editor">
       <div class="source-toolbar">
         <span class="file-path">
-          <Icon icon="lucide:file-text" />
+          <span class="material-symbols-rounded">description</span>
           {{ configPath }}
         </span>
         <div class="toolbar-actions">
-          <button class="btn btn-sm btn-ghost" @click="formatSource">
-            <Icon icon="lucide:align-left" />
+          <button class="m3-button text small" @click="formatSource">
+            <span class="material-symbols-rounded">format_align_left</span>
             格式化
           </button>
         </div>
@@ -77,73 +80,79 @@
       <div class="monaco-container">
         <vue-monaco-editor
           v-model:value="sourceContent"
-          :language="'ini'"
+          :language="'toml'"
           :theme="isDarkMode ? 'vs-dark' : 'vs'"
           :options="monacoOptions"
           @mount="onEditorMount"
         />
       </div>
       <div v-if="validationError" class="validation-error">
-        <Icon icon="lucide:alert-triangle" />
+        <span class="material-symbols-rounded">warning</span>
         {{ validationError }}
       </div>
     </div>
 
     <!-- 备份管理弹窗 -->
-    <div v-if="showBackupsModal" class="modal-overlay" @click.self="showBackupsModal = false">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>
-            <Icon icon="lucide:history" />
-            备份管理
-          </h3>
-          <button class="close-btn" @click="showBackupsModal = false">
-            <Icon icon="lucide:x" />
-          </button>
-        </div>
-        <div class="modal-body">
-          <div v-if="backupsLoading" class="loading-state">
-            <Icon icon="lucide:loader-2" class="spinning" />
-            加载备份列表...
+    <Transition name="dialog">
+      <div v-if="showBackupsModal" class="m3-dialog-overlay" @click.self="showBackupsModal = false">
+        <div class="m3-dialog">
+          <div class="dialog-header">
+            <h3>
+              <span class="material-symbols-rounded">history</span>
+              备份管理
+            </h3>
+            <button class="m3-icon-button" @click="showBackupsModal = false">
+              <span class="material-symbols-rounded">close</span>
+            </button>
           </div>
-          <div v-else-if="backups.length === 0" class="empty-state">
-            <Icon icon="lucide:archive-x" />
-            暂无备份
-          </div>
-          <div v-else class="backup-list">
-            <div v-for="backup in backups" :key="backup.name" class="backup-item">
-              <div class="backup-info">
-                <span class="backup-name">{{ backup.name }}</span>
-                <span class="backup-meta">
-                  {{ backup.created_at }} · {{ formatSize(backup.size) }}
-                </span>
+          <div class="dialog-body">
+            <div v-if="backupsLoading" class="loading-state">
+              <span class="material-symbols-rounded spinning">progress_activity</span>
+              加载备份列表...
+            </div>
+            <div v-else-if="backups.length === 0" class="empty-state">
+              <span class="material-symbols-rounded empty-icon">history_toggle_off</span>
+              暂无备份
+            </div>
+            <div v-else class="backup-list">
+              <div v-for="backup in backups" :key="backup.name" class="backup-item">
+                <div class="backup-info">
+                  <span class="backup-name">{{ backup.name }}</span>
+                  <span class="backup-meta">
+                    {{ backup.created_at }} · {{ formatSize(backup.size) }}
+                  </span>
+                </div>
+                <button 
+                  class="m3-button text" 
+                  @click="restoreBackup(backup.name)"
+                  :disabled="restoringBackup === backup.name"
+                >
+                  <span class="material-symbols-rounded" :class="{ spinning: restoringBackup === backup.name }">
+                    {{ restoringBackup === backup.name ? 'progress_activity' : 'restore' }}
+                  </span>
+                  恢复
+                </button>
               </div>
-              <button 
-                class="btn btn-sm btn-ghost" 
-                @click="restoreBackup(backup.name)"
-                :disabled="restoringBackup === backup.name"
-              >
-                <Icon :icon="restoringBackup === backup.name ? 'lucide:loader-2' : 'lucide:rotate-ccw'" 
-                      :class="{ spinning: restoringBackup === backup.name }" />
-                恢复
-              </button>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </Transition>
 
     <!-- Toast 提示 -->
-    <div v-if="toast.show" :class="['toast', toast.type]">
-      <Icon :icon="toast.type === 'success' ? 'lucide:check-circle' : 'lucide:alert-circle'" />
-      {{ toast.message }}
-    </div>
+    <Transition name="toast">
+      <div v-if="toast.show" class="m3-snackbar" :class="toast.type">
+        <span class="material-symbols-rounded">
+          {{ toast.type === 'success' ? 'check_circle' : 'error' }}
+        </span>
+        {{ toast.message }}
+      </div>
+    </Transition>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, shallowRef } from 'vue'
-import { Icon } from '@iconify/vue'
 import { VueMonacoEditor } from '@guolao/vue-monaco-editor'
 import type { editor } from 'monaco-editor'
 import {
@@ -257,18 +266,18 @@ async function loadConfig() {
     
     // 加载配置内容
     const contentRes = await getConfigContent(modelConfig.path)
-    if (contentRes.success && contentRes.data) {
+    if (contentRes.success && contentRes.data && contentRes.data.success) {
       sourceContent.value = contentRes.data.content || ''
       originalContent.value = contentRes.data.content || ''
       originalParsed.value = contentRes.data.parsed || {}
     } else {
-      loadError.value = '加载配置内容失败'
+      loadError.value = contentRes.data?.error || contentRes.error || '加载配置内容失败'
       return
     }
     
     // 加载配置结构
     const schemaRes = await getConfigSchema(modelConfig.path)
-    if (schemaRes.success && schemaRes.data?.success) {
+    if (schemaRes.success && schemaRes.data && schemaRes.data.success) {
       configSchema.value = schemaRes.data.sections
     }
   } catch (e) {
@@ -290,12 +299,12 @@ async function saveCurrentConfig() {
   try {
     if (editorMode.value === 'source') {
       const res = await saveConfig(configPath.value, sourceContent.value)
-      if (res.success && res.data?.success) {
+      if (res.success && res.data && res.data.success) {
         originalContent.value = sourceContent.value
         showToast('配置已保存', 'success')
         await loadConfig()
       } else {
-        showToast(res.data?.error || '保存失败', 'error')
+        showToast(res.data?.error || res.error || '保存失败', 'error')
       }
     } else {
       if (Object.keys(editedValues.value).length === 0) {
@@ -304,12 +313,12 @@ async function saveCurrentConfig() {
       }
       
       const res = await updateConfig(configPath.value, editedValues.value)
-      if (res.success && res.data?.success) {
+      if (res.success && res.data && res.data.success) {
         editedValues.value = {}
         showToast('配置已保存', 'success')
         await loadConfig()
       } else {
-        showToast(res.data?.error || '保存失败', 'error')
+        showToast(res.data?.error || res.error || '保存失败', 'error')
       }
     }
   } catch {
@@ -325,7 +334,7 @@ async function loadBackups() {
   backupsLoading.value = true
   try {
     const res = await getConfigBackups(configPath.value)
-    if (res.success && res.data?.success) {
+    if (res.success && res.data && res.data.success) {
       backups.value = res.data.backups
     }
   } catch {
@@ -345,12 +354,12 @@ async function restoreBackup(backupName: string) {
   restoringBackup.value = backupName
   try {
     const res = await restoreConfigBackup(configPath.value, backupName)
-    if (res.success && res.data?.success) {
+    if (res.success && res.data && res.data.success) {
       showToast('配置已恢复', 'success')
       showBackupsModal.value = false
       await loadConfig()
     } else {
-      showToast(res.data?.error || '恢复失败', 'error')
+      showToast(res.data?.error || res.error || '恢复失败', 'error')
     }
   } catch {
     showToast('恢复备份失败', 'error')
@@ -406,6 +415,8 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 20px 24px;
+  background: var(--md-sys-color-surface);
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
 }
 
 .header-left {
@@ -414,21 +425,31 @@ onMounted(() => {
   gap: 16px;
 }
 
+.header-icon-container {
+  width: 48px;
+  height: 48px;
+  background: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .header-icon {
-  font-size: 32px;
-  color: #8b5cf6;
+  font-size: 28px;
 }
 
 .header-info h1 {
   font-size: 20px;
-  font-weight: 600;
-  color: var(--text-primary);
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface);
   margin: 0 0 4px 0;
 }
 
 .header-info p {
   font-size: 13px;
-  color: var(--text-tertiary);
+  color: var(--md-sys-color-on-surface-variant);
   margin: 0;
 }
 
@@ -438,72 +459,38 @@ onMounted(() => {
   gap: 12px;
 }
 
-.editor-tabs {
+.m3-segmented-button {
   display: flex;
-  background: var(--bg-secondary);
-  border-radius: var(--radius);
-  padding: 4px;
+  border: 1px solid var(--md-sys-color-outline);
+  border-radius: 20px;
+  overflow: hidden;
 }
 
-.tab-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  background: transparent;
-  border: none;
-  border-radius: var(--radius);
-  color: var(--text-secondary);
-  font-size: 13px;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.tab-btn:hover {
-  color: var(--text-primary);
-}
-
-.tab-btn.active {
-  background: var(--bg-primary);
-  color: var(--primary);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.btn {
+.m3-segmented-button .segment {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 16px;
+  padding: 8px 16px;
   border: none;
-  border-radius: var(--radius);
-  font-size: 13px;
+  background: transparent;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  border-right: 1px solid var(--md-sys-color-outline);
 }
 
-.btn-ghost {
-  background: transparent;
-  color: var(--text-secondary);
+.m3-segmented-button .segment:last-child {
+  border-right: none;
 }
 
-.btn-ghost:hover {
-  background: var(--bg-secondary);
-  color: var(--text-primary);
+.m3-segmented-button .segment.active {
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
 }
 
-.btn-primary {
-  background: var(--primary);
-  color: white;
-}
-
-.btn-primary:hover {
-  background: var(--primary-dark);
-}
-
-.btn-primary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.m3-segmented-button .segment .material-symbols-rounded {
+  font-size: 18px;
 }
 
 /* 可视化编辑器 */
@@ -511,7 +498,7 @@ onMounted(() => {
   flex: 1;
   overflow: auto;
   padding: 24px;
-  background: var(--bg-secondary);
+  background: var(--md-sys-color-surface-container-low);
 }
 
 /* 源码编辑器 */
@@ -527,8 +514,8 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  background: var(--bg-primary);
-  border-bottom: 1px solid var(--border-color);
+  background: var(--md-sys-color-surface);
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
 }
 
 .file-path {
@@ -536,17 +523,13 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: var(--text-secondary);
+  color: var(--md-sys-color-on-surface-variant);
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .toolbar-actions {
   display: flex;
   gap: 8px;
-}
-
-.btn-sm {
-  padding: 6px 12px;
-  font-size: 12px;
 }
 
 .monaco-container {
@@ -559,9 +542,8 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   padding: 12px 16px;
-  background: rgba(239, 68, 68, 0.1);
-  border-top: 1px solid rgba(239, 68, 68, 0.3);
-  color: #ef4444;
+  background: var(--md-sys-color-error-container);
+  color: var(--md-sys-color-on-error-container);
   font-size: 13px;
 }
 
@@ -575,89 +557,68 @@ onMounted(() => {
   justify-content: center;
   gap: 16px;
   padding: 60px 20px;
-  color: var(--text-tertiary);
+  color: var(--md-sys-color-on-surface-variant);
   font-size: 14px;
 }
 
-.loading-state svg,
-.error-state svg,
-.empty-state svg {
+.loading-state .material-symbols-rounded,
+.error-state .material-symbols-rounded,
+.empty-state .empty-icon {
   font-size: 48px;
   opacity: 0.5;
 }
 
 .error-state {
-  color: #ef4444;
+  color: var(--md-sys-color-error);
 }
 
 /* 弹窗 */
-.modal-overlay {
+.m3-dialog-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.32);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  animation: fadeIn 0.2s ease;
+  backdrop-filter: blur(2px);
 }
 
-.modal-content {
-  background: var(--bg-primary);
-  border-radius: var(--radius-lg);
+.m3-dialog {
+  background: var(--md-sys-color-surface-container-high);
+  border-radius: 28px;
+  padding: 24px;
   width: 90%;
   max-width: 500px;
   max-height: 80vh;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  gap: 16px;
+  box-shadow: var(--md-sys-elevation-3);
 }
 
-.modal-header {
+.dialog-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border-color);
 }
 
-.modal-header h3 {
+.dialog-header h3 {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
+  font-size: 20px;
+  font-weight: 400;
+  color: var(--md-sys-color-on-surface);
   margin: 0;
 }
 
-.close-btn {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: none;
-  border-radius: var(--radius);
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.close-btn:hover {
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-}
-
-.modal-body {
+.dialog-body {
   flex: 1;
   overflow-y: auto;
-  padding: 16px 20px;
 }
 
 .backup-list {
@@ -671,8 +632,8 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 12px;
-  background: var(--bg-secondary);
-  border-radius: var(--radius);
+  background: var(--md-sys-color-surface-container-highest);
+  border-radius: 12px;
 }
 
 .backup-info {
@@ -682,51 +643,58 @@ onMounted(() => {
 }
 
 .backup-name {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
-  color: var(--text-primary);
+  color: var(--md-sys-color-on-surface);
 }
 
 .backup-meta {
   font-size: 12px;
-  color: var(--text-tertiary);
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 /* Toast */
-.toast {
+.m3-snackbar {
   position: fixed;
   bottom: 24px;
-  right: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--md-sys-color-inverse-surface);
+  color: var(--md-sys-color-inverse-on-surface);
+  padding: 14px 24px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px 20px;
-  background: var(--bg-primary);
-  border-radius: var(--radius);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  font-size: 14px;
+  gap: 12px;
+  box-shadow: var(--md-sys-elevation-3);
   z-index: 2000;
-  animation: slideIn 0.3s ease;
+  min-width: 300px;
 }
 
-.toast.success {
-  border-left: 4px solid #10b981;
-  color: #10b981;
+.m3-snackbar.error {
+  background: var(--md-sys-color-error-container);
+  color: var(--md-sys-color-on-error-container);
 }
 
-.toast.error {
-  border-left: 4px solid #ef4444;
-  color: #ef4444;
+.toast-enter-active,
+.toast-leave-active {
+  transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
 }
 
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateX(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+.toast-enter-from,
+.toast-leave-to {
+  opacity: 0;
+  transform: translate(-50%, 20px);
+}
+
+.dialog-enter-active,
+.dialog-leave-active {
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.dialog-enter-from,
+.dialog-leave-to {
+  opacity: 0;
+  transform: scale(0.95);
 }
 </style>

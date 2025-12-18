@@ -2,27 +2,28 @@
   <div class="plugin-marketplace-detail">
     <!-- 顶部导航 -->
     <header class="page-header">
-      <button class="btn btn-ghost back-btn" @click="goBack">
-        <Icon icon="lucide:arrow-left" />
+      <button class="m3-button text" @click="goBack">
+        <span class="material-symbols-rounded">arrow_back</span>
         返回市场
       </button>
       <div class="header-actions" v-if="!loading && pluginData">
         <button 
           v-if="!pluginData.is_installed"
-          class="btn btn-primary" 
+          class="m3-button filled" 
           @click="installPluginAction"
           :disabled="installing"
         >
-          <Icon :icon="installing ? 'lucide:loader-2' : 'lucide:download'" 
-                :class="{ spinning: installing }" />
+          <span class="material-symbols-rounded" :class="{ spinning: installing }">
+            {{ installing ? 'progress_activity' : 'download' }}
+          </span>
           {{ installing ? '安装中...' : '安装插件' }}
         </button>
         <button 
           v-else
-          class="btn btn-secondary" 
+          class="m3-button tonal" 
           @click="goToConfig"
         >
-          <Icon icon="lucide:settings" />
+          <span class="material-symbols-rounded">settings</span>
           配置插件
         </button>
       </div>
@@ -31,37 +32,37 @@
     <!-- 内容区域 -->
     <div class="detail-container">
       <div v-if="loading" class="loading-state">
-        <Icon icon="lucide:loader-2" class="spinning" />
-        加载插件详情...
+        <span class="material-symbols-rounded spinning loading-icon">progress_activity</span>
+        <p>加载插件详情...</p>
       </div>
       <div v-else-if="loadError" class="error-state">
-        <Icon icon="lucide:alert-circle" />
-        {{ loadError }}
-        <button class="btn btn-primary" @click="loadPluginDetail">重试</button>
+        <span class="material-symbols-rounded error-icon">error</span>
+        <p>{{ loadError }}</p>
+        <button class="m3-button filled" @click="loadPluginDetail">重试</button>
       </div>
       <div v-else-if="pluginData" class="detail-content">
         <!-- 插件基本信息 -->
-        <div class="plugin-header-info">
+        <div class="m3-card plugin-header-info">
           <div class="plugin-icon">
-            <Icon :icon="getPluginIcon()" />
+            <span class="material-symbols-rounded">{{ getPluginIcon() }}</span>
           </div>
           <div class="plugin-title-section">
             <h1>{{ pluginData.plugin.manifest.name }}</h1>
             <div class="plugin-badges">
-              <span class="badge badge-version">
-                <Icon icon="lucide:tag" />
+              <span class="m3-assist-chip">
+                <span class="material-symbols-rounded">sell</span>
                 v{{ pluginData.plugin.manifest.version }}
               </span>
-              <span v-if="pluginData.is_installed" class="badge badge-success">
-                <Icon icon="lucide:check-circle" />
-                已安装 {{ pluginData.installed_version ? `(v${pluginData.installed_version})` : '' }}
+              <span v-if="pluginData.is_installed" class="m3-assist-chip success">
+                <span class="material-symbols-rounded">check_circle</span>
+                已安装 {{ pluginData.installed_version ? (v) : '' }}
               </span>
-              <span class="badge badge-author">
-                <Icon icon="lucide:user" />
+              <span class="m3-assist-chip">
+                <span class="material-symbols-rounded">person</span>
                 {{ pluginData.plugin.manifest.author }}
               </span>
-              <span class="badge badge-license">
-                <Icon icon="lucide:file-text" />
+              <span class="m3-assist-chip">
+                <span class="material-symbols-rounded">description</span>
                 {{ pluginData.plugin.manifest.license }}
               </span>
             </div>
@@ -69,98 +70,101 @@
         </div>
 
         <!-- 描述 -->
-        <div class="section">
+        <div class="m3-card section">
           <h2>
-            <Icon icon="lucide:align-left" />
+            <span class="material-symbols-rounded">subject</span>
             描述
           </h2>
           <p class="description-text">{{ pluginData.plugin.manifest.description }}</p>
         </div>
 
         <!-- 关键词 -->
-        <div v-if="pluginData.plugin.manifest.keywords && pluginData.plugin.manifest.keywords.length > 0" class="section">
+        <div v-if="pluginData.plugin.manifest.keywords && pluginData.plugin.manifest.keywords.length > 0" class="m3-card section">
           <h2>
-            <Icon icon="lucide:hash" />
+            <span class="material-symbols-rounded">tag</span>
             关键词
           </h2>
           <div class="keywords-list">
-            <span v-for="keyword in pluginData.plugin.manifest.keywords" :key="keyword" class="keyword-tag">
+            <span v-for="keyword in pluginData.plugin.manifest.keywords" :key="keyword" class="m3-filter-chip">
               {{ keyword }}
             </span>
           </div>
         </div>
 
         <!-- 分类 -->
-        <div v-if="pluginData.plugin.manifest.categories && pluginData.plugin.manifest.categories.length > 0" class="section">
+        <div v-if="pluginData.plugin.manifest.categories && pluginData.plugin.manifest.categories.length > 0" class="m3-card section">
           <h2>
-            <Icon icon="lucide:folder" />
+            <span class="material-symbols-rounded">folder</span>
             分类
           </h2>
           <div class="categories-list">
-            <span v-for="category in pluginData.plugin.manifest.categories" :key="category" class="category-tag">
+            <span v-for="category in pluginData.plugin.manifest.categories" :key="category" class="m3-filter-chip">
               {{ category }}
             </span>
           </div>
         </div>
 
         <!-- Python 依赖 -->
-        <div v-if="pluginData.plugin.manifest.python_dependencies && pluginData.plugin.manifest.python_dependencies.length > 0" class="section">
+        <div v-if="pluginData.plugin.manifest.python_dependencies && pluginData.plugin.manifest.python_dependencies.length > 0" class="m3-card section">
           <h2>
-            <Icon icon="lucide:package" />
+            <span class="material-symbols-rounded">package</span>
             Python 依赖
           </h2>
           <ul class="dependencies-list">
             <li v-for="dep in pluginData.plugin.manifest.python_dependencies" :key="dep">
-              <Icon icon="lucide:dot" />
+              <span class="material-symbols-rounded bullet">circle</span>
               {{ dep }}
             </li>
           </ul>
         </div>
 
         <!-- 使用说明 -->
-        <div v-if="pluginData.plugin.manifest.usage" class="section">
+        <div v-if="pluginData.plugin.manifest.usage" class="m3-card section">
           <h2>
-            <Icon icon="lucide:book-open" />
+            <span class="material-symbols-rounded">menu_book</span>
             使用说明
           </h2>
           <pre class="usage-text">{{ pluginData.plugin.manifest.usage }}</pre>
         </div>
 
         <!-- README -->
-        <div v-if="pluginData.readme" class="section">
+        <div v-if="pluginData.readme" class="m3-card section">
           <h2>
-            <Icon icon="lucide:file-text" />
+            <span class="material-symbols-rounded">description</span>
             README
           </h2>
           <div class="readme-content" v-html="renderedReadme"></div>
         </div>
 
         <!-- 仓库链接 -->
-        <div class="section">
+        <div class="m3-card section">
           <h2>
-            <Icon icon="lucide:github" />
+            <span class="material-symbols-rounded">code</span>
             仓库地址
           </h2>
           <a :href="pluginData.plugin.manifest.repository_url" target="_blank" class="repo-link">
             {{ pluginData.plugin.manifest.repository_url }}
-            <Icon icon="lucide:external-link" />
+            <span class="material-symbols-rounded">open_in_new</span>
           </a>
         </div>
       </div>
     </div>
 
     <!-- Toast 提示 -->
-    <div v-if="toast.show" :class="['toast', toast.type]">
-      <Icon :icon="toast.type === 'success' ? 'lucide:check-circle' : 'lucide:alert-circle'" />
-      {{ toast.message }}
-    </div>
+    <Transition name="toast">
+      <div v-if="toast.show" class="m3-snackbar" :class="toast.type">
+        <span class="material-symbols-rounded">
+          {{ toast.type === 'success' ? 'check_circle' : 'error' }}
+        </span>
+        {{ toast.message }}
+      </div>
+    </Transition>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Icon } from '@iconify/vue'
 import { marked } from 'marked'
 import {
   getPluginDetail,
@@ -187,7 +191,7 @@ const renderedReadme = computed(() => {
     return marked(pluginData.value.readme)
   } catch (e) {
     console.error('Markdown 渲染失败:', e)
-    return `<pre>${pluginData.value.readme}</pre>`
+    return '<pre>Markdown 渲染失败</pre>'
   }
 })
 
@@ -202,13 +206,13 @@ function goToConfig() {
 }
 
 function getPluginIcon(): string {
-  if (!pluginData.value) return 'lucide:puzzle'
+  if (!pluginData.value) return 'extension'
   
   const categories = pluginData.value.plugin.manifest.categories || []
-  if (categories.includes('Entertainment') || categories.includes('Fun')) return 'lucide:smile'
-  if (categories.includes('Games')) return 'lucide:gamepad-2'
-  if (categories.includes('Tools')) return 'lucide:wrench'
-  return 'lucide:puzzle'
+  if (categories.includes('Entertainment') || categories.includes('Fun')) return 'sentiment_satisfied'
+  if (categories.includes('Games')) return 'sports_esports'
+  if (categories.includes('Tools')) return 'build'
+  return 'extension'
 }
 
 async function loadPluginDetail() {
@@ -259,15 +263,15 @@ async function installPluginAction() {
       const responseData = res.data as any
       if (responseData.success) {
         // 后端已经自动加载了，直接提示成功
-        showToast(`插件 ${pluginData.value.plugin.manifest.name} 安装成功！`, 'success')
+        showToast(`插件 ${pluginData.value?.manifest.name} 安装成功！`, 'success')
         
         // 重新加载插件详情以更新状态
         await loadPluginDetail()
       } else {
-        showToast(`安装失败: ${responseData.message || '未知错误'}`, 'error')
+        showToast(`安装失败: ${responseData.error || '未知错误'}`, 'error')
       }
     } else {
-      showToast(`安装失败: ${res.error || '未知错误'}`, 'error')
+      showToast(`安装请求失败: ${res.error || '未知错误'}`, 'error')
     }
   } catch (e) {
     showToast('安装插件时发生错误', 'error')
@@ -294,20 +298,20 @@ onMounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  animation: fadeIn 0.3s ease;
+  gap: 16px;
+  animation: fadeIn 0.4s cubic-bezier(0.2, 0, 0, 1);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 24px;
-}
-
-.back-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  padding: 0 8px;
 }
 
 .header-actions {
@@ -317,25 +321,23 @@ onMounted(() => {
 
 .detail-container {
   flex: 1;
-  overflow: auto;
-  padding: 24px;
-  background: var(--bg-secondary);
+  overflow-y: auto;
+  padding: 8px;
 }
 
 .detail-content {
   max-width: 900px;
   margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .plugin-header-info {
   display: flex;
   align-items: start;
-  gap: 20px;
+  gap: 24px;
   padding: 32px;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  margin-bottom: 24px;
 }
 
 .plugin-icon {
@@ -345,17 +347,20 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-  border-radius: var(--radius-lg);
-  color: white;
+  background: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
+  border-radius: 24px;
+}
+
+.plugin-icon .material-symbols-rounded {
   font-size: 40px;
 }
 
 .plugin-title-section h1 {
-  margin: 0 0 12px 0;
+  margin: 0 0 16px 0;
   font-size: 28px;
-  font-weight: 600;
-  color: var(--text-primary);
+  font-weight: 400;
+  color: var(--md-sys-color-on-surface);
 }
 
 .plugin-badges {
@@ -364,59 +369,47 @@ onMounted(() => {
   gap: 8px;
 }
 
-.badge {
+.m3-assist-chip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 6px 12px;
-  border-radius: var(--radius);
-  font-size: 13px;
+  gap: 8px;
+  padding: 6px 16px;
+  border: 1px solid var(--md-sys-color-outline);
+  border-radius: 8px;
+  font-size: 14px;
   font-weight: 500;
+  color: var(--md-sys-color-on-surface-variant);
 }
 
-.badge-version {
-  background: rgba(99, 102, 241, 0.1);
-  color: #6366f1;
+.m3-assist-chip.success {
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  border-color: transparent;
 }
 
-.badge-success {
-  background: rgba(16, 185, 129, 0.1);
-  color: #10b981;
-}
-
-.badge-author {
-  background: rgba(245, 158, 11, 0.1);
-  color: #f59e0b;
-}
-
-.badge-license {
-  background: rgba(139, 92, 246, 0.1);
-  color: #8b5cf6;
+.m3-assist-chip .material-symbols-rounded {
+  font-size: 18px;
 }
 
 .section {
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
   padding: 24px;
-  margin-bottom: 20px;
 }
 
 .section h2 {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   margin: 0 0 16px 0;
   font-size: 18px;
-  font-weight: 600;
-  color: var(--text-primary);
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface);
 }
 
 .description-text {
   margin: 0;
   font-size: 14px;
-  line-height: 1.7;
-  color: var(--text-secondary);
+  line-height: 1.6;
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .keywords-list,
@@ -426,14 +419,12 @@ onMounted(() => {
   gap: 8px;
 }
 
-.keyword-tag,
-.category-tag {
-  padding: 6px 14px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius);
+.m3-filter-chip {
+  padding: 6px 16px;
+  border: 1px solid var(--md-sys-color-outline);
+  border-radius: 8px;
   font-size: 13px;
-  color: var(--text-primary);
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .dependencies-list {
@@ -445,61 +436,67 @@ onMounted(() => {
 .dependencies-list li {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   padding: 8px 0;
   font-size: 14px;
-  color: var(--text-secondary);
-  font-family: 'Courier New', monospace;
+  color: var(--md-sys-color-on-surface-variant);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.bullet {
+  font-size: 8px;
+  color: var(--md-sys-color-outline);
 }
 
 .usage-text {
   margin: 0;
   padding: 16px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius);
+  background: var(--md-sys-color-surface-container-highest);
+  border-radius: 12px;
   font-size: 13px;
   line-height: 1.6;
-  color: var(--text-primary);
+  color: var(--md-sys-color-on-surface-variant);
   white-space: pre-wrap;
   overflow-x: auto;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .readme-content {
-  padding: 16px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius);
+  padding: 24px;
+  background: var(--md-sys-color-surface-container-low);
+  border-radius: 12px;
   font-size: 14px;
   line-height: 1.7;
-  color: var(--text-secondary);
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .readme-content :deep(h1),
 .readme-content :deep(h2),
 .readme-content :deep(h3) {
-  margin-top: 20px;
-  margin-bottom: 12px;
-  color: var(--text-primary);
+  margin-top: 24px;
+  margin-bottom: 16px;
+  color: var(--md-sys-color-on-surface);
+  font-weight: 500;
 }
 
 .readme-content :deep(code) {
   padding: 2px 6px;
-  background: rgba(0, 0, 0, 0.1);
+  background: var(--md-sys-color-surface-container-highest);
   border-radius: 4px;
-  font-family: 'Courier New', monospace;
+  font-family: 'JetBrains Mono', monospace;
   font-size: 0.9em;
 }
 
 .readme-content :deep(pre) {
-  padding: 12px;
-  background: rgba(0, 0, 0, 0.05);
-  border-radius: 6px;
+  padding: 16px;
+  background: var(--md-sys-color-surface-container-highest);
+  border-radius: 8px;
   overflow-x: auto;
+  margin: 16px 0;
 }
 
 .readme-content :deep(a) {
-  color: var(--primary);
+  color: var(--md-sys-color-primary);
   text-decoration: none;
 }
 
@@ -511,68 +508,39 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 16px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius);
-  color: var(--primary);
+  padding: 12px 20px;
+  background: var(--md-sys-color-surface-container-highest);
+  border-radius: 12px;
+  color: var(--md-sys-color-primary);
   text-decoration: none;
   font-size: 14px;
-  transition: all var(--transition-fast);
+  transition: all 0.2s;
 }
 
 .repo-link:hover {
-  background: var(--primary);
-  color: white;
-  border-color: var(--primary);
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
 }
 
-.btn {
+/* 状态展示 */
+.loading-state, .error-state {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 10px 20px;
-  border: none;
-  border-radius: var(--radius);
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition-fast);
+  height: 100%;
+  gap: 16px;
+  color: var(--md-sys-color-on-surface-variant);
+  padding: 40px;
 }
 
-.btn-primary {
-  background: var(--primary);
-  color: white;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: var(--primary-dark);
-}
-
-.btn-secondary {
-  background: transparent;
-  border: 1px solid var(--border-color);
-  color: var(--text-primary);
-}
-
-.btn-secondary:hover {
-  background: var(--bg-secondary);
-}
-
-.btn-ghost {
-  background: transparent;
-  color: var(--text-secondary);
-}
-
-.btn-ghost:hover:not(:disabled) {
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-}
-
-.btn:disabled {
+.loading-icon, .error-icon {
+  font-size: 48px;
   opacity: 0.5;
-  cursor: not-allowed;
+}
+
+.error-state {
+  color: var(--md-sys-color-error);
 }
 
 .spinning {
@@ -584,69 +552,37 @@ onMounted(() => {
   to { transform: rotate(360deg); }
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-/* Toast */
-.toast {
+/* Snackbar */
+.m3-snackbar {
   position: fixed;
   bottom: 24px;
-  right: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--md-sys-color-inverse-surface);
+  color: var(--md-sys-color-inverse-on-surface);
+  padding: 14px 24px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px 20px;
-  background: var(--bg-primary);
-  border-radius: var(--radius);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  font-size: 14px;
+  gap: 12px;
+  box-shadow: var(--md-sys-elevation-3);
   z-index: 2000;
-  animation: slideIn 0.3s ease;
+  min-width: 300px;
 }
 
-.toast.success {
-  border-left: 4px solid #10b981;
-  color: #10b981;
+.m3-snackbar.error {
+  background: var(--md-sys-color-error-container);
+  color: var(--md-sys-color-on-error-container);
 }
 
-.toast.error {
-  border-left: 4px solid #ef4444;
-  color: #ef4444;
+.toast-enter-active,
+.toast-leave-active {
+  transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
 }
 
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateX(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-/* 状态提示 */
-.loading-state,
-.error-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  padding: 60px 20px;
-  color: var(--text-tertiary);
-  font-size: 14px;
-}
-
-.loading-state svg,
-.error-state svg {
-  font-size: 64px;
-  opacity: 0.5;
-}
-
-.error-state {
-  color: #ef4444;
+.toast-enter-from,
+.toast-leave-to {
+  opacity: 0;
+  transform: translate(-50%, 20px);
 }
 </style>

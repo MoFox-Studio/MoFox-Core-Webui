@@ -2,8 +2,8 @@
   <div class="plugin-detail-view">
     <!-- 返回按钮和标题 -->
     <header class="page-header">
-      <button class="btn-back" @click="goBack">
-        <Icon icon="lucide:arrow-left" />
+      <button class="m3-button text" @click="goBack">
+        <span class="material-symbols-rounded">arrow_back</span>
         返回
       </button>
       <div v-if="currentPlugin" class="header-info">
@@ -12,51 +12,54 @@
       </div>
       <div class="header-actions">
         <div v-if="isSystemPlugin(currentPlugin)" class="system-plugin-badge">
-          <Icon icon="lucide:lock" />
+          <span class="material-symbols-rounded">lock</span>
           <span>系统插件 - 仅可查看</span>
         </div>
-        <div v-if="!isSystemPlugin(currentPlugin)" class="toggle-switch">
-          <input 
-            type="checkbox" 
-            id="plugin-enable-toggle"
-            :checked="currentPlugin?.enabled"
-            @change="handleTogglePlugin"
-            :disabled="!currentPlugin?.loaded"
-          />
-          <label for="plugin-enable-toggle">
-            {{ currentPlugin?.enabled ? '已启用' : '已禁用' }}
+        <div v-if="!isSystemPlugin(currentPlugin)" class="m3-switch-container">
+          <label class="m3-switch">
+            <input 
+              type="checkbox" 
+              id="plugin-enable-toggle"
+              :checked="currentPlugin?.enabled"
+              @change="handleTogglePlugin"
+              :disabled="!currentPlugin?.loaded"
+            />
+            <span class="slider"></span>
           </label>
+          <span class="switch-label">
+            {{ currentPlugin?.enabled ? '已启用' : '已禁用' }}
+          </span>
         </div>
         <button 
           v-if="!currentPlugin?.loaded && !isSystemPlugin(currentPlugin)"
-          class="btn btn-success" 
+          class="m3-button filled" 
           @click="handleLoad"
         >
-          <Icon icon="lucide:download" />
+          <span class="material-symbols-rounded">download</span>
           加载
         </button>
         <button 
           v-if="currentPlugin?.loaded && !isSystemPlugin(currentPlugin)"
-          class="btn btn-ghost" 
+          class="m3-button tonal" 
           @click="handleReload"
         >
-          <Icon icon="lucide:refresh-cw" />
+          <span class="material-symbols-rounded">refresh</span>
           重载
         </button>
         <button 
           v-if="currentPlugin?.loaded && !isSystemPlugin(currentPlugin)"
-          class="btn btn-warning" 
+          class="m3-button tonal error" 
           @click="handleUnload"
         >
-          <Icon icon="lucide:power-off" />
+          <span class="material-symbols-rounded">power_settings_new</span>
           卸载
         </button>
         <button 
           v-if="!isSystemPlugin(currentPlugin)"
-          class="btn btn-error" 
+          class="m3-button text error" 
           @click="handleDelete"
         >
-          <Icon icon="lucide:trash-2" />
+          <span class="material-symbols-rounded">delete</span>
           删除
         </button>
       </div>
@@ -64,29 +67,29 @@
 
     <!-- 加载状态 -->
     <div v-if="detailLoading" class="loading-state">
-      <Icon icon="lucide:loader-2" class="spinning" />
-      加载插件详情...
+      <span class="material-symbols-rounded spinning loading-icon">progress_activity</span>
+      <p>加载插件详情...</p>
     </div>
 
     <!-- 错误状态 -->
     <div v-else-if="error" class="error-state">
-      <Icon icon="lucide:alert-circle" />
-      {{ error }}
-      <button class="btn btn-primary" @click="loadPluginDetail">重试</button>
+      <span class="material-symbols-rounded error-icon">error</span>
+      <p>{{ error }}</p>
+      <button class="m3-button filled" @click="loadPluginDetail">重试</button>
     </div>
 
     <!-- 插件详情内容 -->
     <div v-else-if="currentPlugin" class="detail-content">
       <!-- Tab 导航 -->
-      <div class="tabs">
+      <div class="m3-tabs">
         <button 
           v-for="tab in tabs" 
           :key="tab.value"
-          class="tab"
+          class="m3-tab-item"
           :class="{ active: activeTab === tab.value }"
           @click="activeTab = tab.value as 'overview' | 'components' | 'config'"
         >
-          <Icon :icon="tab.icon" />
+          <span class="material-symbols-rounded">{{ tab.icon }}</span>
           {{ tab.label }}
         </button>
       </div>
@@ -95,7 +98,7 @@
       <div class="tab-content">
         <!-- 概览 Tab -->
         <div v-if="activeTab === 'overview'" class="tab-pane">
-          <div class="info-section">
+          <div class="m3-card info-section">
             <h3 class="section-title">基本信息</h3>
             <div class="info-grid">
               <div class="info-item">
@@ -117,10 +120,10 @@
               <div class="info-item">
                 <div class="info-label">状态</div>
                 <div class="info-value">
-                  <span v-if="currentPlugin.loaded" class="badge badge-success">已加载</span>
-                  <span v-else class="badge badge-secondary">未加载</span>
-                  <span v-if="currentPlugin.enabled" class="badge badge-primary">已启用</span>
-                  <span v-else class="badge badge-secondary">已禁用</span>
+                  <span v-if="currentPlugin.loaded" class="m3-badge success">已加载</span>
+                  <span v-else class="m3-badge secondary">未加载</span>
+                  <span v-if="currentPlugin.enabled" class="m3-badge primary">已启用</span>
+                  <span v-else class="m3-badge secondary">已禁用</span>
                 </div>
               </div>
               <div class="info-item">
@@ -130,12 +133,12 @@
             </div>
           </div>
 
-          <div class="info-section">
+          <div class="m3-card info-section">
             <h3 class="section-title">描述</h3>
             <p class="description">{{ currentPlugin.description || '暂无描述' }}</p>
           </div>
 
-          <div v-if="currentPlugin.metadata" class="info-section">
+          <div v-if="currentPlugin.metadata && Object.keys(currentPlugin.metadata).length > 0" class="m3-card info-section">
             <h3 class="section-title">元数据</h3>
             <div class="info-grid">
               <div v-for="(value, key) in currentPlugin.metadata" :key="key" class="info-item">
@@ -149,37 +152,40 @@
         <!-- 组件 Tab -->
         <div v-if="activeTab === 'components'" class="tab-pane">
           <div v-if="currentComponents.length === 0" class="empty-state">
-            <Icon icon="lucide:puzzle" />
+            <span class="material-symbols-rounded empty-icon">extension_off</span>
             <p>该插件没有组件</p>
           </div>
           <div v-else class="components-list">
             <div 
-              v-for="component in currentComponents" 
-              :key="component.name"
-              class="component-card"
+              v-for="(component, index) in currentComponents" 
+              :key="component.name + index"
+              class="m3-card component-card"
             >
               <div class="component-header">
                 <div class="component-icon">
-                  <Icon :icon="getComponentIcon(component.type)" />
+                  <span class="material-symbols-rounded">{{ getComponentIcon(component.type) }}</span>
                 </div>
                 <div class="component-info">
                   <h4>{{ component.name }}</h4>
                   <p class="component-type">{{ component.type }}</p>
                 </div>
                 <div class="component-actions">
-                  <div v-if="!isSystemPlugin(currentPlugin)" class="toggle-switch">
-                    <input 
-                      type="checkbox" 
-                      :id="`comp-${component.name}`"
-                      :checked="component.enabled"
-                      @change="handleToggleComponent(component)"
-                    />
-                    <label :for="`comp-${component.name}`">
-                      {{ component.enabled ? '已启用' : '已禁用' }}
+                  <div v-if="!isSystemPlugin(currentPlugin)" class="m3-switch-container">
+                    <label class="m3-switch">
+                      <input 
+                        type="checkbox" 
+                        :id="`comp-${index}`"
+                        :checked="component.enabled"
+                        @change="handleToggleComponent(component)"
+                      />
+                      <span class="slider"></span>
                     </label>
+                    <span class="switch-label">
+                      {{ component.enabled ? '已启用' : '已禁用' }}
+                    </span>
                   </div>
                   <div v-else class="component-locked">
-                    <Icon icon="lucide:lock" />
+                    <span class="material-symbols-rounded">lock</span>
                     <span>{{ component.enabled ? '已启用' : '已禁用' }}</span>
                   </div>
                 </div>
@@ -193,7 +199,7 @@
 
         <!-- 配置 Tab -->
         <div v-if="activeTab === 'config'" class="tab-pane">
-          <div class="info-section">
+          <div class="m3-card info-section">
             <h3 class="section-title">配置文件</h3>
             <div class="config-info">
               <div class="info-item">
@@ -203,12 +209,12 @@
               <div class="info-item">
                 <div class="info-label">文件状态</div>
                 <div class="info-value">
-                  <span v-if="currentPlugin.config.exists" class="badge badge-success">
-                    <Icon icon="lucide:check" />
+                  <span v-if="currentPlugin.config.exists" class="m3-badge success">
+                    <span class="material-symbols-rounded">check</span>
                     已存在
                   </span>
-                  <span v-else class="badge badge-error">
-                    <Icon icon="lucide:x" />
+                  <span v-else class="m3-badge error">
+                    <span class="material-symbols-rounded">close</span>
                     不存在
                   </span>
                 </div>
@@ -216,14 +222,14 @@
             </div>
             <button 
               v-if="currentPlugin.config.exists"
-              class="btn btn-primary" 
+              class="m3-button filled" 
               @click="goToConfig"
             >
-              <Icon icon="lucide:settings" />
+              <span class="material-symbols-rounded">settings</span>
               打开配置编辑器
             </button>
             <div v-else class="config-not-found">
-              <Icon icon="lucide:alert-circle" />
+              <span class="material-symbols-rounded">error</span>
               <span>配置文件不存在</span>
             </div>
           </div>
@@ -233,39 +239,31 @@
 
     <!-- Toast 提示 -->
     <Transition name="toast">
-      <div v-if="toast.show" :class="['toast', toast.type]">
-        <Icon :icon="toast.type === 'success' ? 'lucide:check-circle' : 'lucide:alert-circle'" />
+      <div v-if="toast.show" class="m3-snackbar" :class="toast.type">
+        <span class="material-symbols-rounded">
+          {{ toast.type === 'success' ? 'check_circle' : 'error' }}
+        </span>
         {{ toast.message }}
       </div>
     </Transition>
 
     <!-- 确认对话框 -->
-    <Transition name="modal">
-      <div v-if="confirmDialog.show" class="modal-overlay" @click="confirmDialog.show = false">
-        <div class="modal-content" @click.stop>
-          <div class="modal-header">
-            <Icon icon="lucide:alert-triangle" class="warning-icon" />
-            <h3>{{ confirmDialog.title }}</h3>
-          </div>
-          <div class="modal-body">
-            <p>{{ confirmDialog.message }}</p>
-          </div>
-          <div class="modal-footer">
-            <button class="btn btn-ghost" @click="confirmDialog.show = false">取消</button>
-            <button class="btn btn-primary" @click="confirmDialog.onConfirm">确认</button>
-          </div>
-        </div>
-      </div>
-    </Transition>
+    <ConfirmDialog
+      :visible="confirmDialog.show"
+      :title="confirmDialog.title"
+      :message="confirmDialog.message"
+      @confirm="confirmDialog.onConfirm"
+      @cancel="confirmDialog.show = false"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Icon } from '@iconify/vue'
 import { usePluginStore } from '@/stores/plugin'
 import type { PluginComponent, PluginDetailInfo } from '@/api'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -275,9 +273,9 @@ const pluginName = route.params.pluginName as string
 
 // Tab 选项
 const tabs = [
-  { label: '概览', value: 'overview', icon: 'lucide:info' },
-  { label: '组件', value: 'components', icon: 'lucide:puzzle' },
-  { label: '配置', value: 'config', icon: 'lucide:settings' },
+  { label: '概览', value: 'overview', icon: 'info' },
+  { label: '组件', value: 'components', icon: 'extension' },
+  { label: '配置', value: 'config', icon: 'settings' },
 ]
 
 // 状态
@@ -346,18 +344,6 @@ async function loadPluginDetail() {
   const success = await pluginStore.fetchPluginDetail(pluginName)
   
   console.log('[PluginDetail] 插件详情加载结果:', success)
-  console.log('[PluginDetail] 插件数据:', JSON.parse(JSON.stringify(pluginStore.currentPlugin)))
-  console.log('[PluginDetail] 组件数据:', JSON.parse(JSON.stringify(pluginStore.currentComponents)))
-  
-  // 检查每个组件的详细信息
-  if (pluginStore.currentComponents && pluginStore.currentComponents.length > 0) {
-    const firstComp = pluginStore.currentComponents[0]
-    console.log('[PluginDetail] 第一个组件详情:', {
-      name: firstComp?.name,
-      type: firstComp?.type,
-      enabled: firstComp?.enabled
-    })
-  }
   
   if (!success && pluginStore.error) {
     error.value = pluginStore.error
@@ -373,14 +359,12 @@ async function handleTogglePlugin() {
   
   if (currentPlugin.value.enabled) {
     const result = await pluginStore.disablePluginAction(pluginName)
-    console.log('[PluginDetail] 禁用插件结果:', result)
     showToast(
       result.success ? '插件已禁用' : result.error || '操作失败',
       result.success ? 'success' : 'error'
     )
   } else {
     const result = await pluginStore.enablePluginAction(pluginName)
-    console.log('[PluginDetail] 启用插件结果:', result)
     showToast(
       result.success ? '插件已启用' : result.error || '操作失败',
       result.success ? 'success' : 'error'
@@ -391,7 +375,7 @@ async function handleTogglePlugin() {
 async function handleLoad() {
   showConfirm(
     '加载插件',
-    `确定要加载插件 "${currentPlugin.value?.display_name}" 吗？`,
+    `确定要加载插件 "${pluginName}" 吗？`,
     async () => {
       const result = await pluginStore.loadPluginAction(pluginName)
       showToast(
@@ -408,7 +392,7 @@ async function handleLoad() {
 async function handleReload() {
   showConfirm(
     '重载插件',
-    `确定要重载插件 "${currentPlugin.value?.display_name}" 吗？`,
+    `确定要重载插件 "${pluginName}" 吗？`,
     async () => {
       const result = await pluginStore.reloadPluginAction(pluginName)
       showToast(
@@ -425,7 +409,7 @@ async function handleReload() {
 async function handleUnload() {
   showConfirm(
     '卸载插件',
-    `确定要卸载插件 "${currentPlugin.value?.display_name}" 吗？卸载后需要重新加载才能使用。`,
+    `确定要卸载插件 "${pluginName}" 吗？卸载后需要重新加载才能使用。`,
     async () => {
       const result = await pluginStore.unloadPluginAction(pluginName)
       showToast(
@@ -442,7 +426,7 @@ async function handleUnload() {
 async function handleDelete() {
   showConfirm(
     '删除插件',
-    `确定要删除插件 "${currentPlugin.value?.display_name}" 吗？此操作将删除插件的所有文件，且无法撤销！`,
+    `确定要删除插件 "${pluginName}" 吗？此操作将删除插件的所有文件，且无法撤销！`,
     async () => {
       const result = await pluginStore.deletePluginAction(pluginName)
       showToast(
@@ -461,9 +445,8 @@ async function handleToggleComponent(component: PluginComponent) {
   
   if (component.enabled) {
     const result = await pluginStore.disableComponentAction(pluginName, component.name, component.type)
-    console.log('[PluginDetail] 禁用组件结果:', result)
     showToast(
-      result.success ? `组件 ${component.name} 已禁用` : result.error || '操作失败',
+      result.success ? '组件已禁用' : result.error || '操作失败',
       result.success ? 'success' : 'error'
     )
     if (result.success) {
@@ -472,9 +455,8 @@ async function handleToggleComponent(component: PluginComponent) {
     }
   } else {
     const result = await pluginStore.enableComponentAction(pluginName, component.name, component.type)
-    console.log('[PluginDetail] 启用组件结果:', result)
     showToast(
-      result.success ? `组件 ${component.name} 已启用` : result.error || '操作失败',
+      result.success ? '组件已启用' : result.error || '操作失败',
       result.success ? 'success' : 'error'
     )
     if (result.success) {
@@ -486,14 +468,14 @@ async function handleToggleComponent(component: PluginComponent) {
 
 function getComponentIcon(type: string): string {
   const icons: Record<string, string> = {
-    'Command': 'lucide:terminal',
-    'Action': 'lucide:zap',
-    'EventHandler': 'lucide:radio',
-    'Router': 'lucide:route',
-    'Tool': 'lucide:wrench',
-    'Prompt': 'lucide:message-square',
+    'Command': 'terminal',
+    'Action': 'bolt',
+    'EventHandler': 'sensors',
+    'Router': 'alt_route',
+    'Tool': 'build',
+    'Prompt': 'chat',
   }
-  return icons[type] || 'lucide:puzzle'
+  return icons[type] || 'extension'
 }
 
 function goBack() {
@@ -504,8 +486,10 @@ function goToConfig() {
   // 使用配置文件的完整路径跳转
   if (currentPlugin.value?.config.path) {
     console.log('[PluginDetail] 跳转到配置编辑器:', currentPlugin.value.config.path)
-    const encodedPath = encodeURIComponent(currentPlugin.value.config.path)
-    router.push(`/dashboard/plugin-config/${encodedPath}`)
+    router.push({
+      name: 'PluginConfigView',
+      query: { path: currentPlugin.value.config.path }
+    })
   } else {
     console.warn('[PluginDetail] 配置文件路径不存在')
     showToast('配置文件路径不存在', 'error')
@@ -519,9 +503,16 @@ onMounted(() => {
 
 <style scoped>
 .plugin-detail-view {
-  padding: 24px;
-  max-width: 1200px;
-  margin: 0 auto;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: fadeIn 0.4s cubic-bezier(0.2, 0, 0, 1);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* 页面头部 */
@@ -529,29 +520,8 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 20px;
-  margin-bottom: 32px;
+  padding: 0 8px;
   flex-wrap: wrap;
-}
-
-.btn-back {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  border-radius: var(--radius);
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  color: var(--text-secondary);
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition);
-}
-
-.btn-back:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
-  border-color: var(--primary);
 }
 
 .header-info {
@@ -560,15 +530,15 @@ onMounted(() => {
 }
 
 .header-info h1 {
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--text-primary);
+  font-size: 24px;
+  font-weight: 400;
+  color: var(--md-sys-color-on-surface);
   margin: 0 0 4px 0;
 }
 
 .header-info p {
   font-size: 14px;
-  color: var(--text-secondary);
+  color: var(--md-sys-color-on-surface-variant);
   margin: 0;
 }
 
@@ -582,115 +552,136 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 16px;
-  background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 11, 0.15) 100%);
-  border: 1px solid rgba(251, 191, 36, 0.3);
-  border-radius: var(--radius);
-  color: rgb(251, 191, 36);
+  padding: 8px 16px;
+  background: var(--md-sys-color-tertiary-container);
+  border-radius: 8px;
+  color: var(--md-sys-color-on-tertiary-container);
   font-size: 14px;
   font-weight: 500;
 }
 
-.system-plugin-badge svg {
-  font-size: 16px;
+.system-plugin-badge .material-symbols-rounded {
+  font-size: 18px;
+}
+
+.m3-switch-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.switch-label {
+  font-size: 14px;
+  color: var(--md-sys-color-on-surface);
+}
+
+.m3-button.error {
+  color: var(--md-sys-color-error);
+}
+
+.m3-button.tonal.error {
+  background: var(--md-sys-color-error-container);
+  color: var(--md-sys-color-on-error-container);
 }
 
 /* Tab 导航 */
-.tabs {
+.m3-tabs {
   display: flex;
   gap: 8px;
-  margin-bottom: 24px;
-  border-bottom: 2px solid var(--border-color);
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+  padding-bottom: 0;
 }
 
-.tab {
+.m3-tab-item {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 20px;
+  padding: 12px 24px;
   border: none;
   background: transparent;
-  color: var(--text-secondary);
+  color: var(--md-sys-color-on-surface-variant);
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition: all var(--transition);
-  border-bottom: 2px solid transparent;
-  margin-bottom: -2px;
+  position: relative;
+  transition: all 0.2s;
 }
 
-.tab:hover {
-  color: var(--text-primary);
-  background: var(--bg-hover);
+.m3-tab-item:hover {
+  background: var(--md-sys-color-surface-container-highest);
+  color: var(--md-sys-color-on-surface);
 }
 
-.tab.active {
-  color: var(--primary);
-  border-bottom-color: var(--primary);
+.m3-tab-item.active {
+  color: var(--md-sys-color-primary);
+}
+
+.m3-tab-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--md-sys-color-primary);
+  border-radius: 3px 3px 0 0;
+}
+
+.m3-tab-item .material-symbols-rounded {
+  font-size: 18px;
 }
 
 /* Tab 内容 */
 .tab-content {
-  min-height: 400px;
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
 }
 
 .tab-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
   animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 /* 信息区块 */
 .info-section {
-  background: var(--bg-primary);
-  border-radius: var(--radius-lg);
   padding: 24px;
-  margin-bottom: 20px;
-  border: 1px solid var(--border-color);
 }
 
 .section-title {
   font-size: 18px;
-  font-weight: 600;
-  color: var(--text-primary);
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface);
   margin: 0 0 20px 0;
   padding-bottom: 12px;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
 }
 
 .info-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 20px;
+  gap: 24px;
 }
 
 .info-item {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .info-label {
   font-size: 12px;
-  font-weight: 600;
-  color: var(--text-tertiary);
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface-variant);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .info-value {
   font-size: 14px;
-  color: var(--text-primary);
-  font-weight: 500;
+  color: var(--md-sys-color-on-surface);
   display: flex;
   gap: 8px;
   align-items: center;
@@ -698,51 +689,53 @@ onMounted(() => {
 }
 
 .info-value.code {
-  font-family: 'Consolas', 'Monaco', monospace;
-  background: var(--bg-tertiary);
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--md-sys-color-surface-container-highest);
   padding: 8px 12px;
-  border-radius: var(--radius);
+  border-radius: 8px;
   font-size: 13px;
 }
 
 .description {
   font-size: 14px;
-  color: var(--text-secondary);
-  line-height: 1.8;
+  color: var(--md-sys-color-on-surface-variant);
+  line-height: 1.6;
   margin: 0;
 }
 
 /* Badge */
-.badge {
-  padding: 4px 10px;
-  border-radius: var(--radius-full);
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+.m3-badge {
+  padding: 4px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 
-.badge-success {
-  background: rgba(34, 197, 94, 0.1);
-  color: rgb(34, 197, 94);
+.m3-badge.success {
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
 }
 
-.badge-primary {
-  background: rgba(59, 130, 246, 0.1);
-  color: rgb(59, 130, 246);
+.m3-badge.primary {
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
 }
 
-.badge-secondary {
-  background: var(--bg-tertiary);
-  color: var(--text-tertiary);
+.m3-badge.secondary {
+  background: var(--md-sys-color-surface-container-highest);
+  color: var(--md-sys-color-on-surface-variant);
 }
 
-.badge-error {
-  background: rgba(239, 68, 68, 0.1);
-  color: rgb(239, 68, 68);
+.m3-badge.error {
+  background: var(--md-sys-color-error-container);
+  color: var(--md-sys-color-on-error-container);
+}
+
+.m3-badge .material-symbols-rounded {
+  font-size: 16px;
 }
 
 /* 组件列表 */
@@ -753,16 +746,7 @@ onMounted(() => {
 }
 
 .component-card {
-  background: var(--bg-secondary);
-  border-radius: var(--radius-lg);
   padding: 20px;
-  border: 1px solid var(--border-color);
-  transition: all var(--transition);
-}
-
-.component-card:hover {
-  border-color: var(--primary);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .component-header {
@@ -775,13 +759,16 @@ onMounted(() => {
   width: 40px;
   height: 40px;
   min-width: 40px;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-  border-radius: var(--radius);
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.component-icon .material-symbols-rounded {
   font-size: 20px;
-  color: white;
 }
 
 .component-info {
@@ -791,14 +778,14 @@ onMounted(() => {
 
 .component-info h4 {
   font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface);
   margin: 0 0 4px 0;
 }
 
 .component-type {
-  font-size: 13px;
-  color: var(--text-tertiary);
+  font-size: 12px;
+  color: var(--md-sys-color-on-surface-variant);
   margin: 0;
 }
 
@@ -812,24 +799,24 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 12px;
-  background: rgba(156, 163, 175, 0.1);
-  border-radius: var(--radius);
-  color: var(--text-tertiary);
-  font-size: 13px;
+  padding: 6px 12px;
+  background: var(--md-sys-color-surface-container-highest);
+  border-radius: 8px;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 12px;
   font-weight: 500;
 }
 
-.component-locked svg {
-  font-size: 14px;
+.component-locked .material-symbols-rounded {
+  font-size: 16px;
 }
 
 .component-description {
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid var(--border-color);
+  border-top: 1px solid var(--md-sys-color-outline-variant);
   font-size: 14px;
-  color: var(--text-secondary);
+  color: var(--md-sys-color-on-surface-variant);
   line-height: 1.6;
 }
 
@@ -838,7 +825,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .config-not-found {
@@ -846,148 +833,15 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   padding: 12px 16px;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  border-radius: var(--radius);
-  color: rgb(239, 68, 68);
+  background: var(--md-sys-color-error-container);
+  border-radius: 8px;
+  color: var(--md-sys-color-on-error-container);
   font-size: 14px;
   font-weight: 500;
 }
 
-.config-not-found svg {
+.config-not-found .material-symbols-rounded {
   font-size: 18px;
-}
-
-/* Toggle Switch */
-.toggle-switch {
-  display: flex;
-  align-items: center;
-}
-
-.toggle-switch input[type="checkbox"] {
-  display: none;
-}
-
-.toggle-switch label {
-  position: relative;
-  display: flex;
-  align-items: center;
-  padding-left: 50px;
-  cursor: pointer;
-  user-select: none;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  transition: color var(--transition);
-}
-
-.toggle-switch label::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  width: 40px;
-  height: 22px;
-  background: var(--bg-tertiary);
-  border-radius: var(--radius-full);
-  transition: all var(--transition);
-}
-
-.toggle-switch label::after {
-  content: '';
-  position: absolute;
-  left: 3px;
-  width: 16px;
-  height: 16px;
-  background: white;
-  border-radius: 50%;
-  transition: all var(--transition);
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-.toggle-switch input[type="checkbox"]:checked + label::before {
-  background: var(--primary);
-}
-
-.toggle-switch input[type="checkbox"]:checked + label::after {
-  left: 21px;
-}
-
-.toggle-switch input[type="checkbox"]:checked + label {
-  color: var(--primary);
-}
-
-.toggle-switch input[type="checkbox"]:disabled + label {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* 按钮 */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 10px 20px;
-  border-radius: var(--radius);
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition);
-  border: none;
-  white-space: nowrap;
-}
-
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-primary {
-  background: var(--primary);
-  color: white;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: var(--primary-dark);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-}
-
-.btn-ghost {
-  background: transparent;
-  color: var(--text-secondary);
-  border: 1px solid var(--border-color);
-}
-
-.btn-ghost:hover:not(:disabled) {
-  background: var(--bg-hover);
-  color: var(--text-primary);
-  border-color: var(--primary);
-}
-
-.btn-warning {
-  background: rgba(251, 191, 36, 0.1);
-  color: rgb(251, 191, 36);
-  border: 1px solid rgba(251, 191, 36, 0.2);
-}
-
-.btn-warning:hover:not(:disabled) {
-  background: rgb(251, 191, 36);
-  color: white;
-  border-color: rgb(251, 191, 36);
-}
-
-.btn-error {
-  background: rgba(239, 68, 68, 0.1);
-  color: rgb(239, 68, 68);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-}
-
-.btn-error:hover:not(:disabled) {
-  background: rgb(239, 68, 68);
-  color: white;
-  border-color: rgb(239, 68, 68);
 }
 
 /* 状态 */
@@ -998,142 +852,62 @@ onMounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 80px 20px;
-  color: var(--text-secondary);
-  font-size: 16px;
+  padding: 60px 20px;
+  color: var(--md-sys-color-on-surface-variant);
   gap: 16px;
 }
 
-.loading-state svg,
-.error-state svg,
-.empty-state svg {
+.loading-icon,
+.error-icon,
+.empty-icon {
   font-size: 48px;
-  color: var(--text-tertiary);
+  opacity: 0.5;
 }
 
-/* Toast */
-.toast {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px 20px;
-  border-radius: var(--radius);
-  background: var(--bg-secondary);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-  color: var(--text-primary);
-  font-size: 14px;
-  font-weight: 500;
-  z-index: 1000;
-  min-width: 300px;
+.error-state {
+  color: var(--md-sys-color-error);
 }
 
-.toast.success {
-  border-left: 4px solid rgb(34, 197, 94);
-}
-
-.toast.error {
-  border-left: 4px solid rgb(239, 68, 68);
-}
-
-.toast-enter-active,
-.toast-leave-active {
-  transition: all 0.3s ease;
-}
-
-.toast-enter-from,
-.toast-leave-to {
-  opacity: 0;
-  transform: translateY(20px);
-}
-
-/* Modal */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 20px;
-}
-
-.modal-content {
-  background: var(--bg-secondary);
-  border-radius: var(--radius-lg);
-  max-width: 480px;
-  width: 100%;
-  overflow: hidden;
-}
-
-.modal-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 24px;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.warning-icon {
-  font-size: 24px;
-  color: rgb(234, 179, 8);
-}
-
-.modal-header h3 {
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.modal-body {
-  padding: 24px;
-}
-
-.modal-body p {
-  font-size: 14px;
-  color: var(--text-secondary);
-  line-height: 1.6;
-  margin: 0;
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  padding: 20px 24px;
-  border-top: 1px solid var(--border-color);
-}
-
-.modal-enter-active,
-.modal-leave-active {
-  transition: all 0.3s ease;
-}
-
-.modal-enter-from,
-.modal-leave-to {
-  opacity: 0;
-}
-
-.modal-enter-from .modal-content,
-.modal-leave-to .modal-content {
-  transform: scale(0.9);
-}
-
-/* Animations */
 .spinning {
   animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Snackbar */
+.m3-snackbar {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--md-sys-color-inverse-surface);
+  color: var(--md-sys-color-inverse-on-surface);
+  padding: 14px 24px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: var(--md-sys-elevation-3);
+  z-index: 2000;
+  min-width: 300px;
+}
+
+.m3-snackbar.error {
+  background: var(--md-sys-color-error-container);
+  color: var(--md-sys-color-on-error-container);
+}
+
+.toast-enter-active,
+.toast-leave-active {
+  transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.toast-enter-from,
+.toast-leave-to {
+  opacity: 0;
+  transform: translate(-50%, 20px);
 }
 </style>

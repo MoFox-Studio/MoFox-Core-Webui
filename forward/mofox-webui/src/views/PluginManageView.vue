@@ -2,61 +2,60 @@
   <div class="plugin-manage-view">
     <!-- 顶部标题栏 -->
     <header class="page-header">
-      <div class="header-left">
-        <Icon icon="lucide:package" class="header-icon" />
-        <div class="header-info">
-          <h1>插件管理</h1>
-          <p>管理系统插件的加载、启用和配置</p>
-        </div>
+      <div class="header-content">
+        <h1>插件管理</h1>
+        <p class="subtitle">管理系统插件的加载、启用和配置</p>
       </div>
       <div class="header-actions">
-        <button class="btn btn-ghost" @click="handleScanPlugins" :disabled="loading">
-          <Icon icon="lucide:scan" />
+        <button class="m3-button text" @click="handleScanPlugins" :disabled="loading">
+          <span class="material-symbols-rounded">search_check</span>
           扫描新插件
         </button>
-        <button class="btn btn-ghost" @click="handleReloadAll" :disabled="loading">
-          <Icon icon="lucide:refresh-cw" />
+        <button class="m3-button text" @click="handleReloadAll" :disabled="loading">
+          <span class="material-symbols-rounded">refresh</span>
           重载所有
         </button>
-        <button class="btn btn-primary" @click="refreshPluginList" :disabled="loading">
-          <Icon :icon="loading ? 'lucide:loader-2' : 'lucide:refresh-cw'" :class="{ spinning: loading }" />
+        <button class="m3-button filled" @click="refreshPluginList" :disabled="loading">
+          <span class="material-symbols-rounded" :class="{ spinning: loading }">
+            {{ loading ? 'progress_activity' : 'sync' }}
+          </span>
           刷新列表
         </button>
       </div>
     </header>
 
     <!-- 统计卡片 -->
-    <div class="stats-cards">
-      <div class="stat-card">
-        <div class="stat-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%)">
-          <Icon icon="lucide:package" />
+    <div class="stats-grid">
+      <div class="m3-card stat-card primary-container">
+        <div class="stat-icon">
+          <span class="material-symbols-rounded">extension</span>
         </div>
         <div class="stat-content">
           <div class="stat-value">{{ pluginStore.stats.total }}</div>
           <div class="stat-label">插件总数</div>
         </div>
       </div>
-      <div class="stat-card">
-        <div class="stat-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%)">
-          <Icon icon="lucide:check-circle" />
+      <div class="m3-card stat-card success-container">
+        <div class="stat-icon">
+          <span class="material-symbols-rounded">check_circle</span>
         </div>
         <div class="stat-content">
           <div class="stat-value">{{ pluginStore.stats.loaded }}</div>
           <div class="stat-label">已加载</div>
         </div>
       </div>
-      <div class="stat-card">
-        <div class="stat-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)">
-          <Icon icon="lucide:zap" />
+      <div class="m3-card stat-card tertiary-container">
+        <div class="stat-icon">
+          <span class="material-symbols-rounded">bolt</span>
         </div>
         <div class="stat-content">
           <div class="stat-value">{{ pluginStore.stats.enabled }}</div>
           <div class="stat-label">已启用</div>
         </div>
       </div>
-      <div class="stat-card">
-        <div class="stat-icon" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%)">
-          <Icon icon="lucide:alert-circle" />
+      <div class="m3-card stat-card error-container">
+        <div class="stat-icon">
+          <span class="material-symbols-rounded">error</span>
         </div>
         <div class="stat-content">
           <div class="stat-value">{{ pluginStore.stats.failed }}</div>
@@ -67,21 +66,23 @@
 
     <!-- 筛选和搜索栏 -->
     <div class="filter-bar">
-      <div class="filter-buttons">
+      <div class="filter-chips">
         <button 
           v-for="filter in filters" 
           :key="filter.value"
-          class="filter-btn"
-          :class="{ active: pluginStore.statusFilter === filter.value }"
+          class="m3-filter-chip"
+          :class="{ selected: pluginStore.statusFilter === filter.value }"
           @click="pluginStore.setStatusFilter(filter.value)"
         >
+          <span v-if="pluginStore.statusFilter === filter.value" class="material-symbols-rounded check-icon">check</span>
           {{ filter.label }}
         </button>
       </div>
       <div class="search-box">
-        <Icon icon="lucide:search" class="search-icon" />
+        <span class="material-symbols-rounded search-icon">search</span>
         <input 
           type="text" 
+          class="m3-input"
           placeholder="搜索插件名称或描述..." 
           v-model="pluginStore.searchKeyword"
         />
@@ -89,59 +90,47 @@
     </div>
 
     <!-- 失败插件区域 -->
-    <div v-if="!loading && pluginStore.failedPlugins.length > 0" class="failed-plugins-section">
-      <div class="section-header">
-        <Icon icon="lucide:alert-circle" class="section-icon error" />
-        <h2>加载失败的插件 ({{ pluginStore.failedPlugins.length }})</h2>
+    <div v-if="!loading && pluginStore.failedPlugins.length > 0" class="section-container">
+      <div class="section-header error-text">
+        <span class="material-symbols-rounded">error</span>
+        <h2>加载失败 ({{ pluginStore.failedPlugins.length }})</h2>
       </div>
-      <div class="plugin-grid failed-grid">
+      <div class="plugin-grid">
         <div 
           v-for="plugin in pluginStore.failedPlugins" 
           :key="plugin.name"
-          class="plugin-card plugin-card-failed"
+          class="m3-card plugin-card error-card"
         >
-          <!-- 插件卡片头部 -->
-          <div class="plugin-card-header">
-            <div class="plugin-icon error">
-              <Icon icon="lucide:alert-circle" />
+          <div class="card-content">
+            <div class="card-header">
+              <div class="plugin-icon error">
+                <span class="material-symbols-rounded">error</span>
+              </div>
+              <div class="header-text">
+                <h3>{{ plugin.display_name }}</h3>
+                <p>v{{ plugin.version }} • {{ plugin.author }}</p>
+              </div>
             </div>
-            <div class="plugin-header-info">
-              <h3 class="plugin-name">{{ plugin.display_name }}</h3>
-              <p class="plugin-version">v{{ plugin.version }} • {{ plugin.author }}</p>
+            <div class="plugin-description">
+              {{ plugin.description || '暂无描述' }}
             </div>
-            <div class="plugin-badges">
-              <span class="badge badge-error">加载失败</span>
+            <div class="error-message">
+              <span class="material-symbols-rounded">warning</span>
+              {{ plugin.error || '未知错误' }}
             </div>
           </div>
-
-          <!-- 插件描述 -->
-          <div class="plugin-description">
-            {{ plugin.description || '暂无描述' }}
-          </div>
-
-          <!-- 错误信息 -->
-          <div class="plugin-error">
-            <Icon icon="lucide:alert-triangle" />
-            {{ plugin.error || '未知错误' }}
-          </div>
-
-          <!-- 操作按钮 -->
-          <div class="plugin-actions" @click.stop>
-            <button 
-              class="btn btn-sm btn-ghost" 
-              @click="handleReloadPlugin(plugin.name)"
-              title="重试加载"
-            >
-              <Icon icon="lucide:refresh-cw" />
+          <div class="card-actions">
+            <button class="m3-button text" @click="handleReloadPlugin(plugin.name)">
+              <span class="material-symbols-rounded">refresh</span>
               重试
             </button>
             <button 
               v-if="!isSystemPlugin(plugin)"
-              class="btn btn-sm btn-error" 
+              class="m3-button text error" 
               @click="handleDeletePlugin(plugin.name, plugin.display_name)"
-              title="删除插件"
             >
-              <Icon icon="lucide:trash-2" />
+              <span class="material-symbols-rounded">delete</span>
+              删除
             </button>
           </div>
         </div>
@@ -151,147 +140,146 @@
     <!-- 插件列表 -->
     <div class="plugin-list-container">
       <div v-if="loading" class="loading-state">
-        <Icon icon="lucide:loader-2" class="spinning" />
-        加载插件列表...
+        <span class="material-symbols-rounded spinning loading-icon">progress_activity</span>
+        <p>加载插件列表...</p>
       </div>
       <div v-else-if="error" class="error-state">
-        <Icon icon="lucide:alert-circle" />
-        {{ error }}
-        <button class="btn btn-primary" @click="refreshPluginList">重试</button>
+        <span class="material-symbols-rounded error-icon">error</span>
+        <p>{{ error }}</p>
+        <button class="m3-button filled" @click="refreshPluginList">重试</button>
       </div>
       <div v-else-if="pluginStore.filteredPlugins.length === 0 && pluginStore.failedPlugins.length === 0" class="empty-state">
-        <Icon icon="lucide:package" />
+        <span class="material-symbols-rounded empty-icon">extension_off</span>
         <p>没有找到插件</p>
         <span class="hint">尝试调整筛选条件或扫描新插件</span>
       </div>
       <div v-else-if="pluginStore.filteredPlugins.length > 0">
         <div class="section-header" v-if="pluginStore.failedPlugins.length > 0">
-          <Icon icon="lucide:check-circle" class="section-icon success" />
+          <span class="material-symbols-rounded success-text">check_circle</span>
           <h2>正常插件 ({{ pluginStore.filteredPlugins.length }})</h2>
         </div>
         <div class="plugin-grid">
-        <div 
-          v-for="plugin in pluginStore.filteredPlugins" 
-          :key="plugin.name"
-          class="plugin-card"
-          :class="{ 'plugin-card-disabled': !plugin.loaded }"
-          @click="plugin.loaded ? goToDetail(plugin.name) : null"
-        >
-          <!-- 插件卡片头部 -->
-          <div class="plugin-card-header">
-            <div class="plugin-icon">
-              <Icon :icon="plugin.error ? 'lucide:alert-circle' : 'lucide:package'" />
-            </div>
-            <div class="plugin-header-info">
-              <h3 class="plugin-name">{{ plugin.display_name }}</h3>
-              <p class="plugin-version">v{{ plugin.version }} • {{ plugin.author }}</p>
-            </div>
-            <div class="plugin-badges">
-              <span v-if="isSystemPlugin(plugin)" class="badge badge-system">系统插件</span>
-              <span v-if="plugin.loaded" class="badge badge-success">已加载</span>
-              <span v-else class="badge badge-secondary">未加载</span>
-              <span v-if="plugin.error" class="badge badge-error">错误</span>
-            </div>
-          </div>
+          <div 
+            v-for="plugin in pluginStore.filteredPlugins" 
+            :key="plugin.name"
+            class="m3-card plugin-card"
+            :class="{ 'disabled': !plugin.loaded }"
+            @click="plugin.loaded ? goToDetail(plugin.name) : null"
+          >
+            <div class="card-content">
+              <div class="card-header">
+                <div class="plugin-icon">
+                  <span class="material-symbols-rounded">{{ plugin.error ? 'error' : 'extension' }}</span>
+                </div>
+                <div class="header-text">
+                  <h3>{{ plugin.display_name }}</h3>
+                  <p>v{{ plugin.version }} • {{ plugin.author }}</p>
+                </div>
+                <div class="badges">
+                  <span v-if="isSystemPlugin(plugin)" class="m3-assist-chip system">系统</span>
+                  <span v-if="plugin.loaded" class="m3-assist-chip success">已加载</span>
+                  <span v-else class="m3-assist-chip">未加载</span>
+                </div>
+              </div>
+              
+              <div class="plugin-description">
+                {{ plugin.description || '暂无描述' }}
+              </div>
 
-          <!-- 插件描述 -->
-          <div class="plugin-description">
-            {{ plugin.description || '暂无描述' }}
-          </div>
+              <div v-if="plugin.error" class="error-message">
+                <span class="material-symbols-rounded">warning</span>
+                {{ plugin.error }}
+              </div>
 
-          <!-- 错误信息 -->
-          <div v-if="plugin.error" class="plugin-error">
-            <Icon icon="lucide:alert-triangle" />
-            {{ plugin.error }}
-          </div>
+              <div class="plugin-meta">
+                <span class="meta-item">
+                  <span class="material-symbols-rounded">widgets</span>
+                  {{ plugin.components_count }} 个组件
+                </span>
+              </div>
+            </div>
 
-          <!-- 插件信息 -->
-          <div class="plugin-info">
-            <div class="info-item">
-              <Icon icon="lucide:puzzle" />
-              {{ plugin.components_count }} 个组件
+            <div class="card-actions" @click.stop>
+              <div class="action-left">
+                <label class="m3-switch" v-if="plugin.loaded && !isSystemPlugin(plugin)">
+                  <input 
+                    type="checkbox" 
+                    :checked="plugin.enabled"
+                    @change="handleTogglePlugin(plugin)"
+                    :disabled="!plugin.loaded"
+                  >
+                  <span class="slider"></span>
+                </label>
+                <div class="system-lock" v-if="isSystemPlugin(plugin)">
+                  <span class="material-symbols-rounded">lock</span>
+                  <span>系统锁定</span>
+                </div>
+              </div>
+              
+              <div class="action-right">
+                <button 
+                  v-if="!plugin.loaded && !isSystemPlugin(plugin)"
+                  class="m3-icon-button" 
+                  @click="handleLoadPlugin(plugin.name)"
+                  title="加载插件"
+                >
+                  <span class="material-symbols-rounded">download</span>
+                </button>
+                <button 
+                  v-if="plugin.loaded && !isSystemPlugin(plugin)"
+                  class="m3-icon-button" 
+                  @click="handleReloadPlugin(plugin.name)"
+                  title="重载插件"
+                >
+                  <span class="material-symbols-rounded">refresh</span>
+                </button>
+                <button 
+                  v-if="!isSystemPlugin(plugin)"
+                  class="m3-icon-button error" 
+                  @click="handleDeletePlugin(plugin.name, plugin.display_name)"
+                  title="删除插件"
+                >
+                  <span class="material-symbols-rounded">delete</span>
+                </button>
+                <button 
+                  v-if="plugin.loaded"
+                  class="m3-icon-button filled-tonal" 
+                  @click="goToDetail(plugin.name)"
+                  title="查看详情"
+                >
+                  <span class="material-symbols-rounded">arrow_forward</span>
+                </button>
+              </div>
             </div>
-          </div>
-
-          <!-- 操作按钮 -->
-          <div class="plugin-actions" @click.stop>
-            <div class="toggle-switch" v-if="plugin.loaded && !isSystemPlugin(plugin)">
-              <input 
-                type="checkbox" 
-                :id="`toggle-${plugin.name}`"
-                :checked="plugin.enabled"
-                @change="handleTogglePlugin(plugin)"
-                :disabled="!plugin.loaded"
-              />
-              <label :for="`toggle-${plugin.name}`">
-                {{ plugin.enabled ? '已启用' : '已禁用' }}
-              </label>
-            </div>
-            <div class="system-plugin-lock" v-if="isSystemPlugin(plugin)">
-              <Icon icon="lucide:lock" />
-              <span>系统插件</span>
-            </div>
-            <button 
-              v-if="!plugin.loaded && !isSystemPlugin(plugin)"
-              class="btn btn-sm btn-success" 
-              @click="handleLoadPlugin(plugin.name)"
-              title="加载插件"
-            >
-              <Icon icon="lucide:download" />
-              加载
-            </button>
-            <button 
-              v-if="plugin.loaded && !isSystemPlugin(plugin)"
-              class="btn btn-sm btn-ghost" 
-              @click="handleReloadPlugin(plugin.name)"
-              title="重载插件"
-            >
-              <Icon icon="lucide:refresh-cw" />
-            </button>
-            <button 
-              v-if="!isSystemPlugin(plugin)"
-              class="btn btn-sm btn-error" 
-              @click="handleDeletePlugin(plugin.name, plugin.display_name)"
-              title="删除插件"
-            >
-              <Icon icon="lucide:trash-2" />
-            </button>
-            <button 
-              v-if="plugin.loaded"
-              class="btn btn-sm btn-primary" 
-              @click="goToDetail(plugin.name)"
-              title="查看详情"
-            >
-              <Icon icon="lucide:arrow-right" />
-            </button>
           </div>
         </div>
-      </div>
       </div>
     </div>
 
     <!-- Toast 提示 -->
     <Transition name="toast">
-      <div v-if="toast.show" :class="['toast', toast.type]">
-        <Icon :icon="toast.type === 'success' ? 'lucide:check-circle' : 'lucide:alert-circle'" />
+      <div v-if="toast.show" class="m3-snackbar" :class="toast.type">
+        <span class="material-symbols-rounded">
+          {{ toast.type === 'success' ? 'check_circle' : 'error' }}
+        </span>
         {{ toast.message }}
       </div>
     </Transition>
 
     <!-- 确认对话框 -->
-    <Transition name="modal">
-      <div v-if="confirmDialog.show" class="modal-overlay" @click="confirmDialog.show = false">
-        <div class="modal-content" @click.stop>
-          <div class="modal-header">
-            <Icon icon="lucide:alert-triangle" class="warning-icon" />
-            <h3>{{ confirmDialog.title }}</h3>
+    <Transition name="dialog">
+      <div v-if="confirmDialog.show" class="m3-dialog-overlay" @click="confirmDialog.show = false">
+        <div class="m3-dialog" @click.stop>
+          <div class="dialog-icon">
+            <span class="material-symbols-rounded">warning</span>
           </div>
-          <div class="modal-body">
-            <p>{{ confirmDialog.message }}</p>
+          <div class="dialog-content">
+            <h3 class="headline">{{ confirmDialog.title }}</h3>
+            <p class="supporting-text">{{ confirmDialog.message }}</p>
           </div>
-          <div class="modal-footer">
-            <button class="btn btn-ghost" @click="confirmDialog.show = false">取消</button>
-            <button class="btn btn-primary" @click="confirmDialog.onConfirm">确认</button>
+          <div class="dialog-actions">
+            <button class="m3-button text" @click="confirmDialog.show = false">取消</button>
+            <button class="m3-button text" @click="confirmDialog.onConfirm">确认</button>
           </div>
         </div>
       </div>
@@ -302,7 +290,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Icon } from '@iconify/vue'
 import { usePluginStore } from '@/stores/plugin'
 import type { PluginItem } from '@/api'
 
@@ -501,9 +488,18 @@ onMounted(() => {
 
 <style scoped>
 .plugin-manage-view {
-  padding: 24px;
-  max-width: 1400px;
-  margin: 0 auto;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 8px;
+  animation: fadeIn 0.4s cubic-bezier(0.2, 0, 0, 1);
+  overflow-y: auto;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* 页面头部 */
@@ -511,98 +507,86 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 32px;
+  padding: 0 8px;
 }
 
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.header-icon {
-  width: 48px;
-  height: 48px;
-  min-width: 48px;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-  border-radius: var(--radius);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.header-content h1 {
   font-size: 24px;
-  color: white;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-}
-
-.header-info h1 {
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--text-primary);
+  font-weight: 400;
+  color: var(--md-sys-color-on-surface);
   margin: 0 0 4px 0;
 }
 
-.header-info p {
+.subtitle {
   font-size: 14px;
-  color: var(--text-secondary);
+  color: var(--md-sys-color-on-surface-variant);
   margin: 0;
 }
 
 .header-actions {
   display: flex;
-  gap: 12px;
+  gap: 8px;
 }
 
 /* 统计卡片 */
-.stats-cards {
+.stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 20px;
-  margin-bottom: 32px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
 }
 
 .stat-card {
-  background: var(--bg-primary);
-  border-radius: var(--radius-lg);
-  padding: 24px;
+  padding: 20px;
   display: flex;
   align-items: center;
-  gap: 20px;
-  transition: all var(--transition);
-  border: 1px solid var(--border-color);
+  gap: 16px;
+  border: none;
 }
 
-.stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+.stat-card.primary-container {
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+}
+
+.stat-card.success-container {
+  background: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
+}
+
+.stat-card.tertiary-container {
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.stat-card.error-container {
+  background: var(--md-sys-color-error-container);
+  color: var(--md-sys-color-on-error-container);
 }
 
 .stat-icon {
-  width: 56px;
-  height: 56px;
-  min-width: 56px;
-  border-radius: var(--radius);
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
-  color: white;
+  background: rgba(255, 255, 255, 0.2);
 }
 
-.stat-content {
-  flex: 1;
+.stat-icon .material-symbols-rounded {
+  font-size: 24px;
 }
 
 .stat-value {
-  font-size: 32px;
-  font-weight: 700;
-  color: var(--text-primary);
+  font-size: 28px;
+  font-weight: 600;
   line-height: 1;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 .stat-label {
-  font-size: 14px;
-  color: var(--text-secondary);
+  font-size: 12px;
+  opacity: 0.8;
 }
 
 /* 筛选栏 */
@@ -610,43 +594,49 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 20px;
-  margin-bottom: 24px;
+  gap: 16px;
   flex-wrap: wrap;
 }
 
-.filter-buttons {
+.filter-chips {
   display: flex;
   gap: 8px;
 }
 
-.filter-btn {
-  padding: 8px 16px;
-  border-radius: var(--radius);
-  border: 1px solid var(--border-color);
-  background: var(--bg-primary);
-  color: var(--text-secondary);
+.m3-filter-chip {
+  height: 32px;
+  padding: 0 16px;
+  border-radius: 8px;
+  border: 1px solid var(--md-sys-color-outline);
+  background: transparent;
+  color: var(--md-sys-color-on-surface-variant);
   font-size: 14px;
   font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   cursor: pointer;
-  transition: all var(--transition);
+  transition: all 0.2s;
 }
 
-.filter-btn:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
+.m3-filter-chip:hover {
+  background: var(--md-sys-color-surface-container-highest);
 }
 
-.filter-btn.active {
-  background: var(--primary);
-  color: white;
-  border-color: var(--primary);
+.m3-filter-chip.selected {
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  border-color: transparent;
+}
+
+.m3-filter-chip .check-icon {
+  font-size: 18px;
+  margin-left: -4px;
 }
 
 .search-box {
   position: relative;
-  flex: 1;
-  max-width: 400px;
+  width: 300px;
 }
 
 .search-icon {
@@ -654,145 +644,161 @@ onMounted(() => {
   left: 12px;
   top: 50%;
   transform: translateY(-50%);
-  color: var(--text-tertiary);
-  font-size: 18px;
+  color: var(--md-sys-color-on-surface-variant);
+  pointer-events: none;
 }
 
-.search-box input {
+.search-box .m3-input {
+  padding-left: 40px;
   width: 100%;
-  padding: 10px 12px 10px 40px;
-  border-radius: var(--radius);
-  border: 1px solid var(--border-color);
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  font-size: 14px;
-  transition: all var(--transition);
-}
-
-.search-box input:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 /* 插件列表 */
-.plugin-list-container {
-  min-height: 400px;
+.section-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--md-sys-color-on-surface);
+}
+
+.section-header h2 {
+  font-size: 16px;
+  font-weight: 500;
+  margin: 0;
+}
+
+.section-header.error-text {
+  color: var(--md-sys-color-error);
+}
+
+.success-text {
+  color: var(--md-sys-color-primary);
 }
 
 .plugin-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 16px;
 }
 
 .plugin-card {
-  background: var(--bg-primary);
-  border-radius: var(--radius-lg);
-  padding: 20px;
-  border: 1px solid var(--border-color);
-  transition: all var(--transition);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all 0.2s;
   cursor: pointer;
+  border: 1px solid transparent;
 }
 
 .plugin-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-  border-color: var(--primary);
+  box-shadow: var(--md-sys-elevation-2);
+  border-color: var(--md-sys-color-outline-variant);
 }
 
-.plugin-card-disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
+.plugin-card.disabled {
+  background: var(--md-sys-color-surface);
+  border: 1px solid var(--md-sys-color-outline-variant);
 }
 
-.plugin-card-disabled:hover {
-  transform: none;
-  box-shadow: none;
-  border-color: var(--border-color);
+.plugin-card.disabled .plugin-icon {
+  background: var(--md-sys-color-surface-container-highest);
+  color: var(--md-sys-color-on-surface-variant);
 }
 
-.plugin-card-header {
+.plugin-card.error-card {
+  border-color: var(--md-sys-color-error-container);
+  background: var(--md-sys-color-surface-container-low);
+  color: var(--md-sys-color-on-surface);
+}
+
+.plugin-card.error-card .plugin-description {
+  color: var(--md-sys-color-on-surface-variant);
+  opacity: 1;
+}
+
+.card-content {
+  padding: 16px;
+}
+
+.card-header {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .plugin-icon {
-  width: 48px;
-  height: 48px;
-  min-width: 48px;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-  border-radius: var(--radius);
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  border-radius: 8px;
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
-  color: white;
 }
 
-.plugin-header-info {
+.plugin-icon.error {
+  background: var(--md-sys-color-error-container);
+  color: var(--md-sys-color-on-error-container);
+}
+
+.header-text {
   flex: 1;
   min-width: 0;
 }
 
-.plugin-name {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--text-primary);
+.header-text h3 {
   margin: 0 0 4px 0;
+  font-size: 16px;
+  font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.plugin-version {
-  font-size: 13px;
-  color: var(--text-tertiary);
+.header-text p {
   margin: 0;
+  font-size: 12px;
+  opacity: 0.7;
 }
 
-.plugin-badges {
+.badges {
   display: flex;
-  gap: 6px;
+  gap: 4px;
 }
 
-.badge {
-  padding: 4px 10px;
-  border-radius: var(--radius-full);
+.m3-assist-chip {
+  height: 24px;
+  padding: 0 8px;
   font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
-.badge-success {
-  background: rgba(34, 197, 94, 0.1);
-  color: rgb(34, 197, 94);
+.m3-assist-chip.system {
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  border: none;
 }
 
-.badge-secondary {
-  background: var(--bg-tertiary);
-  color: var(--text-tertiary);
-}
-
-.badge-error {
-  background: rgba(239, 68, 68, 0.1);
-  color: rgb(239, 68, 68);
-}
-
-.badge-system {
-  background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 11, 0.15) 100%);
-  border: 1px solid rgba(251, 191, 36, 0.3);
-  color: rgb(251, 191, 36);
+.m3-assist-chip.success {
+  background: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
+  border: none;
 }
 
 .plugin-description {
   font-size: 14px;
-  color: var(--text-secondary);
-  line-height: 1.6;
-  margin-bottom: 16px;
+  line-height: 1.5;
+  color: var(--md-sys-color-on-surface-variant);
+  margin-bottom: 12px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   line-clamp: 2;
@@ -800,369 +806,233 @@ onMounted(() => {
   overflow: hidden;
 }
 
-.plugin-error {
+.error-message {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   padding: 12px;
-  background: rgba(239, 68, 68, 0.1);
-  border-radius: var(--radius);
-  color: rgb(239, 68, 68);
+  background: var(--md-sys-color-error-container);
+  color: var(--md-sys-color-on-error-container);
+  border-radius: 8px;
   font-size: 13px;
-  margin-bottom: 16px;
+  line-height: 1.4;
+  margin-bottom: 12px;
 }
 
-.plugin-info {
+.error-message .material-symbols-rounded {
+  font-size: 18px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.plugin-meta {
   display: flex;
-  gap: 16px;
-  margin-bottom: 16px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--border-color);
+  gap: 12px;
+  font-size: 12px;
+  color: var(--md-sys-color-on-surface-variant);
 }
 
-.info-item {
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.meta-item .material-symbols-rounded {
+  font-size: 16px;
+}
+
+.card-actions {
+  padding: 8px 16px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.action-left {
+  display: flex;
+  align-items: center;
+}
+
+.system-lock {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
-  color: var(--text-secondary);
+  font-size: 12px;
+  color: var(--md-sys-color-outline);
+  padding: 4px 8px;
+  background: var(--md-sys-color-surface-container-highest);
+  border-radius: 4px;
 }
 
-.plugin-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.toggle-switch {
-  flex: 1;
-  display: flex;
-  align-items: center;
-}
-
-.system-plugin-lock {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  background: rgba(156, 163, 175, 0.1);
-  border-radius: var(--radius);
-  color: var(--text-tertiary);
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.system-plugin-lock svg {
+.system-lock .material-symbols-rounded {
   font-size: 14px;
 }
 
-.toggle-switch input[type="checkbox"] {
-  display: none;
+.action-right {
+  display: flex;
+  gap: 4px;
 }
 
-.toggle-switch label {
-  position: relative;
+.m3-icon-button {
+  width: 32px;
+  height: 32px;
+  border-radius: 16px;
   display: flex;
   align-items: center;
-  padding-left: 50px;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--md-sys-color-on-surface-variant);
   cursor: pointer;
-  user-select: none;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  transition: color var(--transition);
+  transition: all 0.2s;
 }
 
-.toggle-switch label::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  width: 40px;
-  height: 22px;
-  background: var(--bg-tertiary);
-  border-radius: var(--radius-full);
-  transition: all var(--transition);
+.m3-icon-button:hover {
+  background: var(--md-sys-color-surface-container-highest);
+  color: var(--md-sys-color-on-surface);
 }
 
-.toggle-switch label::after {
-  content: '';
-  position: absolute;
-  left: 3px;
-  width: 16px;
-  height: 16px;
-  background: white;
-  border-radius: 50%;
-  transition: all var(--transition);
-  top: 50%;
-  transform: translateY(-50%);
+.m3-icon-button.filled-tonal {
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
 }
 
-.toggle-switch input[type="checkbox"]:checked + label::before {
-  background: var(--primary);
+.m3-icon-button.filled-tonal:hover {
+  background: var(--md-sys-color-secondary);
+  color: var(--md-sys-color-on-secondary);
 }
 
-.toggle-switch input[type="checkbox"]:checked + label::after {
-  left: 21px;
+.m3-icon-button.error:hover {
+  background: var(--md-sys-color-error-container);
+  color: var(--md-sys-color-on-error-container);
 }
 
-.toggle-switch input[type="checkbox"]:checked + label {
-  color: var(--primary);
-}
-
-.toggle-switch input[type="checkbox"]:disabled + label {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* 状态样式 */
-.loading-state,
-.error-state,
-.empty-state {
+/* 状态展示 */
+.loading-state, .error-state, .empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 80px 20px;
-  color: var(--text-secondary);
-  font-size: 16px;
+  padding: 60px 0;
   gap: 16px;
+  color: var(--md-sys-color-on-surface-variant);
 }
 
-.loading-state svg,
-.error-state svg,
-.empty-state svg {
+.loading-icon, .error-icon, .empty-icon {
   font-size: 48px;
-  color: var(--text-tertiary);
-}
-
-.hint {
-  font-size: 14px;
-  color: var(--text-tertiary);
-}
-
-/* 按钮样式 */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 10px 20px;
-  border-radius: var(--radius);
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition);
-  border: none;
-  white-space: nowrap;
-}
-
-.btn:disabled {
   opacity: 0.5;
-  cursor: not-allowed;
 }
 
-.btn-primary {
-  background: var(--primary);
-  color: white;
+.error-state {
+  color: var(--md-sys-color-error);
 }
 
-.btn-primary:hover:not(:disabled) {
-  background: var(--primary-dark);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-}
-
-.btn-ghost {
-  background: transparent;
-  color: var(--text-secondary);
-  border: 1px solid var(--border-color);
-}
-
-.btn-ghost:hover:not(:disabled) {
-  background: var(--bg-hover);
-  color: var(--text-primary);
-  border-color: var(--primary);
-}
-
-.btn-sm {
-  padding: 6px 12px;
-  font-size: 13px;
-}
-
-/* Toast 提示 */
-.toast {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px 20px;
-  border-radius: var(--radius);
-  background: var(--bg-secondary);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-  color: var(--text-primary);
-  font-size: 14px;
-  font-weight: 500;
-  z-index: 1000;
-  min-width: 300px;
-}
-
-.toast.success {
-  border-left: 4px solid rgb(34, 197, 94);
-}
-
-.toast.error {
-  border-left: 4px solid rgb(239, 68, 68);
-}
-
-.toast-enter-active,
-.toast-leave-active {
-  transition: all 0.3s ease;
-}
-
-.toast-enter-from,
-.toast-leave-to {
-  opacity: 0;
-  transform: translateY(20px);
-}
-
-/* 确认对话框 */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 20px;
-}
-
-.modal-content {
-  background: var(--bg-secondary);
-  border-radius: var(--radius-lg);
-  max-width: 480px;
-  width: 100%;
-  overflow: hidden;
-}
-
-.modal-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 24px;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.warning-icon {
-  font-size: 24px;
-  color: rgb(234, 179, 8);
-}
-
-.modal-header h3 {
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.modal-body {
-  padding: 24px;
-}
-
-.modal-body p {
-  font-size: 14px;
-  color: var(--text-secondary);
-  line-height: 1.6;
-  margin: 0;
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  padding: 20px 24px;
-  border-top: 1px solid var(--border-color);
-}
-
-.modal-enter-active,
-.modal-leave-active {
-  transition: all 0.3s ease;
-}
-
-.modal-enter-from,
-.modal-leave-to {
-  opacity: 0;
-}
-
-.modal-enter-from .modal-content,
-.modal-leave-to .modal-content {
-  transform: scale(0.9);
-}
-
-/* 失败插件区域 */
-.failed-plugins-section {
-  margin-bottom: 32px;
-}
-
-.section-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-
-.section-icon {
-  font-size: 24px;
-}
-
-.section-icon.error {
-  color: rgb(239, 68, 68);
-}
-
-.section-icon.success {
-  color: rgb(34, 197, 94);
-}
-
-.section-header h2 {
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.plugin-card-failed {
-  border-color: rgba(239, 68, 68, 0.3);
-  background: rgba(239, 68, 68, 0.05);
-}
-
-.plugin-card-failed:hover {
-  border-color: rgb(239, 68, 68);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.2);
-}
-
-.plugin-card-failed .plugin-icon {
-  background: linear-gradient(135deg, rgb(239, 68, 68) 0%, rgb(220, 38, 38) 100%);
-}
-
-.failed-grid {
-  margin-bottom: 24px;
-}
-
-/* 动画 */
 .spinning {
   animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Snackbar */
+.m3-snackbar {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--md-sys-color-inverse-surface);
+  color: var(--md-sys-color-inverse-on-surface);
+  padding: 14px 24px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: var(--md-sys-elevation-3);
+  z-index: 2000;
+  min-width: 300px;
+}
+
+.m3-snackbar.error {
+  background: var(--md-sys-color-error-container);
+  color: var(--md-sys-color-on-error-container);
+}
+
+.toast-enter-active,
+.toast-leave-active {
+  transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.toast-enter-from,
+.toast-leave-to {
+  opacity: 0;
+  transform: translate(-50%, 20px);
+}
+
+/* Dialog */
+.m3-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.32);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+}
+
+.m3-dialog {
+  background: var(--md-sys-color-surface-container-high);
+  border-radius: 28px;
+  padding: 24px;
+  width: 100%;
+  max-width: 320px;
+  box-shadow: var(--md-sys-elevation-3);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
+  text-align: center;
+}
+
+.dialog-icon {
+  color: var(--md-sys-color-secondary);
+}
+
+.dialog-icon .material-symbols-rounded {
+  font-size: 24px;
+}
+
+.dialog-content .headline {
+  margin: 0 0 16px 0;
+  font-size: 24px;
+  color: var(--md-sys-color-on-surface);
+}
+
+.dialog-content .supporting-text {
+  margin: 0;
+  font-size: 14px;
+  color: var(--md-sys-color-on-surface-variant);
+  line-height: 20px;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  width: 100%;
+}
+
+.dialog-enter-active,
+.dialog-leave-active {
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.dialog-enter-from,
+.dialog-leave-to {
+  opacity: 0;
+  transform: scale(0.9);
 }
 </style>

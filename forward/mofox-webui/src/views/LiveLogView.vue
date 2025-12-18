@@ -4,7 +4,7 @@
     <div class="page-header">
       <div class="header-content">
         <div class="title-group">
-          <Icon icon="lucide:radio" class="title-icon" />
+          <span class="material-symbols-rounded title-icon">sensors</span>
           <h1 class="page-title">实时日志</h1>
           <div class="status-badge" :class="{ connected: realtimeEnabled }">
             <span class="status-dot"></span>
@@ -22,57 +22,63 @@
         <div class="toolbar">
           <div class="toolbar-left">
             <button 
-              class="action-button primary" 
+              class="m3-button filled" 
               @click="toggleRealtime"
               :disabled="connecting"
             >
-              <Icon :icon="realtimeEnabled ? 'lucide:pause' : 'lucide:play'" />
+              <span class="material-symbols-rounded">{{ realtimeEnabled ? 'pause' : 'play_arrow' }}</span>
               <span>{{ realtimeEnabled ? '断开连接' : '开始监听' }}</span>
             </button>
             
             <button 
-              class="action-button" 
+              class="m3-button text error" 
               @click="clearRealtimeLogs"
               :disabled="!realtimeEnabled && realtimeLogs.length === 0"
             >
-              <Icon icon="lucide:trash-2" />
+              <span class="material-symbols-rounded">delete</span>
               <span>清空日志</span>
             </button>
             
             <div class="separator-line"></div>
             
-            <label class="checkbox-label">
-              <input type="checkbox" v-model="autoScroll" />
-              <span>自动滚动</span>
-            </label>
+            <div class="m3-switch-container">
+              <label class="m3-switch">
+                <input type="checkbox" v-model="autoScroll" />
+                <span class="slider"></span>
+              </label>
+              <span class="switch-label">自动滚动</span>
+            </div>
           </div>
           
           <div class="toolbar-right">
             <div class="filter-group">
               <div class="level-filter-dropdown">
-                <button class="filter-button" @click="toggleLevelFilter">
-                  <Icon icon="lucide:filter" />
+                <button class="m3-filter-chip" @click="toggleLevelFilter" :class="{ active: showLevelFilter }">
+                  <span class="material-symbols-rounded">filter_list</span>
                   <span>日志级别 ({{ selectedLevels.length }})</span>
-                  <Icon :icon="showLevelFilter ? 'lucide:chevron-up' : 'lucide:chevron-down'" />
+                  <span class="material-symbols-rounded">{{ showLevelFilter ? 'expand_less' : 'expand_more' }}</span>
                 </button>
-                <div v-if="showLevelFilter" class="filter-dropdown-menu">
+                <div v-if="showLevelFilter" class="filter-dropdown-menu m3-card">
                   <label v-for="level in logLevels" :key="level" class="filter-option">
                     <input 
                       type="checkbox" 
                       :value="level" 
                       v-model="selectedLevels"
                     />
-                    <span :class="`level-badge level-${level.toLowerCase()}`">{{ level }}</span>
+                    <span :class="['level-badge', 'level-' + level.toLowerCase()]">{{ level }}</span>
                   </label>
                 </div>
               </div>
               
-              <input 
-                v-model="searchQuery" 
-                type="text" 
-                class="search-input"
-                placeholder="搜索日志内容..."
-              />
+              <div class="search-box">
+                <span class="material-symbols-rounded search-icon">search</span>
+                <input 
+                  v-model="searchQuery" 
+                  type="text" 
+                  class="m3-input"
+                  placeholder="搜索日志内容..."
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -89,24 +95,24 @@
           </div>
           <div class="stat-item" v-for="(count, level) in logLevelCounts" :key="level">
             <span class="stat-label">{{ level }}:</span>
-            <span class="stat-value" :class="`level-${level.toLowerCase()}`">{{ count }}</span>
+            <span class="stat-value" :class="'level-' + level.toLowerCase()">{{ count }}</span>
           </div>
         </div>
 
         <!-- 日志内容区域 -->
         <div class="log-content" ref="logContentContainer">
           <div v-if="connecting" class="loading-state">
-            <Icon icon="lucide:loader-2" class="loading-icon spinning" />
+            <span class="material-symbols-rounded spinning loading-icon">progress_activity</span>
             <p>正在连接...</p>
           </div>
 
           <div v-else-if="!realtimeEnabled && realtimeLogs.length === 0" class="empty-state">
-            <Icon icon="lucide:radio" class="empty-icon" />
+            <span class="material-symbols-rounded empty-icon">sensors</span>
             <p>点击"开始监听"按钮开始接收实时日志</p>
           </div>
 
           <div v-else-if="filteredLogs.length === 0" class="empty-state">
-            <Icon icon="lucide:filter-x" class="empty-icon" />
+            <span class="material-symbols-rounded empty-icon">filter_list_off</span>
             <p>没有匹配的日志</p>
             <p style="font-size: 12px; margin-top: 8px;">尝试调整筛选条件或搜索关键词</p>
           </div>
@@ -141,7 +147,6 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
-import { Icon } from '@iconify/vue'
 import { getServerInfo } from '@/api/index'
 import type { LogEntry } from '@/api/log_viewer'
 
@@ -268,7 +273,7 @@ const formatLogMessage = (message: string) => {
     const text = message.substring(lastIndex, match.index)
     if (text) {
       if (currentColor) {
-        result += `<span style="color: ${currentColor};">${escapeHtml(text)}</span>`
+        result += `<span style="color: ${currentColor}">${escapeHtml(text)}</span>`
       } else {
         result += escapeHtml(text)
       }
@@ -287,7 +292,7 @@ const formatLogMessage = (message: string) => {
   const remainingText = message.substring(lastIndex)
   if (remainingText) {
     if (currentColor) {
-      result += `<span style="color: ${currentColor};">${escapeHtml(remainingText)}</span>`
+      result += `<span style="color: ${currentColor}">${escapeHtml(remainingText)}</span>`
     } else {
       result += escapeHtml(remainingText)
     }
@@ -447,7 +452,7 @@ onUnmounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: var(--bg-secondary);
+  background: var(--md-sys-color-surface);
 }
 
 /* 页面标题 */
@@ -471,13 +476,13 @@ onUnmounted(() => {
 
 .title-icon {
   font-size: 28px;
-  color: var(--primary);
+  color: var(--md-sys-color-primary);
 }
 
 .page-title {
   font-size: 24px;
-  font-weight: 700;
-  color: var(--text-primary);
+  font-weight: 400;
+  color: var(--md-sys-color-on-surface);
   margin: 0;
 }
 
@@ -486,29 +491,29 @@ onUnmounted(() => {
   align-items: center;
   gap: 6px;
   padding: 4px 12px;
-  border-radius: var(--radius-full);
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  background: var(--md-sys-color-surface-container-highest);
+  border: 1px solid var(--md-sys-color-outline);
   font-size: 12px;
   font-weight: 500;
-  color: var(--text-secondary);
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .status-badge.connected {
-  background: rgba(34, 197, 94, 0.1);
-  border-color: rgb(34, 197, 94);
-  color: rgb(34, 197, 94);
+  background: var(--md-sys-color-tertiary-container);
+  border-color: transparent;
+  color: var(--md-sys-color-on-tertiary-container);
 }
 
 .status-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--text-tertiary);
+  background: var(--md-sys-color-outline);
 }
 
 .status-badge.connected .status-dot {
-  background: rgb(34, 197, 94);
+  background: var(--md-sys-color-on-tertiary-container);
   animation: pulse 2s infinite;
 }
 
@@ -519,7 +524,7 @@ onUnmounted(() => {
 
 .page-description {
   font-size: 14px;
-  color: var(--text-secondary);
+  color: var(--md-sys-color-on-surface-variant);
   margin: 0;
 }
 
@@ -541,46 +546,18 @@ onUnmounted(() => {
   max-height: calc(100vh - 220px);
   display: flex;
   flex-direction: column;
-  background: var(--terminal-bg);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--terminal-border);
+  background: var(--md-sys-color-surface-container-low);
+  border-radius: 16px;
+  border: 1px solid var(--md-sys-color-outline-variant);
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-}
-
-/* 终端配色变量 */
-:root {
-  --terminal-bg: #0a0a0a;
-  --terminal-bar-bg: #1a1a1a;
-  --terminal-border: #2a2a2a;
-  --terminal-text: #e0e0e0;
-  --terminal-text-dim: #909090;
-  --terminal-text-darker: #808080;
-  --terminal-hover: rgba(255, 255, 255, 0.03);
-  --terminal-scrollbar-track: #1a1a1a;
-  --terminal-scrollbar-thumb: #404040;
-  --terminal-scrollbar-thumb-hover: #505050;
-}
-
-/* 浅色模式 */
-html.light {
-  --terminal-bg: #f8f9fa;
-  --terminal-bar-bg: #e9ecef;
-  --terminal-border: #dee2e6;
-  --terminal-text: #212529;
-  --terminal-text-dim: #6c757d;
-  --terminal-text-darker: #495057;
-  --terminal-hover: rgba(0, 0, 0, 0.03);
-  --terminal-scrollbar-track: #e9ecef;
-  --terminal-scrollbar-thumb: #ced4da;
-  --terminal-scrollbar-thumb-hover: #adb5bd;
+  box-shadow: var(--md-sys-elevation-2);
 }
 
 /* 工具栏 */
 .toolbar {
   padding: 16px;
-  border-bottom: 1px solid var(--terminal-border);
-  background: var(--terminal-bar-bg);
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+  background: var(--md-sys-color-surface-container);
   display: flex;
   justify-content: space-between;
   gap: 16px;
@@ -595,63 +572,26 @@ html.light {
   align-items: center;
 }
 
-.action-button {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius);
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition);
-}
-
-.action-button:hover:not(:disabled) {
-  background: var(--bg-hover);
-  border-color: var(--primary);
-  color: var(--primary);
-}
-
-.action-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.action-button.primary {
-  background: var(--primary);
-  color: white;
-  border-color: var(--primary);
-}
-
-.action-button.primary:hover:not(:disabled) {
-  background: var(--primary-dark);
-}
-
 .separator-line {
   width: 1px;
   height: 24px;
-  background: var(--border-color);
+  background: var(--md-sys-color-outline-variant);
   margin: 0 4px;
 }
 
-.checkbox-label {
+.m3-switch-container {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  color: var(--text-secondary);
-  cursor: pointer;
-  user-select: none;
+  gap: 12px;
 }
 
-.checkbox-label input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  cursor: pointer;
+.switch-label {
+  font-size: 14px;
+  color: var(--md-sys-color-on-surface);
+}
+
+.m3-button.error {
+  color: var(--md-sys-color-error);
 }
 
 .filter-group {
@@ -660,28 +600,38 @@ html.light {
   align-items: center;
 }
 
-.level-filter-dropdown {
-  position: relative;
-}
-
-.filter-button {
+.m3-filter-chip {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid var(--md-sys-color-outline);
+  background: transparent;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 13px;
+  font-weight: 500;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 16px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius);
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-  font-size: 14px;
   cursor: pointer;
-  transition: all var(--transition);
-  white-space: nowrap;
+  transition: all 0.2s;
 }
 
-.filter-button:hover {
-  background: var(--bg-hover);
-  border-color: var(--primary);
+.m3-filter-chip:hover {
+  background: var(--md-sys-color-surface-container-highest);
+}
+
+.m3-filter-chip.active {
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  border-color: transparent;
+}
+
+.m3-filter-chip .material-symbols-rounded {
+  font-size: 18px;
+}
+
+.level-filter-dropdown {
+  position: relative;
 }
 
 .filter-dropdown-menu {
@@ -691,10 +641,6 @@ html.light {
   z-index: 1000;
   min-width: 200px;
   padding: 8px;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -705,14 +651,14 @@ html.light {
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  border-radius: var(--radius-sm);
+  border-radius: 8px;
   cursor: pointer;
-  transition: all var(--transition);
+  transition: all 0.2s;
   user-select: none;
 }
 
 .filter-option:hover {
-  background: var(--bg-hover);
+  background: var(--md-sys-color-surface-container-highest);
 }
 
 .filter-option input[type="checkbox"] {
@@ -723,40 +669,42 @@ html.light {
 
 .level-badge {
   padding: 2px 8px;
-  border-radius: var(--radius-sm);
-  font-weight: 600;
+  border-radius: 4px;
+  font-weight: 500;
   font-size: 11px;
   flex: 1;
 }
 
-.level-badge.level-debug { background: #8b8b8b; color: white; }
-.level-badge.level-info { background: #3b82f6; color: white; }
-.level-badge.level-warning { background: #f59e0b; color: white; }
-.level-badge.level-error { background: #ef4444; color: white; }
-.level-badge.level-critical { background: #dc2626; color: white; }
+.level-badge.level-debug { background: #E0E0E0; color: #424242; }
+.level-badge.level-info { background: #E3F2FD; color: #1565C0; }
+.level-badge.level-warning { background: #FFF3E0; color: #EF6C00; }
+.level-badge.level-error { background: #FFEBEE; color: #C62828; }
+.level-badge.level-critical { background: #D32F2F; color: #FFFFFF; }
 
-.search-input {
-  padding: 10px 12px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius);
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-  font-size: 14px;
-  min-width: 200px;
-  transition: all var(--transition);
+.search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
 }
 
-.search-input:focus {
-  outline: none;
-  border-color: var(--primary);
-  background: var(--bg-primary);
+.search-icon {
+  position: absolute;
+  left: 12px;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 20px;
+  pointer-events: none;
+}
+
+.search-box input {
+  padding-left: 40px;
+  min-width: 200px;
 }
 
 /* 统计栏 */
 .stats-bar {
   padding: 12px 16px;
-  border-bottom: 1px solid var(--terminal-border);
-  background: var(--terminal-bar-bg);
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+  background: var(--md-sys-color-surface-container-low);
   display: flex;
   gap: 24px;
   flex-wrap: wrap;
@@ -768,23 +716,23 @@ html.light {
   align-items: center;
   gap: 6px;
   font-size: 13px;
-  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-family: 'Roboto Mono', 'Noto Sans SC', 'JetBrains Mono', monospace;
 }
 
 .stat-label {
-  color: var(--terminal-text-dim);
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .stat-value {
   font-weight: 600;
-  color: var(--terminal-text);
+  color: var(--md-sys-color-on-surface);
 }
 
-.stat-value.level-debug { color: #8b8b8b; }
-.stat-value.level-info { color: #3b82f6; }
-.stat-value.level-warning { color: #f59e0b; }
-.stat-value.level-error { color: #ef4444; }
-.stat-value.level-critical { color: #dc2626; }
+.stat-value.level-debug { color: #757575; }
+.stat-value.level-info { color: #1565C0; }
+.stat-value.level-warning { color: #EF6C00; }
+.stat-value.level-error { color: #C62828; }
+.stat-value.level-critical { color: #D32F2F; }
 
 /* 日志内容区 - 命令行样式 */
 .log-content {
@@ -793,8 +741,9 @@ html.light {
   overflow-x: auto;
   padding: 12px;
   min-height: 0;
-  background: var(--terminal-bg);
-  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  background: #1e1e1e; /* 深色背景 */
+  color: #d4d4d4; /* 浅色文字 */
+  font-family: 'Roboto Mono', 'Noto Sans SC', 'JetBrains Mono', monospace;
 }
 
 .log-content::-webkit-scrollbar {
@@ -803,16 +752,16 @@ html.light {
 }
 
 .log-content::-webkit-scrollbar-track {
-  background: var(--terminal-scrollbar-track);
+  background: #1e1e1e;
 }
 
 .log-content::-webkit-scrollbar-thumb {
-  background: var(--terminal-scrollbar-thumb);
-  border-radius: 2px;
+  background: #424242;
+  border-radius: 5px;
 }
 
 .log-content::-webkit-scrollbar-thumb:hover {
-  background: var(--terminal-scrollbar-thumb-hover);
+  background: #5a5a5a;
 }
 
 /* 命令行样式的日志条目 */
@@ -828,7 +777,7 @@ html.light {
   background: transparent;
   transition: background 0.1s ease;
   animation: terminalFadeIn 0.15s ease-out;
-  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-family: 'Roboto Mono', 'Noto Sans SC', 'JetBrains Mono', monospace;
   font-size: 13px;
   line-height: 1.5;
   white-space: pre-wrap;
@@ -838,121 +787,66 @@ html.light {
 }
 
 @keyframes terminalFadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .log-entry.terminal-line:hover {
-  background: var(--terminal-hover);
+  background: #2d2d2d;
 }
 
-/* 时间戳 - 橙黄色 */
+/* 时间戳 */
 .terminal-time {
-  color: #d97706;
+  color: #808080;
   flex-shrink: 0;
   font-weight: normal;
 }
 
-html.light .terminal-time {
-  color: #b45309;
-}
-
-/* 日志级别 - 根据级别显示不同颜色 */
+/* 日志级别 */
 .terminal-level {
   font-weight: bold;
   flex-shrink: 0;
   min-width: 90px;
 }
 
-.terminal-level.level-debug { color: #9ca3af; }
-.terminal-level.level-info { color: #3b82f6; }
-.terminal-level.level-warning { color: #f59e0b; }
-.terminal-level.level-error { color: #ef4444; }
+.terminal-level.level-debug { color: #808080; }
+.terminal-level.level-info { color: #569cd6; }
+.terminal-level.level-warning { color: #ce9178; }
+.terminal-level.level-error { color: #f44747; }
 .terminal-level.level-critical { 
-  color: #dc2626;
-  background: rgba(220, 38, 38, 0.2);
+  color: #ffffff;
+  background: #f44747;
   padding: 0 4px;
-}
-
-/* 浅色模式下的级别颜色调整 */
-html.light .terminal-level.level-debug { color: #6b7280; }
-html.light .terminal-level.level-info { color: #2563eb; }
-html.light .terminal-level.level-warning { color: #d97706; }
-html.light .terminal-level.level-error { color: #dc2626; }
-html.light .terminal-level.level-critical { 
-  color: #991b1b;
-  background: rgba(220, 38, 38, 0.15);
+  border-radius: 4px;
 }
 
 /* Logger名称 */
 .terminal-logger {
-  color: var(--terminal-text-darker);
+  color: #4ec9b0;
   flex-shrink: 0;
   font-weight: normal;
 }
 
 /* 消息内容 */
 .terminal-message {
-  color: var(--terminal-text);
+  color: inherit;
   flex: 1;
   word-break: break-word;
-  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-family: 'Roboto Mono', 'Noto Sans SC', 'JetBrains Mono', monospace;
 }
 
-/* 错误级别的消息使用红色背景 */
+/* 错误级别的消息 */
 .log-entry.terminal-line.level-error {
-  background: rgba(239, 68, 68, 0.05);
+  background: rgba(244, 71, 71, 0.1);
 }
 
 .log-entry.terminal-line.level-critical {
-  background: rgba(220, 38, 38, 0.1);
+  background: rgba(244, 71, 71, 0.2);
 }
 
-/* 警告级别的消息使用橙色背景 */
+/* 警告级别的消息 */
 .log-entry.terminal-line.level-warning {
-  background: rgba(245, 158, 11, 0.05);
-}
-
-/* 浅色模式下的背景颜色调整 */
-html.light .log-entry.terminal-line.level-error {
-  background: rgba(239, 68, 68, 0.08);
-}
-
-html.light .log-entry.terminal-line.level-critical {
-  background: rgba(220, 38, 38, 0.12);
-}
-
-html.light .log-entry.terminal-line.level-warning {
-  background: rgba(245, 158, 11, 0.08);
-}
-
-.entry-extra {
-  margin-top: 8px;
-  font-size: 12px;
-}
-
-.entry-extra details {
-  cursor: pointer;
-}
-
-.entry-extra summary {
-  color: var(--primary);
-  user-select: none;
-}
-
-.entry-extra pre {
-  margin-top: 8px;
-  padding: 8px;
-  background: var(--bg-primary);
-  border-radius: var(--radius-sm);
-  overflow-x: auto;
-  font-family: 'Consolas', 'Monaco', monospace;
-  font-size: 11px;
-  color: var(--text-secondary);
+  background: rgba(206, 145, 120, 0.1);
 }
 
 /* 空状态 */
@@ -963,9 +857,9 @@ html.light .log-entry.terminal-line.level-warning {
   align-items: center;
   justify-content: center;
   padding: 60px 20px;
-  color: var(--terminal-text-darker);
+  color: var(--md-sys-color-on-surface-variant);
   height: 100%;
-  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-family: 'Roboto Mono', 'Noto Sans SC', 'JetBrains Mono', monospace;
 }
 
 .empty-icon,
@@ -973,14 +867,14 @@ html.light .log-entry.terminal-line.level-warning {
   font-size: 48px;
   margin-bottom: 12px;
   opacity: 0.5;
-  color: var(--terminal-text-darker);
+  color: var(--md-sys-color-outline);
 }
 
 .empty-state p,
 .loading-state p {
   font-size: 14px;
   margin: 0;
-  color: var(--terminal-text-dim);
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .spinning {

@@ -15,15 +15,35 @@
         class="user-item"
       >
         <div class="user-inputs">
-          <select 
-            class="input platform-select"
-            :value="user[0]"
-            @change="updateUser(index, 0, ($event.target as HTMLSelectElement).value)"
+          <div 
+            class="custom-select-wrapper" 
+            :ref="el => dropdownRefs[index] = el as HTMLElement"
           >
-            <option value="qq">QQ</option>
-            <option value="telegram">Telegram</option>
-            <option value="discord">Discord</option>
-          </select>
+            <div 
+              class="custom-select-trigger input" 
+              :class="{ active: openDropdownIndex === index }"
+              @click.stop="toggleDropdown(index)"
+            >
+              <span>{{ platforms.find(p => p.value === user[0])?.label || user[0] }}</span>
+              <Icon icon="lucide:chevron-down" class="select-arrow" :class="{ rotated: openDropdownIndex === index }" />
+            </div>
+            
+            <Transition name="fade">
+              <div v-if="openDropdownIndex === index" class="custom-select-dropdown">
+                <div 
+                  v-for="platform in platforms" 
+                  :key="platform.value"
+                  class="custom-select-option"
+                  :class="{ selected: user[0] === platform.value }"
+                  @click.stop="selectPlatform(index, platform.value)"
+                >
+                  <span>{{ platform.label }}</span>
+                  <Icon v-if="user[0] === platform.value" icon="lucide:check" class="check-icon" />
+                </div>
+              </div>
+            </Transition>
+          </div>
+
           <input 
             type="text" 
             class="input user-id-input"
@@ -51,7 +71,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 
 const props = defineProps<{
@@ -61,6 +81,45 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'update', value: string[][]): void
 }>()
+
+const platforms = [
+  { value: 'qq', label: 'QQ' },
+  { value: 'telegram', label: 'Telegram' },
+  { value: 'discord', label: 'Discord' }
+]
+
+const openDropdownIndex = ref<number>(-1)
+const dropdownRefs = ref<(HTMLElement | null)[]>([])
+
+function toggleDropdown(index: number) {
+  if (openDropdownIndex.value === index) {
+    openDropdownIndex.value = -1
+  } else {
+    openDropdownIndex.value = index
+  }
+}
+
+function selectPlatform(index: number, platform: string) {
+  updateUser(index, 0, platform)
+  openDropdownIndex.value = -1
+}
+
+function handleClickOutside(event: MouseEvent) {
+  if (openDropdownIndex.value !== -1) {
+    const activeDropdown = dropdownRefs.value[openDropdownIndex.value]
+    if (activeDropdown && !activeDropdown.contains(event.target as Node)) {
+      openDropdownIndex.value = -1
+    }
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
 
 // 解析用户列表
 const users = computed(() => {
@@ -145,16 +204,87 @@ function updateUser(index: number, field: number, value: string) {
   gap: 8px;
 }
 
-.platform-select {
-  width: 120px;
+.custom-select-wrapper {
+  position: relative;
+  width: 140px;
+}
+
+.custom-select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+  height: 34px; /* Match input height */
+}
+
+.custom-select-trigger.active {
+  border-color: var(--primary);
+  background: var(--bg-secondary);
+}
+
+.select-arrow {
+  font-size: 16px;
+  color: var(--text-tertiary);
+  transition: transform 0.2s;
+}
+
+.select-arrow.rotated {
+  transform: rotate(180deg);
+}
+
+.custom-select-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 100%;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 4px;
+  z-index: 100;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.custom-select-option {
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--text-primary);
+  transition: background 0.2s;
+}
+
+.custom-select-option:hover {
+  background: var(--bg-tertiary);
+}
+
+.custom-select-option.selected {
+  background: var(--primary-bg);
+  color: var(--primary);
+  font-weight: 500;
+}
+
+.check-icon {
+  font-size: 14px;
 }
 
 .user-id-input {
   flex: 1;
+  height: 34px;
 }
 
 .input {
-  padding: 8px 12px;
+  padding: 0 12px;
+  height: 34px;
+  display: flex;
+  align-items: center;
   background: var(--bg-primary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
