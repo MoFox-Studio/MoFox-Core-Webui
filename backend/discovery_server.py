@@ -1,15 +1,17 @@
 """
 发现服务器模块
-提供一个固定端口的FastAPI服务器，用于前端发现主程序的IP和端口
+提供一个固定端口的FastAPI服务器,用于前端发现主程序的IP和端口
+同时支持托管编译好的前端静态文件
 """
 
 import asyncio
-import os
+from pathlib import Path
 from typing import Optional
 
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from src.common.logger import get_logger
@@ -56,12 +58,29 @@ def create_discovery_app(main_host: str, main_port: int) -> FastAPI:
         allow_headers=["*"],
     )
     
-    @app.get("/", summary="服务状态检查")
+    # 检查是否存在编译好的前端静态文件
+    # 使用相对于当前文件的路径定位static目录
+    current_dir = Path(__file__).parent
+    static_dir = current_dir / "static"
+    
+    if static_dir.exists() and static_dir.is_dir():
+        # 检查是否有index.html文件
+        index_file = static_dir / "index.html"
+        if index_file.exists():
+            logger.info(f"发现编译好的前端文件，将托管静态文件: {static_dir}")
+            # 挂载静态文件目录
+            app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
+        else:
+            logger.info("静态目录存在但未找到index.html，不托管静态文件")
+    else:
+        logger.info(f"未找到编译好的前端文件(路径: {static_dir})，不托管静态文件")
+    
+    @app.get("/api/health", summary="服务状态检查")
     def health_check():
         """检查服务是否运行"""
         return {"status": "ok", "service": "MoFox WebUI Discovery"}
     
-    @app.get("/server-info", summary="获取主程序服务器信息", response_model=ServerInfo)
+    @app.get("/api/server-info", summary="获取主程序服务器信息", response_model=ServerInfo)
     def get_server_info():
         """
         获取主程序的IP和端口信息
