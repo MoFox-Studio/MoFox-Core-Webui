@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "@material/material-color-utilities": "^0.3.0"
+  }
+}

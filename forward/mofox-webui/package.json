@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@guolao/vue-monaco-editor": "^1.6.0",
+    "@material/material-color-utilities": "^0.3.0",
     "axios": "^1.7.9",
     "echarts": "^5.5.1",
     "marked": "^17.0.1",

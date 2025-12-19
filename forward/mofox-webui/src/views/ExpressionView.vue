@@ -28,37 +28,91 @@
     <!-- 搜索和筛选栏 -->
     <div class="m3-card toolbar-card">
       <div class="toolbar-content">
-        <div class="search-box">
-          <span class="material-symbols-rounded search-icon">search</span>
-          <input
-            v-model="searchQuery"
-            type="text"
-            class="m3-input search-input"
-            placeholder="搜索情境或表达风格..."
-            @keyup.enter="handleSearch"
-          />
-          <button v-if="searchQuery" class="m3-icon-button small clear-btn" @click="clearSearch">
-            <span class="material-symbols-rounded">close</span>
-          </button>
+        <div class="search-container">
+          <div class="search-wrapper" :class="{ focused: isSearchFocused }">
+            <span class="material-symbols-rounded search-icon">search</span>
+            <input
+              v-model="searchQuery"
+              type="text"
+              class="search-input"
+              placeholder="搜索情境或表达风格..."
+              @focus="isSearchFocused = true"
+              @blur="isSearchFocused = false"
+              @keyup.enter="handleSearch"
+            />
+            <button v-if="searchQuery" class="icon-button clear-btn" @click="clearSearch">
+              <span class="material-symbols-rounded">cancel</span>
+            </button>
+          </div>
         </div>
         
         <div class="filters-group">
-          <div class="select-wrapper">
-            <select v-model="filterType" class="m3-input filter-select" @change="loadExpressionList">
-              <option value="">全部类型</option>
-              <option value="style">语言风格</option>
-              <option value="grammar">句法特点</option>
-            </select>
-            <span class="material-symbols-rounded select-arrow">arrow_drop_down</span>
+          <!-- Type Filter -->
+          <div class="custom-select" :class="{ active: showTypeDropdown }">
+            <div class="select-trigger" @click="showTypeDropdown = !showTypeDropdown; showSortDropdown = false">
+              <span>{{ getFilterTypeLabel(filterType) }}</span>
+              <span class="material-symbols-rounded select-arrow">arrow_drop_down</span>
+            </div>
+            <Transition name="scale-y">
+              <div v-if="showTypeDropdown" class="select-options m3-card">
+                <div 
+                  class="select-option" 
+                  :class="{ selected: filterType === '' }"
+                  @click="filterType = ''; loadExpressionList(); showTypeDropdown = false"
+                >
+                  全部类型
+                </div>
+                <div 
+                  class="select-option" 
+                  :class="{ selected: filterType === 'style' }"
+                  @click="filterType = 'style'; loadExpressionList(); showTypeDropdown = false"
+                >
+                  语言风格
+                </div>
+                <div 
+                  class="select-option" 
+                  :class="{ selected: filterType === 'grammar' }"
+                  @click="filterType = 'grammar'; loadExpressionList(); showTypeDropdown = false"
+                >
+                  句法特点
+                </div>
+              </div>
+            </Transition>
+            <div v-if="showTypeDropdown" class="dropdown-overlay" @click="showTypeDropdown = false"></div>
           </div>
           
-          <div class="select-wrapper">
-            <select v-model="sortBy" class="m3-input filter-select" @change="loadExpressionList">
-              <option value="last_active_time">最后使用</option>
-              <option value="count">使用次数</option>
-              <option value="create_date">创建时间</option>
-            </select>
-            <span class="material-symbols-rounded select-arrow">arrow_drop_down</span>
+          <!-- Sort Filter -->
+          <div class="custom-select" :class="{ active: showSortDropdown }">
+            <div class="select-trigger" @click="showSortDropdown = !showSortDropdown; showTypeDropdown = false">
+              <span>{{ getSortByLabel(sortBy) }}</span>
+              <span class="material-symbols-rounded select-arrow">arrow_drop_down</span>
+            </div>
+            <Transition name="scale-y">
+              <div v-if="showSortDropdown" class="select-options m3-card">
+                <div 
+                  class="select-option" 
+                  :class="{ selected: sortBy === 'last_active_time' }"
+                  @click="sortBy = 'last_active_time'; loadExpressionList(); showSortDropdown = false"
+                >
+                  最后使用
+                </div>
+                <div 
+                  class="select-option" 
+                  :class="{ selected: sortBy === 'count' }"
+                  @click="sortBy = 'count'; loadExpressionList(); showSortDropdown = false"
+                >
+                  使用次数
+                </div>
+                <div 
+                  class="select-option" 
+                  :class="{ selected: sortBy === 'create_date' }"
+                  @click="sortBy = 'create_date'; loadExpressionList(); showSortDropdown = false"
+                >
+                  创建时间
+                </div>
+              </div>
+            </Transition>
+            <div v-if="showSortDropdown" class="dropdown-overlay" @click="showSortDropdown = false"></div>
           </div>
           
           <button 
@@ -535,6 +589,29 @@ const toggleSortOrder = () => {
   sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
 }
 
+// UI State
+const isSearchFocused = ref(false)
+const showTypeDropdown = ref(false)
+const showSortDropdown = ref(false)
+
+const getFilterTypeLabel = (type: string | undefined) => {
+  const map: Record<string, string> = {
+    '': '全部类型',
+    'style': '语言风格',
+    'grammar': '句法特点'
+  }
+  return map[type || ''] || '全部类型'
+}
+
+const getSortByLabel = (sort: string) => {
+  const map: Record<string, string> = {
+    'last_active_time': '最后使用',
+    'count': '使用次数',
+    'create_date': '创建时间'
+  }
+  return map[sort] || '最后使用'
+}
+
 // 加载表达方式列表
 const loadExpressionList = async () => {
   loading.value = true
@@ -823,32 +900,61 @@ const formatDate = (timestamp: number) => {
   flex-wrap: wrap;
 }
 
-.search-box {
+.search-container {
   flex: 1;
   min-width: 280px;
+}
+
+.search-wrapper {
   position: relative;
+  display: flex;
+  align-items: center;
+  height: 40px;
+  background: var(--md-sys-color-surface-container-high);
+  border-radius: 20px;
+  padding: 0 12px;
+  transition: all 0.2s;
+  border: 2px solid transparent;
+}
+
+.search-wrapper.focused {
+  background: var(--md-sys-color-surface);
+  border-color: var(--md-sys-color-primary);
 }
 
 .search-icon {
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
   color: var(--md-sys-color-on-surface-variant);
-  pointer-events: none;
+  font-size: 20px;
+  margin-right: 8px;
 }
 
 .search-input {
-  width: 100%;
-  padding-left: 44px;
-  padding-right: 40px;
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--md-sys-color-on-surface);
+  font-size: 14px;
+  outline: none;
+  padding: 0;
+  height: 100%;
 }
 
 .clear-btn {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
+  color: var(--md-sys-color-on-surface-variant);
+  padding: 4px;
+  margin-left: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+}
+
+.clear-btn:hover {
+  background: var(--md-sys-color-surface-variant);
+  color: var(--md-sys-color-on-surface);
 }
 
 .filters-group {
@@ -857,24 +963,93 @@ const formatDate = (timestamp: number) => {
   align-items: center;
 }
 
-.select-wrapper {
+/* Custom Select */
+.custom-select {
   position: relative;
-  display: flex;
-  align-items: center;
+  min-width: 140px;
+  height: 40px;
 }
 
-.filter-select {
-  padding-right: 32px;
-  appearance: none;
+.select-trigger {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px 0 16px;
+  background: var(--md-sys-color-surface-container-high);
+  border-radius: 8px;
   cursor: pointer;
-  min-width: 120px;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+  color: var(--md-sys-color-on-surface);
+  font-size: 14px;
+}
+
+.custom-select.active .select-trigger {
+  background: var(--md-sys-color-surface);
+  border-color: var(--md-sys-color-primary);
 }
 
 .select-arrow {
-  position: absolute;
-  right: 8px;
-  pointer-events: none;
   color: var(--md-sys-color-on-surface-variant);
+  transition: transform 0.2s;
+}
+
+.custom-select.active .select-arrow {
+  transform: rotate(180deg);
+  color: var(--md-sys-color-primary);
+}
+
+.select-options {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--md-sys-color-surface-container-high);
+  border-radius: 8px;
+  padding: 4px;
+  z-index: 100;
+  box-shadow: var(--md-sys-elevation-2);
+  transform-origin: top center;
+}
+
+.select-option {
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--md-sys-color-on-surface);
+  font-size: 14px;
+  transition: background 0.2s;
+}
+
+.select-option:hover {
+  background: var(--md-sys-color-surface-variant);
+}
+
+.select-option.selected {
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.dropdown-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 99;
+}
+
+/* Transitions */
+.scale-y-enter-active,
+.scale-y-leave-active {
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.scale-y-enter-from,
+.scale-y-leave-to {
+  opacity: 0;
+  transform: scaleY(0.8);
 }
 
 /* 内容区域 */

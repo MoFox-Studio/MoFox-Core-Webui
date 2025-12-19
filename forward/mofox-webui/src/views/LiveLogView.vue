@@ -683,21 +683,47 @@ onUnmounted(() => {
 
 .search-box {
   position: relative;
+  width: 240px;
+  height: 40px;
+  background: var(--md-sys-color-surface-container-high);
+  border-radius: 20px;
   display: flex;
   align-items: center;
+  transition: all 0.2s;
+}
+
+.search-box:hover {
+  background: var(--md-sys-color-surface-container-highest);
+}
+
+.search-box:focus-within {
+  background: var(--md-sys-color-surface-container-highest);
+  box-shadow: 0 0 0 2px var(--md-sys-color-primary);
 }
 
 .search-icon {
   position: absolute;
   left: 12px;
-  color: var(--md-sys-color-on-surface-variant);
   font-size: 20px;
+  color: var(--md-sys-color-on-surface-variant);
   pointer-events: none;
 }
 
-.search-box input {
-  padding-left: 40px;
-  min-width: 200px;
+.search-box .m3-input {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  border: none;
+  padding: 0 16px 0 40px;
+  font-size: 13px;
+  color: var(--md-sys-color-on-surface);
+  outline: none;
+  border-radius: 20px;
+  font-family: inherit;
+}
+
+.search-box .m3-input::placeholder {
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 /* 统计栏 */

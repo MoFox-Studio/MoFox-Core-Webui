@@ -52,19 +52,23 @@
                   v-for="child in item.children" 
                   :key="child.path"
                   :to="child.path" 
-                  class="nav-item nav-child-item"
-                  :class="{ active: isActive(child.path) }"
-                  v-slot="{ navigate }"
                   custom
+                  v-slot="{ navigate }"
                 >
-                  <div class="nav-item-content" @click="navigate" :title="child.name">
-                    <div class="nav-icon-wrapper">
-                      <span class="material-symbols-rounded nav-icon">{{ child.icon }}</span>
+                  <div 
+                    class="nav-item nav-child-item"
+                    @click="navigate"
+                    :title="child.name"
+                  >
+                    <div 
+                      class="nav-item-content"
+                      :class="{ active: isActive(child.path) }"
+                    >
+                      <div class="nav-icon-wrapper">
+                        <span class="material-symbols-rounded nav-icon">{{ child.icon }}</span>
+                      </div>
+                      <span class="nav-text">{{ child.name }}</span>
                     </div>
-                    <span class="nav-text">{{ child.name }}</span>
-                    <Transition name="fade">
-                      <div v-if="isActive(child.path)" class="active-indicator"></div>
-                    </Transition>
                   </div>
                 </router-link>
               </div>
@@ -75,21 +79,25 @@
           <router-link 
             v-else
             :to="item.path" 
-            class="nav-item"
-            :class="{ active: isActive(item.path) }"
-            v-slot="{ navigate }"
             custom
+            v-slot="{ navigate }"
           >
-            <div class="nav-item-content" @click="navigate" :title="item.name">
-              <div class="nav-icon-wrapper">
-                <span class="material-symbols-rounded nav-icon">{{ item.icon }}</span>
+            <div 
+              class="nav-item"
+              @click="navigate"
+              :title="item.name"
+            >
+              <div 
+                class="nav-item-content"
+                :class="{ active: isActive(item.path) }"
+              >
+                <div class="nav-icon-wrapper">
+                  <span class="material-symbols-rounded nav-icon">{{ item.icon }}</span>
+                </div>
+                <Transition name="slide-fade">
+                  <span v-if="!isCollapsed" class="nav-text">{{ item.name }}</span>
+                </Transition>
               </div>
-              <Transition name="slide-fade">
-                <span v-if="!isCollapsed" class="nav-text">{{ item.name }}</span>
-              </Transition>
-              <Transition name="fade">
-                <div v-if="isActive(item.path)" class="active-indicator"></div>
-              </Transition>
             </div>
           </router-link>
         </template>
@@ -133,20 +141,6 @@
         </Transition>
       </button>
 
-      <!-- 主题切换 -->
-      <button 
-        class="footer-button theme-button" 
-        @click="themeStore.toggleTheme"
-        :title="themeStore.theme === 'light' ? '切换到深色模式' : '切换到浅色模式'"
-      >
-        <span class="material-symbols-rounded footer-icon">
-          {{ themeStore.theme === 'light' ? 'dark_mode' : 'light_mode' }}
-        </span>
-        <Transition name="slide-fade">
-          <span v-if="!isCollapsed">{{ themeStore.theme === 'light' ? '深色模式' : '浅色模式' }}</span>
-        </Transition>
-      </button>
-      
       <!-- 折叠按钮 -->
       <button 
         class="footer-button collapse-button" 
@@ -165,7 +159,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useThemeStore } from '@/stores/theme'
 import { useUserStore } from '@/stores/user'
@@ -260,6 +254,7 @@ const menuItems: MenuItem[] = [
   { name: '插件管理', path: '/dashboard/plugin-manage', icon: 'deployed_code' },
   { name: '插件市场', path: '/dashboard/marketplace', icon: 'storefront' },
   { name: '系统更新', path: '/dashboard/git-update', icon: 'system_update' },
+  { name: '风格与壁纸', path: '/dashboard/theme', icon: 'palette' },
 ]
 
 const toggleSidebar = () => {
@@ -397,7 +392,8 @@ const isGroupActive = (item: MenuItem) => {
   color: var(--md-sys-color-on-surface);
 }
 
-.nav-item.active .nav-item-content {
+.nav-item.active .nav-item-content,
+.nav-item .nav-item-content.active {
   background: var(--md-sys-color-secondary-container);
   color: var(--md-sys-color-on-secondary-container);
 }
@@ -451,10 +447,6 @@ const isGroupActive = (item: MenuItem) => {
   padding-left: 24px; /* 增加缩进 */
 }
 
-.sidebar.collapsed .nav-child-item .nav-item-content {
-  padding-left: 16px; /* 折叠时恢复 */
-}
-
 .nav-child-item .nav-icon {
   font-size: 20px;
 }
@@ -484,6 +476,11 @@ const isGroupActive = (item: MenuItem) => {
   transition: all 0.2s;
   white-space: nowrap;
   overflow: hidden;
+}
+
+.footer-button.active {
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
 }
 
 .footer-button:hover {

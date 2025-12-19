@@ -383,22 +383,47 @@ onMounted(() => {
 
 .search-box {
   position: relative;
-  width: 240px;
+  width: 280px;
+  height: 48px;
+  background: var(--md-sys-color-surface-container-high);
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.search-box:hover {
+  background: var(--md-sys-color-surface-container-highest);
+}
+
+.search-box:focus-within {
+  background: var(--md-sys-color-surface-container-highest);
+  box-shadow: 0 0 0 2px var(--md-sys-color-primary);
 }
 
 .search-icon {
   position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
+  left: 16px;
   font-size: 20px;
   color: var(--md-sys-color-on-surface-variant);
   pointer-events: none;
 }
 
 .search-input {
-  padding-left: 44px;
   width: 100%;
+  height: 100%;
+  background: transparent;
+  border: none;
+  padding: 0 16px 0 48px;
+  font-size: 14px;
+  color: var(--md-sys-color-on-surface);
+  outline: none;
+  border-radius: 24px;
+  font-family: inherit;
+}
+
+.search-input::placeholder {
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 /* 分类筛选 */

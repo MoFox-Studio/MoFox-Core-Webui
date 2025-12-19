@@ -79,26 +79,62 @@
             </div>
 
             <div class="filter-group">
-              <div class="select-wrapper">
-                <select v-model="filterLevel" class="m3-input filter-select" @change="searchLogs">
-                  <option value="">所有级别</option>
-                  <option value="debug">DEBUG</option>
-                  <option value="info">INFO</option>
-                  <option value="warning">WARNING</option>
-                  <option value="error">ERROR</option>
-                  <option value="critical">CRITICAL</option>
-                </select>
-                <span class="material-symbols-rounded select-arrow">arrow_drop_down</span>
+              <!-- Level Dropdown -->
+              <div class="custom-select" :class="{ active: showLevelDropdown }">
+                <div class="select-trigger" @click="showLevelDropdown = !showLevelDropdown; showLoggerDropdown = false">
+                  <span>{{ filterLevel ? filterLevel.toUpperCase() : '所有级别' }}</span>
+                  <span class="material-symbols-rounded select-arrow">arrow_drop_down</span>
+                </div>
+                <Transition name="scale-y">
+                  <div v-if="showLevelDropdown" class="select-options m3-card">
+                    <div 
+                      class="select-option" 
+                      :class="{ selected: filterLevel === '' }"
+                      @click="filterLevel = ''; searchLogs(); showLevelDropdown = false"
+                    >
+                      所有级别
+                    </div>
+                    <div 
+                      v-for="level in ['debug', 'info', 'warning', 'error', 'critical']"
+                      :key="level"
+                      class="select-option"
+                      :class="{ selected: filterLevel === level }"
+                      @click="filterLevel = level; searchLogs(); showLevelDropdown = false"
+                    >
+                      {{ level.toUpperCase() }}
+                    </div>
+                  </div>
+                </Transition>
+                <div v-if="showLevelDropdown" class="dropdown-overlay" @click="showLevelDropdown = false"></div>
               </div>
 
-              <div class="select-wrapper">
-                <select v-model="filterLogger" class="m3-input filter-select" @change="searchLogs">
-                  <option value="">所有模块</option>
-                  <option v-for="logger in loggers" :key="logger.name" :value="logger.name">
-                    {{ logger.alias || logger.name }}
-                  </option>
-                </select>
-                <span class="material-symbols-rounded select-arrow">arrow_drop_down</span>
+              <!-- Logger Dropdown -->
+              <div class="custom-select" :class="{ active: showLoggerDropdown }">
+                <div class="select-trigger" @click="showLoggerDropdown = !showLoggerDropdown; showLevelDropdown = false">
+                  <span>{{ filterLogger ? (loggers.find(l => l.name === filterLogger)?.alias || filterLogger) : '所有模块' }}</span>
+                  <span class="material-symbols-rounded select-arrow">arrow_drop_down</span>
+                </div>
+                <Transition name="scale-y">
+                  <div v-if="showLoggerDropdown" class="select-options m3-card">
+                    <div 
+                      class="select-option" 
+                      :class="{ selected: filterLogger === '' }"
+                      @click="filterLogger = ''; searchLogs(); showLoggerDropdown = false"
+                    >
+                      所有模块
+                    </div>
+                    <div 
+                      v-for="logger in loggers" 
+                      :key="logger.name"
+                      class="select-option"
+                      :class="{ selected: filterLogger === logger.name }"
+                      @click="filterLogger = logger.name; searchLogs(); showLoggerDropdown = false"
+                    >
+                      {{ logger.alias || logger.name }}
+                    </div>
+                  </div>
+                </Transition>
+                <div v-if="showLoggerDropdown" class="dropdown-overlay" @click="showLoggerDropdown = false"></div>
               </div>
 
               <button 
@@ -236,14 +272,25 @@
               <span class="material-symbols-rounded">last_page</span>
             </button>
 
-            <div class="select-wrapper small">
-              <select v-model="pageSize" class="m3-input page-size-select" @change="changePageSize">
-                <option :value="50">50 条/页</option>
-                <option :value="100">100 条/页</option>
-                <option :value="200">200 条/页</option>
-                <option :value="500">500 条/页</option>
-              </select>
-              <span class="material-symbols-rounded select-arrow">arrow_drop_down</span>
+            <div class="custom-select small" :class="{ active: showPageSizeDropdown }">
+              <div class="select-trigger" @click="showPageSizeDropdown = !showPageSizeDropdown">
+                <span>{{ pageSize }} 条/页</span>
+                <span class="material-symbols-rounded select-arrow">arrow_drop_down</span>
+              </div>
+              <Transition name="scale-y">
+                <div v-if="showPageSizeDropdown" class="select-options m3-card up">
+                  <div 
+                    v-for="size in [50, 100, 200, 500]"
+                    :key="size"
+                    class="select-option"
+                    :class="{ selected: pageSize === size }"
+                    @click="pageSize = size; changePageSize(); showPageSizeDropdown = false"
+                  >
+                    {{ size }} 条/页
+                  </div>
+                </div>
+              </Transition>
+              <div v-if="showPageSizeDropdown" class="dropdown-overlay" @click="showPageSizeDropdown = false"></div>
             </div>
           </div>
         </div>
@@ -278,6 +325,9 @@ const filterStartTime = ref('')
 const filterEndTime = ref('')
 const useRegex = ref(false)
 const showAdvancedFilter = ref(false)
+const showLevelDropdown = ref(false)
+const showLoggerDropdown = ref(false)
+const showPageSizeDropdown = ref(false)
 
 // 分页
 const currentPage = ref(1)
@@ -605,21 +655,46 @@ onMounted(() => {
 .search-input-wrapper {
   flex: 1;
   position: relative;
+  height: 40px;
+  background: var(--md-sys-color-surface-container-high);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.search-input-wrapper:hover {
+  background: var(--md-sys-color-surface-container-highest);
+}
+
+.search-input-wrapper:focus-within {
+  background: var(--md-sys-color-surface-container-highest);
+  box-shadow: 0 0 0 2px var(--md-sys-color-primary);
 }
 
 .search-icon {
   position: absolute;
   left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
   font-size: 20px;
   color: var(--md-sys-color-on-surface-variant);
   pointer-events: none;
 }
 
 .search-input {
-  padding-left: 44px;
   width: 100%;
+  height: 100%;
+  background: transparent;
+  border: none;
+  padding: 0 16px 0 44px;
+  font-size: 14px;
+  color: var(--md-sys-color-on-surface);
+  outline: none;
+  border-radius: 20px;
+  font-family: inherit;
+}
+
+.search-input::placeholder {
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .filter-group {
@@ -628,23 +703,132 @@ onMounted(() => {
   align-items: center;
 }
 
-.select-wrapper {
+/* Custom Dropdown */
+.custom-select {
   position: relative;
-  display: flex;
-  align-items: center;
+  height: 40px;
+  min-width: 120px;
 }
 
-.filter-select {
-  padding-right: 32px;
-  appearance: none;
+.select-trigger {
+  height: 100%;
+  background: var(--md-sys-color-surface-container-high);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
   cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+  gap: 8px;
+}
+
+.select-trigger:hover {
+  background: var(--md-sys-color-surface-container-highest);
+}
+
+.custom-select.active .select-trigger {
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.select-trigger span:first-child {
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .select-arrow {
-  position: absolute;
-  right: 8px;
-  pointer-events: none;
+  font-size: 20px;
   color: var(--md-sys-color-on-surface-variant);
+  transition: transform 0.2s;
+}
+
+.custom-select.active .select-arrow {
+  transform: rotate(180deg);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.select-options {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 100%;
+  max-height: 300px;
+  overflow-y: auto;
+  background: var(--md-sys-color-surface-container-high);
+  border-radius: 8px;
+  padding: 4px;
+  z-index: 1000;
+  box-shadow: var(--md-sys-elevation-2);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.select-option {
+  padding: 8px 12px;
+  font-size: 14px;
+  color: var(--md-sys-color-on-surface);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.select-option:hover {
+  background: var(--md-sys-color-surface-container-highest);
+}
+
+.select-option.selected {
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  font-weight: 500;
+}
+
+.dropdown-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 999;
+  background: transparent;
+}
+
+/* Transitions */
+.scale-y-enter-active,
+.scale-y-leave-active {
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  transform-origin: top;
+}
+
+.scale-y-enter-from,
+.scale-y-leave-to {
+  opacity: 0;
+  transform: scaleY(0.8);
+}
+
+.custom-select.small {
+  height: 32px;
+  min-width: 110px;
+}
+
+.custom-select.small .select-trigger {
+  font-size: 12px;
+  padding: 0 8px;
+}
+
+.custom-select.small .select-arrow {
+  font-size: 18px;
+}
+
+.select-options.up {
+  top: auto;
+  bottom: calc(100% + 4px);
+  transform-origin: bottom;
 }
 
 /* 高级筛选 */

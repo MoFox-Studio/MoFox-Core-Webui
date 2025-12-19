@@ -80,7 +80,7 @@
       <div class="monaco-container">
         <vue-monaco-editor
           v-model:value="sourceContent"
-          :language="'toml'"
+          :language="'ini'"
           :theme="isDarkMode ? 'vs-dark' : 'vs'"
           :options="monacoOptions"
           @mount="onEditorMount"

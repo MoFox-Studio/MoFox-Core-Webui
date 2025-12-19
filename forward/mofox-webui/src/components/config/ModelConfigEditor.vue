@@ -1282,15 +1282,16 @@ watch(() => props.parsedData, () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--primary), #6d28d9);
+  background: linear-gradient(135deg, var(--primary), var(--tertiary));
   border-radius: var(--radius);
-  color: white;
+  color: var(--on-primary);
   font-size: 18px;
   flex-shrink: 0;
 }
 
 .model-icon {
-  background: linear-gradient(135deg, #10b981, #059669);
+  background: linear-gradient(135deg, var(--secondary), var(--tertiary));
+  color: var(--on-secondary);
 }
 
 .provider-main,
