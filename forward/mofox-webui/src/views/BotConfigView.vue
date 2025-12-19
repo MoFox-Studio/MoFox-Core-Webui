@@ -234,11 +234,25 @@ async function loadConfig() {
 }
 
 // 更新字段值
-function updateFieldValue(section: string, key: string, value: any) {
-  if (!editedValues.value[section]) {
-    editedValues.value[section] = {}
+function updateFieldValue(sectionOrFullKey: string, keyOrValue: string | any, value?: any) {
+  // 支持两种调用方式：
+  // 1. updateFieldValue(fullKey, value) - 来自 MainConfigEditor 的特殊编辑器
+  // 2. updateFieldValue(section, key, value) - 传统方式
+  
+  if (value === undefined) {
+    // 单key模式: (fullKey, value)
+    const fullKey = sectionOrFullKey
+    const val = keyOrValue
+    editedValues.value[fullKey] = val
+  } else {
+    // 双key模式: (section, key, value)
+    const section = sectionOrFullKey
+    const key = keyOrValue
+    if (!editedValues.value[section]) {
+      editedValues.value[section] = {}
+    }
+    editedValues.value[section][key] = value
   }
-  editedValues.value[section][key] = value
 }
 
 // 保存配置

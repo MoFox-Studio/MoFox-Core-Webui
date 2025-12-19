@@ -199,10 +199,23 @@ const availableEngines: Engine[] = [
 ]
 
 // 解析已启用的引擎列表
+// 优先从 value 获取（这是 editedValues 中的值），如果没有则从 configData 获取
 const enabledEngines = computed(() => {
-  if (Array.isArray(props.value)) {
-    return props.value as string[]
+  // props.value 是当前编辑的值（来自 editedValues）
+  if (props.value !== undefined && props.value !== null) {
+    if (Array.isArray(props.value)) {
+      return props.value as string[]
+    }
   }
+  
+  // 如果没有编辑值，从 configData 中获取原始值
+  if (props.configData && typeof props.configData === 'object') {
+    const webSearch = (props.configData as any).web_search
+    if (webSearch && Array.isArray(webSearch.enabled_engines)) {
+      return webSearch.enabled_engines as string[]
+    }
+  }
+  
   return []
 })
 
@@ -213,9 +226,11 @@ function isEngineEnabled(engineId: string): boolean {
 
 // 切换引擎启用状态
 function toggleEngine(engineId: string) {
+  const currentEngines = [...enabledEngines.value]
   const newEngines = isEngineEnabled(engineId)
-    ? enabledEngines.value.filter(id => id !== engineId)
-    : [...enabledEngines.value, engineId]
+    ? currentEngines.filter(id => id !== engineId)
+    : [...currentEngines, engineId]
+  
   emit('update', newEngines)
 }
 

@@ -31,7 +31,7 @@ export async function getServerInfo(): Promise<ServerInfo> {
   }
 
   try {
-    const response = await fetch(`${DISCOVERY_SERVER_URL}/server-info`)
+    const response = await fetch(`${DISCOVERY_SERVER_URL}/api/server-info`)
     if (!response.ok) {
       throw new Error(`发现服务器请求失败: ${response.status}`)
     }
