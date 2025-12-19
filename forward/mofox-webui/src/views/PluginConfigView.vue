@@ -331,9 +331,22 @@ function getShortPath(path: string): string {
 async function loadConfig() {
   loading.value = true
   loadError.value = ''
+  
+  console.log('[DEBUG] 开始加载配置')
+  console.log('[DEBUG] decodedPath:', decodedPath.value)
+  console.log('[DEBUG] route.params.path:', route.params.path)
+  
   try {
+    console.log('[DEBUG] 准备发送请求到 getConfigContent...')
     const res = await getConfigContent(decodedPath.value)
+    
+    console.log('[DEBUG] 收到响应:', res)
+    console.log('[DEBUG] res.success:', res.success)
+    console.log('[DEBUG] res.error:', res.error)
+    console.log('[DEBUG] res.data:', res.data)
+    
     if (res.success && res.parsed) {
+      console.log('[DEBUG] 配置加载成功')
       configInfo.value = {
         path: res.path,
         display_name: '未命名插件', // ConfigContentResponse doesn't have display_name
@@ -349,13 +362,16 @@ async function loadConfig() {
       // 生成 Schema
       generateSchema(res.parsed)
     } else {
+      console.error('[DEBUG] 配置加载失败:', res.error)
       loadError.value = res.error || '加载配置失败'
     }
   } catch (e) {
+    console.error('[DEBUG] 请求异常:', e)
     loadError.value = '网络请求失败'
     console.error(e)
   } finally {
     loading.value = false
+    console.log('[DEBUG] 加载完成，loading.value:', loading.value)
   }
 }
 

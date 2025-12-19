@@ -9,6 +9,7 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
+from urllib.parse import unquote
 
 import toml
 import tomlkit
@@ -366,6 +367,9 @@ class WebUIConfigRouter(BaseRouterComponent):
             - 解析后的字典
             """
             try:
+                # URL解码路径
+                path = unquote(path)
+                
                 # 安全检查：防止路径遍历
                 config_path = CONFIG_ROOT / path
                 config_path = config_path.resolve()
@@ -422,6 +426,9 @@ class WebUIConfigRouter(BaseRouterComponent):
             - 每个字段包含：键名、类型、当前值、描述
             """
             try:
+                # URL解码路径
+                path = unquote(path)
+                
                 # 安全检查
                 config_path = CONFIG_ROOT / path
                 config_path = config_path.resolve()
@@ -543,7 +550,11 @@ class WebUIConfigRouter(BaseRouterComponent):
                 request: 包含 TOML 内容和备份选项
             """
             try:
-                # 安全检查
+                # URL解码路径
+                path = unquote(path)
+                                # URL解码路径
+                path = unquote(path)
+                                # 安全检查
                 config_path = CONFIG_ROOT / path
                 config_path = config_path.resolve()
                 
@@ -607,6 +618,9 @@ class WebUIConfigRouter(BaseRouterComponent):
                 request: 包含更新的键值对
             """
             try:
+                # URL解码路径
+                path = unquote(path)
+                
                 # 安全检查
                 config_path = CONFIG_ROOT / path
                 config_path = config_path.resolve()
@@ -672,6 +686,9 @@ class WebUIConfigRouter(BaseRouterComponent):
                 path: 配置文件相对路径
             """
             try:
+                # URL解码路径
+                path = unquote(path)
+                
                 # 安全检查
                 config_path = CONFIG_ROOT / path
                 config_path = config_path.resolve()

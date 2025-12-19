@@ -59,7 +59,7 @@ const routes: Array<RouteRecordRaw> = [
         component: PluginConfigList
       },
       {
-        path: 'plugin-config/:pluginPath',
+        path: 'plugin-config/:path(.*)',
         name: 'PluginConfigView',
         component: PluginConfigView,
         props: true
