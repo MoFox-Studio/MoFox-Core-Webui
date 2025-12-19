@@ -485,8 +485,8 @@ async function loadConfigSchema() {
   try {
     const res = await getConfigSchema(decodedPath.value)
     
-    if (res.success && res.sections) {
-      configSchema.value = res.sections
+    if (res.data.success && res.data.sections) {
+      configSchema.value = res.data.sections
     } else {
       console.error('加载配置模式失败:', res.error)
       // 如果加载模式失败，尝试生成简单的模式
