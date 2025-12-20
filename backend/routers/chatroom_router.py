@@ -386,7 +386,10 @@ class ChatroomRouterComponent(BaseRouterComponent):
                 if not success:
                     raise HTTPException(status_code=404, detail=f"用户 {user_id} 不存在")
 
-                # 注意：这里不删除person_info中的记录，保留历史数据
+                # 同时删除person_info中的记录
+                person_id = self.person_manager.get_person_id("web_ui_chatroom", user_id)
+                await self.person_manager.del_one_document(person_id)
+                logger.info(f"已删除虚拟用户 {user_id} 及其person_info记录 {person_id}")
 
                 return {
                     "success": True,
