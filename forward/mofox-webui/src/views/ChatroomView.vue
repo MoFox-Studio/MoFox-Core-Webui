@@ -203,13 +203,23 @@
               </div>
               
               <div class="input-group">
-                <label>印象/性格描述</label>
+                <label>详细印象/性格描述</label>
                 <textarea 
                   v-model="newUser.impression" 
                   class="m3-input" 
                   rows="3"
-                  placeholder="例如: 活泼开朗，喜欢聊天..."
+                  placeholder="例如: 活泼开朗，喜欢聊天，经常分享生活趣事..."
                 ></textarea>
+              </div>
+              
+              <div class="input-group">
+                <label>简短印象</label>
+                <input v-model="newUser.short_impression" type="text" class="m3-input" placeholder="例如: 活泼开朗" />
+              </div>
+              
+              <div class="input-group">
+                <label>态度值 (-100 到 100)</label>
+                <input v-model.number="newUser.attitude" type="number" class="m3-input" min="-100" max="100" placeholder="0" />
               </div>
               
               <div class="input-group">
@@ -252,17 +262,28 @@
               </div>
               
               <div class="input-group">
-                <label>印象/性格描述</label>
+                <label>详细印象/性格描述</label>
                 <textarea 
                   v-model="editUser.impression" 
                   class="m3-input" 
                   rows="3"
+                  placeholder="详细描述用户的印象和性格特点..."
                 ></textarea>
               </div>
               
               <div class="input-group">
+                <label>简短印象</label>
+                <input v-model="editUser.short_impression" type="text" class="m3-input" placeholder="用简短词语概括" />
+              </div>
+              
+              <div class="input-group">
+                <label>态度值 (-100 到 100)</label>
+                <input v-model.number="editUser.attitude" type="number" class="m3-input" min="-100" max="100" placeholder="数值化的态度评分" />
+              </div>
+              
+              <div class="input-group">
                 <label>头像URL</label>
-                <input v-model="editUser.avatar" type="text" class="m3-input" />
+                <input v-model="editUser.avatar" type="text" class="m3-input" placeholder="https://..." />
               </div>
             </div>
             
@@ -326,7 +347,9 @@ interface User {
   user_id: string
   nickname: string
   impression: string
+  short_impression?: string
   avatar: string
+  attitude?: number | null
   person_id?: string
   created_at: number
   updated_at: number
@@ -369,13 +392,17 @@ const newUser = ref({
   user_id: '',
   nickname: '',
   impression: '',
-  avatar: ''
+  short_impression: '',
+  avatar: '',
+  attitude: null as number | null
 })
 
 const editUser = ref({
   nickname: '',
   impression: '',
-  avatar: ''
+  short_impression: '',
+  avatar: '',
+  attitude: null as number | null
 })
 
 // 操作状态
@@ -469,7 +496,9 @@ function selectUser(user: User) {
   editUser.value = {
     nickname: user.nickname,
     impression: user.impression,
-    avatar: user.avatar
+    short_impression: user.short_impression || '',
+    avatar: user.avatar,
+    attitude: user.attitude ?? null
   }
 }
 
@@ -497,7 +526,9 @@ async function createUser() {
         user_id: '',
         nickname: '',
         impression: '',
-        avatar: ''
+        short_impression: '',
+        avatar: '',
+        attitude: null
       }
       await loadUsers()
     } else {

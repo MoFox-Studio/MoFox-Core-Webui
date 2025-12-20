@@ -67,7 +67,13 @@ class ChatroomStorage:
     # ========== 虚拟用户管理 ==========
 
     def create_user(
-        self, user_id: str, nickname: str, impression: str = "", avatar: str = ""
+        self, 
+        user_id: str, 
+        nickname: str, 
+        impression: str = "", 
+        short_impression: str = "",
+        avatar: str = "",
+        attitude: int | None = None
     ) -> dict[str, Any]:
         """创建虚拟用户"""
         if user_id in self._users:
@@ -77,7 +83,9 @@ class ChatroomStorage:
             "user_id": user_id,
             "nickname": nickname,
             "impression": impression,
+            "short_impression": short_impression,
             "avatar": avatar,
+            "attitude": attitude,
             "created_at": time.time(),
             "updated_at": time.time(),
         }
@@ -105,7 +113,13 @@ class ChatroomStorage:
         user = self._users[user_id]
 
         # 更新允许的字段
-        allowed_fields = {"nickname", "impression", "avatar"}
+        allowed_fields = {
+            "nickname", 
+            "impression", 
+            "short_impression",
+            "avatar", 
+            "attitude"
+        }
         for key, value in kwargs.items():
             if key in allowed_fields:
                 user[key] = value

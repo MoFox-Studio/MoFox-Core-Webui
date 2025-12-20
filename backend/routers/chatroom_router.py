@@ -41,14 +41,18 @@ class CreateUserRequest(BaseModel):
     user_id: str
     nickname: str
     impression: str = ""
+    short_impression: str = ""
     avatar: str = ""
+    attitude: int | None = None
 
 
 class UpdateUserRequest(BaseModel):
     """更新用户请求"""
     nickname: str | None = None
     impression: str | None = None
+    short_impression: str | None = None
     avatar: str | None = None
+    attitude: int | None = None
 
 
 class MessageResponse(BaseModel):
@@ -66,7 +70,9 @@ class UserResponse(BaseModel):
     user_id: str
     nickname: str
     impression: str
+    short_impression: str
     avatar: str
+    attitude: int | None = None
     person_id: str | None = None
     created_at: float
     updated_at: float
@@ -131,7 +137,7 @@ class ChatroomRouterComponent(BaseRouterComponent):
                     msg for msg in messages
                     if msg.get("user_platform") == "web_ui_chatroom"
                 ]
-                logger.info(ui_messages)
+                logger.info(f"获取到 {len(ui_messages)} 条UI消息")
 
                 # 转换为前端格式
                 result = []
@@ -299,14 +305,18 @@ class ChatroomRouterComponent(BaseRouterComponent):
                     user_id=request.user_id,
                     nickname=request.nickname,
                     impression=request.impression,
-                    avatar=request.avatar
+                    short_impression=request.short_impression,
+                    avatar=request.avatar,
+                    attitude=request.attitude
                 )
 
                 # 在person_info中创建对应记录
                 person_id = await self._ensure_person_exists(
                     user_id=request.user_id,
                     nickname=request.nickname,
-                    impression=request.impression
+                    impression=request.impression,
+                    short_impression=request.short_impression,
+                    attitude=request.attitude
                 )
 
                 return {
@@ -349,6 +359,10 @@ class ChatroomRouterComponent(BaseRouterComponent):
                     await self.person_manager.update_one_field(person_id, "nickname", update_data["nickname"])
                 if "impression" in update_data:
                     await self.person_manager.update_one_field(person_id, "impression", update_data["impression"])
+                if "short_impression" in update_data:
+                    await self.person_manager.update_one_field(person_id, "short_impression", update_data["short_impression"])
+                if "attitude" in update_data:
+                    await self.person_manager.update_one_field(person_id, "attitude", update_data["attitude"])
 
                 return {
                     "success": True,
@@ -447,12 +461,19 @@ class ChatroomRouterComponent(BaseRouterComponent):
                 logger.error(f"获取消息失败: {e}", exc_info=True)
                 raise HTTPException(status_code=500, detail=str(e))
 
-    async def _ensure_person_exists(self, user_id: str, nickname: str, impression: str = "") -> str:
-        """确保person_info中存在该用户"""
+    async def _ensure_person_exists(
+        self, 
+        user_id: str, 
+        nickname: str, 
+        impression: str = "",
+        short_impression: str = "",
+        attitude: int | None = None
+    ) -> str:
+        """确保person_info中存在该用户，并更新所有相关字段"""
         # 直接使用 get_or_create_person，它会自动生成正确的 person_id
         person_info = await self.person_manager.get_or_create_person(
             platform="web_ui_chatroom",
-            user_id=int(user_id),  # 保持字符串类型
+            user_id=int(user_id),
             nickname=nickname,
             user_cardname=nickname,
             user_avatar=""
@@ -461,8 +482,12 @@ class ChatroomRouterComponent(BaseRouterComponent):
         # 获取 person_id
         person_id = self.person_manager.get_person_id("web_ui_chatroom", user_id)
         
-        # 如果有印象信息，更新它
+        # 更新所有提供的字段
         if impression and person_info:
             await self.person_manager.update_one_field(person_id, "impression", impression)
+        if short_impression and person_info:
+            await self.person_manager.update_one_field(person_id, "short_impression", short_impression)
+        if attitude is not None and person_info:
+            await self.person_manager.update_one_field(person_id, "attitude", attitude)
 
         return person_id
