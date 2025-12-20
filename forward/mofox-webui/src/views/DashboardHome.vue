@@ -896,7 +896,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  max-height: 300px;
+  height: 320px;
   overflow-y: auto;
   padding-right: 8px;
 }
@@ -946,6 +946,22 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  height: 320px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.plans-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.plans-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.plans-list::-webkit-scrollbar-thumb {
+  background-color: var(--md-sys-color-outline-variant);
+  border-radius: 3px;
 }
 
 .plan-item {
