@@ -114,6 +114,13 @@
                 @update="(v: unknown) => emit('update', field.key, v)"
                 @updateConfig="(key: string, v: unknown) => emit('update', key, v)"
               />
+              <ChatListEditor 
+                v-else-if="field.specialEditor === 'chat_list'"
+                :value="getFieldValue(field.key)"
+                :title="field.name"
+                :description="field.description"
+                @update="(v: unknown) => emit('update', field.key, v)"
+              />
             </div>
             
             <!-- 普通字段 -->
@@ -361,6 +368,7 @@ import MasterUsersEditor from './special/MasterUsersEditor.vue'
 import ExpressionRulesEditor from './special/ExpressionRulesEditor.vue'
 import ReactionRulesEditor from './special/ReactionRulesEditor.vue'
 import WebSearchEnginesEditor from './special/WebSearchEnginesEditor.vue'
+import ChatListEditor from './special/ChatListEditor.vue'
 import { botConfigGroups, type ConfigGroupDef, type ConfigFieldDef } from '@/config/configDescriptions'
 
 const props = defineProps<{

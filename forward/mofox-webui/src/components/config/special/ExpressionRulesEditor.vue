@@ -219,7 +219,7 @@ const groups = computed((): GroupData[] => {
           learning_strength: rule.learning_strength ?? 1.0
         })
       }
-      if (rule.chat_stream_id) {
+      if (rule.chat_stream_id !== undefined && rule.chat_stream_id !== null) {
         groupMap.get(rule.group)!.streams.push(rule.chat_stream_id)
       }
     }
@@ -313,8 +313,11 @@ function removeGroup(groupIndex: number) {
 
 // 更新组名
 function updateGroupName(groupIndex: number, newName: string) {
+  const group = groups.value[groupIndex]
+  if (!group) return
+
   const rules = groupsToRules()
-  const oldName = groups.value[groupIndex].name
+  const oldName = group.name
   
   rules.forEach(rule => {
     if (rule.group === oldName) {
@@ -327,8 +330,11 @@ function updateGroupName(groupIndex: number, newName: string) {
 
 // 更新组设置
 function updateGroupSetting(groupIndex: number, field: string, value: any) {
+  const group = groups.value[groupIndex]
+  if (!group) return
+
   const rules = groupsToRules()
-  const groupName = groups.value[groupIndex].name
+  const groupName = group.name
   
   rules.forEach(rule => {
     if (rule.group === groupName) {
@@ -341,8 +347,10 @@ function updateGroupSetting(groupIndex: number, field: string, value: any) {
 
 // 添加聊天流
 function addStream(groupIndex: number) {
-  const rules = groupsToRules()
   const group = groups.value[groupIndex]
+  if (!group) return
+
+  const rules = groupsToRules()
   
   rules.push({
     chat_stream_id: '',
@@ -357,27 +365,69 @@ function addStream(groupIndex: number) {
 
 // 删除聊天流
 function removeStream(groupIndex: number, streamIndex: number) {
-  const rules = groupsToRules()
-  const group = groups.value[groupIndex]
-  const streamId = group.streams[streamIndex]
+  const newRules: ExpressionRule[] = []
   
-  const newRules = rules.filter(rule => !(rule.chat_stream_id === streamId && rule.group === group.name))
+  // 添加全局规则
+  newRules.push({
+    chat_stream_id: '',
+    use_expression: globalRule.value.use_expression,
+    learn_expression: globalRule.value.learn_expression,
+    learning_strength: globalRule.value.learning_strength
+  })
+  
+  // 重建所有组的规则
+  groups.value.forEach((group, gIdx) => {
+    group.streams.forEach((stream, sIdx) => {
+      // 如果是当前组，且索引匹配，则跳过（即删除）
+      if (gIdx === groupIndex && sIdx === streamIndex) {
+        return
+      }
+      
+      newRules.push({
+        chat_stream_id: stream,
+        group: group.name,
+        use_expression: group.use_expression,
+        learn_expression: group.learn_expression,
+        learning_strength: group.learning_strength
+      })
+    })
+  })
+  
   emit('update', newRules)
 }
 
 // 更新聊天流
 function updateStream(groupIndex: number, streamIndex: number, newValue: string) {
-  const rules = groupsToRules()
-  const group = groups.value[groupIndex]
-  const oldStreamId = group.streams[streamIndex]
+  const newRules: ExpressionRule[] = []
   
-  rules.forEach(rule => {
-    if (rule.chat_stream_id === oldStreamId && rule.group === group.name) {
-      rule.chat_stream_id = newValue
-    }
+  // 添加全局规则
+  newRules.push({
+    chat_stream_id: '',
+    use_expression: globalRule.value.use_expression,
+    learn_expression: globalRule.value.learn_expression,
+    learning_strength: globalRule.value.learning_strength
   })
   
-  emit('update', rules)
+  // 重建所有组的规则
+  groups.value.forEach((group, gIdx) => {
+    group.streams.forEach((stream, sIdx) => {
+      let streamId = stream
+      // 如果是当前组且索引匹配，使用新值
+      if (gIdx === groupIndex && sIdx === streamIndex) {
+        streamId = newValue
+      }
+      
+      newRules.push({
+        chat_stream_id: streamId,
+        group: group.name,
+        use_expression: group.use_expression,
+        learn_expression: group.learn_expression,
+        learning_strength: group.learning_strength
+      })
+    })
+  })
+  
+  emit('update', newRules)
 }
 </script>
 

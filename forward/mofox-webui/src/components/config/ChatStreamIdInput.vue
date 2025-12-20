@@ -133,20 +133,20 @@ function toggleTypeDropdown() {
 
 function selectPlatform(platform: string) {
   const { id, type } = streamData.value
-  const newValue = id && type ? `${platform}:${id}:${type}` : ''
+  const newValue = `${platform}:${id}:${type}`
   emit('update', newValue)
   isDropdownOpen.value = false
 }
 
 function updateId(id: string) {
   const { platform, type } = streamData.value
-  const newValue = platform && id && type ? `${platform}:${id}:${type}` : ''
+  const newValue = `${platform}:${id}:${type}`
   emit('update', newValue)
 }
 
 function selectType(type: string) {
   const { platform, id } = streamData.value
-  const newValue = platform && id && type ? `${platform}:${id}:${type}` : ''
+  const newValue = `${platform}:${id}:${type}`
   emit('update', newValue)
   isTypeDropdownOpen.value = false
 }

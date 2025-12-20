@@ -8,7 +8,7 @@
 export type FieldType = 'string' | 'number' | 'boolean' | 'array' | 'object' | 'password' | 'select' | 'textarea' 
 
 // 配置字段类型扩展
-export type SpecialEditorType = 'master_users' | 'expression_rules' | 'reaction_rules' | 'model_extra_params' | 'web_search_engines' | 'string_array' | 'key_value'
+export type SpecialEditorType = 'master_users' | 'expression_rules' | 'reaction_rules' | 'model_extra_params' | 'web_search_engines' | 'chat_list'
 
 // 配置字段定义
 export interface ConfigFieldDef {
@@ -102,8 +102,7 @@ export const botConfigGroups: ConfigGroupDef[] = [
         description: '机器人的其他称呼，用户也可以通过这些名字与机器人互动',
         type: 'array',
         default: [],
-        placeholder: '例如: 狐狐, 墨墨',
-        specialEditor: 'string_array'
+        placeholder: '例如: 狐狐, 墨墨'
       }
     ]
   },
@@ -120,7 +119,6 @@ export const botConfigGroups: ConfigGroupDef[] = [
         name: '命令前缀',
         description: '触发命令的前缀字符，可以配置多个',
         type: 'array',
-        specialEditor: 'string_array',
         default: ['/'],
         placeholder: '例如: /, !, #'
       }
@@ -177,8 +175,7 @@ export const botConfigGroups: ConfigGroupDef[] = [
         name: '互动规则',
         description: '机器人在任何情况下都必须遵守的原则',
         type: 'array',
-        placeholder: '添加互动准则...',
-        specialEditor: 'string_array'
+        placeholder: '添加互动准则...'
       },
       {
         key: 'personality.compress_personality',
@@ -404,8 +401,7 @@ export const botConfigGroups: ConfigGroupDef[] = [
         name: '屏蔽词',
         description: '包含这些词的消息将被过滤，不会被机器人读取',
         type: 'array',
-        placeholder: '添加屏蔽词...',
-        specialEditor: 'string_array'
+        placeholder: '添加屏蔽词...'
       },
       {
         key: 'message_receive.ban_msgs_regex',
@@ -413,16 +409,14 @@ export const botConfigGroups: ConfigGroupDef[] = [
         description: '符合这些正则表达式的消息将被过滤',
         type: 'array',
         placeholder: '添加正则表达式...',
-        advanced: true,
-        specialEditor: 'string_array'
+        advanced: true
       },
       {
         key: 'message_receive.mute_group_list',
         name: '静默群组',
         description: '在这些群组中，只有被 @ 或回复时才会响应',
         type: 'array',
-        placeholder: '添加群号...',
-        specialEditor: 'string_array'
+        placeholder: '添加群号...'
       }
     ]
   },
@@ -1653,8 +1647,7 @@ export const botConfigGroups: ConfigGroupDef[] = [
         description: '完全屏蔽的第三方库日志列表',
         type: 'array',
         placeholder: '例如: faiss, httpx, urllib3',
-        advanced: true,
-        specialEditor: 'string_array'
+        advanced: true
       },
       {
         key: 'log.library_log_levels',
@@ -1662,8 +1655,7 @@ export const botConfigGroups: ConfigGroupDef[] = [
         description: '设置特定库的日志级别，格式为对象 { "库名": "日志级别" }',
         type: 'object',
         placeholder: '例如: { "aiohttp": "WARNING" }',
-        advanced: true,
-        specialEditor: 'key_value'
+        advanced: true
       }
     ]
   },
@@ -1947,8 +1939,7 @@ export const botConfigGroups: ConfigGroupDef[] = [
         name: 'API认证密钥',
         description: '用于访问需要认证的插件API的有效密钥列表',
         type: 'array',
-        placeholder: '添加API密钥...',
-        specialEditor: 'string_array'
+        placeholder: '添加API密钥...'
       }
     ]
   },
@@ -2107,14 +2098,16 @@ export const botConfigGroups: ConfigGroupDef[] = [
         name: '白名单',
         description: '白名单列表，格式: ["platform:type:id", ...]',
         type: 'array',
-        placeholder: '例如: qq:group:123456'
+        placeholder: '例如: qq:group:123456',
+        specialEditor: 'chat_list'
       },
       {
         key: 'cross_context.s4u_blacklist_chats',
         name: '黑名单',
         description: '黑名单列表，格式: ["platform:type:id", ...]',
         type: 'array',
-        placeholder: '例如: qq:private:789'
+        placeholder: '例如: qq:private:789',
+        specialEditor: 'chat_list'
       }
     ]
   },
