@@ -89,10 +89,36 @@ export interface UpdateRelationshipRequest {
 }
 
 /**
+ * 平台信息
+ */
+export interface PlatformInfo {
+  platform: string
+  count: number
+}
+
+/**
+ * 平台列表响应
+ */
+export interface PlatformsResponse {
+  platforms: PlatformInfo[]
+}
+
+/**
+ * 获取平台列表
+ */
+export async function getPlatforms() {
+  return await api.get<PlatformsResponse>('relationship/platforms')
+}
+
+/**
  * 获取用户列表
  */
-export async function getPersonList(page: number = 1, pageSize: number = 20) {
-  return await api.get<PersonListResponse>(`relationship/list?page=${page}&page_size=${pageSize}`)
+export async function getPersonList(page: number = 1, pageSize: number = 20, platform?: string) {
+  let url = `relationship/list?page=${page}&page_size=${pageSize}`
+  if (platform) {
+    url += `&platform=${encodeURIComponent(platform)}`
+  }
+  return await api.get<PersonListResponse>(url)
 }
 
 /**

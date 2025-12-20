@@ -190,6 +190,34 @@
         <span class="m3-badge secondary">共 {{ totalCount }} 人</span>
       </div>
 
+      <!-- 平台筛选 -->
+      <div class="platform-filter">
+        <div class="filter-label">
+          <span class="material-symbols-rounded">filter_list</span>
+          <span>按平台筛选</span>
+        </div>
+        <div class="platform-chips">
+          <button 
+            class="platform-chip" 
+            :class="{ active: selectedPlatform === '' }"
+            @click="selectedPlatform = ''; handlePlatformChange()"
+          >
+            <span>全部</span>
+            <span class="chip-count">{{ platforms.reduce((sum, p) => sum + p.count, 0) }}</span>
+          </button>
+          <button 
+            v-for="platform in platforms" 
+            :key="platform.platform"
+            class="platform-chip" 
+            :class="{ active: selectedPlatform === platform.platform }"
+            @click="selectedPlatform = platform.platform; handlePlatformChange()"
+          >
+            <span>{{ platform.platform }}</span>
+            <span class="chip-count">{{ platform.count }}</span>
+          </button>
+        </div>
+      </div>
+
       <!-- 加载状态 -->
       <div v-if="listLoading" class="loading-state">
         <span class="material-symbols-rounded spinning loading-icon">progress_activity</span>
@@ -545,8 +573,10 @@ import {
   getPersonDetail, 
   updatePersonRelationship, 
   searchPerson,
+  getPlatforms,
   type PersonDetail,
-  type PersonCard 
+  type PersonCard,
+  type PlatformInfo 
 } from '@/api/relationship'
 import { showSuccess, showError } from '@/utils/dialog'
 
@@ -563,6 +593,11 @@ const pageSize = ref(20)
 const totalPages = ref(0)
 const totalCount = ref(0)
 const listLoading = ref(false)
+
+// 平台筛选相关
+const platforms = ref<PlatformInfo[]>([])
+const selectedPlatform = ref<string>('')
+const platformsLoading = ref(false)
 
 const showEditRelationshipDialog = ref(false)
 const showEditImpressionDialog = ref(false)
@@ -583,7 +618,7 @@ const loadPersonList = async () => {
   error.value = ''
   
   try {
-    const result = await getPersonList(currentPage.value, pageSize.value)
+    const result = await getPersonList(currentPage.value, pageSize.value, selectedPlatform.value || undefined)
     if (result.success && result.data) {
       personList.value = result.data.persons
       totalPages.value = result.data.total_pages
@@ -598,9 +633,31 @@ const loadPersonList = async () => {
   }
 }
 
-// 页面加载时获取用户列表
+// 加载平台列表
+const loadPlatforms = async () => {
+  platformsLoading.value = true
+  try {
+    const result = await getPlatforms()
+    if (result.success && result.data) {
+      platforms.value = result.data.platforms
+    }
+  } catch (err) {
+    console.error('加载平台列表失败:', err)
+  } finally {
+    platformsLoading.value = false
+  }
+}
+
+// 平台变化时重新加载列表
+const handlePlatformChange = async () => {
+  currentPage.value = 1
+  await loadPersonList()
+}
+
+// 页面加载时获取用户列表和平台列表
 onMounted(() => {
   loadPersonList()
+  loadPlatforms()
 })
 
 // 计算可见的页码
@@ -894,13 +951,27 @@ const saveMemoryPoints = async () => {
   }
 }
 
-const formatDate = (dateStr?: string) => {
+const formatDate = (dateStr?: string | number) => {
   if (!dateStr) return '未知'
   try {
-    const date = new Date(dateStr)
+    let date: Date
+    // 如果是字符串类型的数字时间戳，先转换为数字
+    if (typeof dateStr === 'string' && !isNaN(Number(dateStr))) {
+      date = new Date(Number(dateStr) * 1000)  // Unix 时间戳（秒）转为毫秒
+    } else if (typeof dateStr === 'number') {
+      date = new Date(dateStr * 1000)  // Unix 时间戳（秒）转为毫秒
+    } else {
+      date = new Date(dateStr)
+    }
+    
+    // 检查日期是否有效
+    if (isNaN(date.getTime())) {
+      return '未知'
+    }
+    
     return date.toLocaleString('zh-CN')
   } catch {
-    return dateStr
+    return '未知'
   }
 }
 
@@ -1541,6 +1612,81 @@ const isSearchFocused = ref(false)
   font-size: 22px;
   font-weight: 500;
   color: var(--md-sys-color-on-surface);
+}
+
+/* 平台筛选 */
+.platform-filter {
+  margin-bottom: 24px;
+  padding: 20px;
+  background: var(--md-sys-color-surface-container-low);
+  border-radius: 16px;
+}
+
+.filter-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface-variant);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.filter-label .material-symbols-rounded {
+  font-size: 20px;
+  color: var(--md-sys-color-primary);
+}
+
+.platform-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.platform-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--md-sys-color-surface-container-high);
+  border: 2px solid transparent;
+  border-radius: 20px;
+  color: var(--md-sys-color-on-surface);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.platform-chip:hover {
+  background: var(--md-sys-color-surface-container-highest);
+  border-color: var(--md-sys-color-outline);
+}
+
+.platform-chip.active {
+  background: var(--md-sys-color-primary-container);
+  border-color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary-container);
+}
+
+.chip-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 8px;
+  background: var(--md-sys-color-surface);
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.platform-chip.active .chip-count {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
 }
 
 /* 用户卡片网格 */
