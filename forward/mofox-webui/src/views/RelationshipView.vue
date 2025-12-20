@@ -294,162 +294,247 @@
     </div>
 
     <!-- 编辑关系信息对话框 -->
-    <div class="m3-dialog-overlay" v-if="showEditRelationshipDialog" @click="showEditRelationshipDialog = false">
-      <div class="m3-dialog" @click.stop>
-        <div class="dialog-header">
-          <h3>编辑关系信息</h3>
-          <button class="m3-icon-button" @click="showEditRelationshipDialog = false">
-            <span class="material-symbols-rounded">close</span>
-          </button>
-        </div>
-        <div class="dialog-content">
-          <div class="form-section">
-            <div class="form-group">
-              <label class="m3-label">关系分数 (0-100)</label>
-              <input 
-                v-model.number="editForm.score" 
-                type="number" 
-                min="0" 
-                max="100" 
-                step="1"
-                class="m3-input"
-              />
-              <div class="score-preview">
-                <div 
-                  class="score-fill" 
-                  :style="{ width: `${editForm.score}%` }"
-                ></div>
+    <Transition name="dialog-fade">
+      <div class="m3-dialog-overlay" v-if="showEditRelationshipDialog" @click="showEditRelationshipDialog = false">
+        <Transition name="dialog-scale">
+          <div class="m3-dialog modern" @click.stop v-if="showEditRelationshipDialog">
+            <div class="dialog-header">
+              <div class="header-icon-wrapper">
+                <span class="material-symbols-rounded header-icon">favorite</span>
               </div>
-            </div>
-            <div class="form-group">
-              <label class="m3-label">关系描述</label>
-              <textarea 
-                v-model="editForm.text" 
-                class="m3-input textarea"
-                rows="3"
-                placeholder="描述你与该用户的关系..."
-              ></textarea>
-            </div>
-          </div>
-        </div>
-        <div class="dialog-actions">
-          <button class="m3-button text" @click="showEditRelationshipDialog = false">
-            取消
-          </button>
-          <button class="m3-button filled" @click="saveRelationship" :disabled="saving">
-            {{ saving ? '保存中...' : '保存' }}
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 编辑印象对话框 -->
-    <div class="m3-dialog-overlay" v-if="showEditImpressionDialog" @click="showEditImpressionDialog = false">
-      <div class="m3-dialog" @click.stop>
-        <div class="dialog-header">
-          <h3>编辑印象</h3>
-          <button class="m3-icon-button" @click="showEditImpressionDialog = false">
-            <span class="material-symbols-rounded">close</span>
-          </button>
-        </div>
-        <div class="dialog-content">
-          <div class="form-section">
-            <div class="form-group">
-              <label class="m3-label">详细印象</label>
-              <textarea 
-                v-model="editForm.impression" 
-                class="m3-input textarea"
-                rows="4"
-                placeholder="详细描述你对该用户的印象..."
-              ></textarea>
-            </div>
-            <div class="form-group">
-              <label class="m3-label">简短印象</label>
-              <textarea 
-                v-model="editForm.shortImpression" 
-                class="m3-input textarea"
-                rows="2"
-                placeholder="一句话概括你的印象..."
-              ></textarea>
-            </div>
-          </div>
-        </div>
-        <div class="dialog-actions">
-          <button class="m3-button text" @click="showEditImpressionDialog = false">
-            取消
-          </button>
-          <button class="m3-button filled" @click="saveImpression" :disabled="saving">
-            {{ saving ? '保存中...' : '保存' }}
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 编辑记忆点对话框 -->
-    <div class="m3-dialog-overlay" v-if="showEditMemoryPointsDialog" @click="showEditMemoryPointsDialog = false">
-      <div class="m3-dialog large" @click.stop>
-        <div class="dialog-header">
-          <h3>编辑记忆点</h3>
-          <button class="m3-icon-button" @click="showEditMemoryPointsDialog = false">
-            <span class="material-symbols-rounded">close</span>
-          </button>
-        </div>
-        <div class="dialog-content">
-          <div class="form-section">
-            <div class="section-header">
-              <h4><span class="material-symbols-rounded">bookmark</span> 记忆点列表</h4>
-              <button class="m3-button tonal small" @click="addMemoryPoint" type="button">
-                <span class="material-symbols-rounded">add</span>
-                添加
+              <div class="header-content">
+                <h3>编辑关系信息</h3>
+                <p class="header-subtitle">调整与用户的关系描述</p>
+              </div>
+              <button class="m3-icon-button" @click="showEditRelationshipDialog = false">
+                <span class="material-symbols-rounded">close</span>
               </button>
             </div>
-            <div v-if="editForm.memoryPoints.length === 0" class="empty-hint">
-              暂无记忆点，点击"添加"按钮创建新记忆点
-            </div>
-            <div v-else class="memory-points-edit-list">
-              <div 
-                v-for="(point, index) in editForm.memoryPoints" 
-                :key="index"
-                class="memory-point-edit"
-              >
-                <div class="point-edit-header">
-                  <label class="m3-label">重要性 (0-1)</label>
-                  <input 
-                    v-model.number="point.weight" 
-                    type="number" 
-                    min="0" 
-                    max="1" 
-                    step="0.01"
-                    class="m3-input weight-input"
-                  />
-                  <button 
-                    class="m3-icon-button error" 
-                    @click="deleteMemoryPoint(index)"
-                    type="button"
-                  >
-                    <span class="material-symbols-rounded">delete</span>
-                  </button>
+            <div class="dialog-content">
+              <div class="form-section">
+                <div class="form-group">
+                  <label class="m3-label">
+                    <span class="material-symbols-rounded label-icon">favorite</span>
+                    <span>关系分数</span>
+                  </label>
+                  <div class="score-input-container">
+                    <input 
+                      v-model.number="editForm.score" 
+                      type="range" 
+                      min="0" 
+                      max="100" 
+                      class="m3-slider"
+                    />
+                    <div class="score-value-display">
+                      <span class="score-number">{{ editForm.score }}</span>
+                      <span class="score-unit">分</span>
+                    </div>
+                  </div>
+                  <div class="score-preview">
+                    <div 
+                      class="score-fill" 
+                      :style="{ width: editForm.score + '%' }"
+                    ></div>
+                  </div>
+                  <div class="score-hint">
+                    <span>{{ getScoreDescription(editForm.score) }}</span>
+                  </div>
                 </div>
-                <textarea 
-                  v-model="point.content" 
-                  class="m3-input textarea"
-                  rows="2"
-                  placeholder="描述这个记忆点..."
-                ></textarea>
+                <div class="form-group">
+                  <label class="m3-label">
+                    <span class="material-symbols-rounded label-icon">description</span>
+                    <span>关系描述</span>
+                  </label>
+                  <textarea 
+                    v-model="editForm.text" 
+                    class="m3-textarea"
+                    rows="4"
+                    placeholder="描述你与这个用户的关系..."
+                  ></textarea>
+                  <div class="char-count" :class="{ warning: editForm.text.length > 200 }">
+                    {{ editForm.text.length }} / 200
+                  </div>
+                </div>
               </div>
             </div>
+            <div class="dialog-actions">
+              <button class="m3-button text" @click="showEditRelationshipDialog = false">
+                <span class="material-symbols-rounded">close</span>
+                <span>取消</span>
+              </button>
+              <button class="m3-button filled" @click="saveRelationship" :disabled="saving">
+                <span class="material-symbols-rounded">{{ saving ? 'progress_activity' : 'check' }}</span>
+                <span>{{ saving ? '保存中...' : '保存' }}</span>
+              </button>
+            </div>
           </div>
-        </div>
-        <div class="dialog-actions">
-          <button class="m3-button text" @click="showEditMemoryPointsDialog = false">
-            取消
-          </button>
-          <button class="m3-button filled" @click="saveMemoryPoints" :disabled="saving">
-            {{ saving ? '保存中...' : '保存' }}
-          </button>
-        </div>
+        </Transition>
       </div>
-    </div>
+    </Transition>
+
+    <!-- 编辑印象对话框 -->
+    <Transition name="dialog-fade">
+      <div class="m3-dialog-overlay" v-if="showEditImpressionDialog" @click="showEditImpressionDialog = false">
+        <Transition name="dialog-scale">
+          <div class="m3-dialog modern large" @click.stop v-if="showEditImpressionDialog">
+            <div class="dialog-header">
+              <div class="header-icon-wrapper">
+                <span class="material-symbols-rounded header-icon">psychology</span>
+              </div>
+              <div class="header-content">
+                <h3>编辑印象</h3>
+                <p class="header-subtitle">记录你对用户的印象和感受</p>
+              </div>
+              <button class="m3-icon-button" @click="showEditImpressionDialog = false">
+                <span class="material-symbols-rounded">close</span>
+              </button>
+            </div>
+            <div class="dialog-content">
+              <div class="form-section">
+                <div class="form-group">
+                  <label class="m3-label">
+                    <span class="material-symbols-rounded label-icon">article</span>
+                    <span>详细印象</span>
+                  </label>
+                  <textarea 
+                    v-model="editForm.impression" 
+                    class="m3-textarea"
+                    rows="6"
+                    placeholder="详细描述你对这个用户的印象..."
+                  ></textarea>
+                  <div class="char-count">
+                    {{ editForm.impression.length }} 字符
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="m3-label">
+                    <span class="material-symbols-rounded label-icon">sentiment_satisfied</span>
+                    <span>简短印象</span>
+                  </label>
+                  <textarea 
+                    v-model="editForm.shortImpression" 
+                    class="m3-textarea short"
+                    rows="3"
+                    placeholder="用简短的话概括你的印象..."
+                  ></textarea>
+                  <div class="char-count" :class="{ warning: editForm.shortImpression.length > 100 }">
+                    {{ editForm.shortImpression.length }} / 100
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="dialog-actions">
+              <button class="m3-button text" @click="showEditImpressionDialog = false">
+                <span class="material-symbols-rounded">close</span>
+                <span>取消</span>
+              </button>
+              <button class="m3-button filled" @click="saveImpression" :disabled="saving">
+                <span class="material-symbols-rounded">{{ saving ? 'progress_activity' : 'check' }}</span>
+                <span>{{ saving ? '保存中...' : '保存' }}</span>
+              </button>
+            </div>
+          </div>
+        </Transition>
+      </div>
+    </Transition>
+
+    <!-- 编辑记忆点对话框 -->
+    <Transition name="dialog-fade">
+      <div class="m3-dialog-overlay" v-if="showEditMemoryPointsDialog" @click="showEditMemoryPointsDialog = false">
+        <Transition name="dialog-scale">
+          <div class="m3-dialog modern extra-large" @click.stop v-if="showEditMemoryPointsDialog">
+            <div class="dialog-header">
+              <div class="header-icon-wrapper">
+                <span class="material-symbols-rounded header-icon">bookmark</span>
+              </div>
+              <div class="header-content">
+                <h3>编辑记忆点</h3>
+                <p class="header-subtitle">管理与用户相关的重要记忆</p>
+              </div>
+              <button class="m3-icon-button" @click="showEditMemoryPointsDialog = false">
+                <span class="material-symbols-rounded">close</span>
+              </button>
+            </div>
+            <div class="dialog-content scrollable">
+              <div class="form-section">
+                <div class="section-header">
+                  <div class="section-title">
+                    <span class="material-symbols-rounded">collections_bookmark</span>
+                    <h4>记忆点列表</h4>
+                    <span class="m3-badge">{{ editForm.memoryPoints.length }}</span>
+                  </div>
+                  <button class="m3-button filled-tonal" @click="addMemoryPoint" type="button">
+                    <span class="material-symbols-rounded">add</span>
+                    <span>添加</span>
+                  </button>
+                </div>
+                <div v-if="editForm.memoryPoints.length === 0" class="empty-hint modern">
+                  <span class="material-symbols-rounded empty-icon">bookmark_border</span>
+                  <p>暂无记忆点，点击「添加」按钮创建新记忆点</p>
+                </div>
+                <TransitionGroup name="list" tag="div" v-else class="memory-points-edit-list">
+                  <div 
+                    v-for="(point, index) in editForm.memoryPoints" 
+                    :key="index"
+                    class="memory-point-edit"
+                  >
+                    <div class="point-edit-header">
+                      <div class="point-index">
+                        <span class="material-symbols-rounded">bookmark</span>
+                        <span>记忆点 #{{ index + 1 }}</span>
+                      </div>
+                      <div class="point-weight-control">
+                        <label class="weight-label">重要度</label>
+                        <div class="weight-slider-wrapper">
+                          <input 
+                            v-model.number="point.weight" 
+                            type="range" 
+                            min="0" 
+                            max="1" 
+                            step="0.1" 
+                            class="m3-slider small"
+                          />
+                          <span class="weight-value">{{ (point.weight * 100).toFixed(0) }}%</span>
+                        </div>
+                      </div>
+                      <button class="m3-icon-button error" @click="deleteMemoryPoint(index)" type="button" title="删除">
+                        <span class="material-symbols-rounded">delete</span>
+                      </button>
+                    </div>
+                    <div class="point-edit-body">
+                      <label class="m3-label">
+                        <span class="material-symbols-rounded label-icon">edit_note</span>
+                        <span>记忆内容</span>
+                      </label>
+                      <textarea 
+                        v-model="point.content" 
+                        class="m3-textarea"
+                        rows="4"
+                        placeholder="输入这个记忆点的详细内容..."
+                      ></textarea>
+                      <div class="point-timestamp">
+                        <span class="material-symbols-rounded">schedule</span>
+                        <span>{{ formatDate(point.timestamp) }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </TransitionGroup>
+              </div>
+            </div>
+            <div class="dialog-actions">
+              <button class="m3-button text" @click="showEditMemoryPointsDialog = false">
+                <span class="material-symbols-rounded">close</span>
+                <span>取消</span>
+              </button>
+              <button class="m3-button filled" @click="saveMemoryPoints" :disabled="saving">
+                <span class="material-symbols-rounded">{{ saving ? 'progress_activity' : 'check' }}</span>
+                <span>{{ saving ? '保存中...' : '保存' }}</span>
+              </button>
+            </div>
+          </div>
+        </Transition>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -587,20 +672,38 @@ const handleSearch = async () => {
 const loadPersonDetail = async () => {
   if (!currentPersonId.value) return
 
+  console.log('[RelationshipView] 开始加载用户详情, personId:', currentPersonId.value)
   loading.value = true
   error.value = ''
 
   try {
     const result = await getPersonDetail(currentPersonId.value)
+    console.log('[RelationshipView] 获取用户详情结果:', result)
     if (result.success && result.data) {
-      personDetail.value = result.data
+      console.log('[RelationshipView] 更新 personDetail.value:', result.data)
+      console.log('[RelationshipView] 详细印象值:', result.data.impression)
+      console.log('[RelationshipView] 简短印象值:', result.data.short_impression)
+      console.log('[RelationshipView] 记忆点数量:', result.data.memory_points?.length)
+      
+      // 强制创建新对象以触发响应式更新
+      personDetail.value = {
+        basic_info: { ...result.data.basic_info },
+        relationship: { ...result.data.relationship },
+        impression: result.data.impression,
+        short_impression: result.data.short_impression,
+        memory_points: [...(result.data.memory_points || [])]
+      }
+      
       // 初始化编辑表单
       editForm.score = result.data.relationship.relationship_score * 100
       editForm.text = result.data.relationship.relationship_text || ''
+      console.log('[RelationshipView] personDetail 已更新, 新值:', personDetail.value)
     } else {
+      console.error('[RelationshipView] 加载用户详情失败:', result.error)
       error.value = result.error || '加载用户详情失败'
     }
   } catch (err) {
+    console.error('[RelationshipView] 加载用户详情异常:', err)
     error.value = err instanceof Error ? err.message : '加载失败'
   } finally {
     loading.value = false
@@ -661,6 +764,11 @@ const deleteMemoryPoint = (index: number) => {
 const saveRelationship = async () => {
   if (!currentPersonId.value) return
 
+  console.log('[RelationshipView] 开始保存关系信息, personId:', currentPersonId.value)
+  console.log('[RelationshipView] 提交数据:', {
+    relationship_score: editForm.score / 100,
+    relationship_text: editForm.text
+  })
   saving.value = true
 
   try {
@@ -669,6 +777,8 @@ const saveRelationship = async () => {
       relationship_score: editForm.score / 100,
       relationship_text: editForm.text
     })
+
+    console.log('[RelationshipView] 保存关系信息响应:', result)
 
     if (!result.success) {
       throw new Error(result.error || '更新关系信息失败')
@@ -679,10 +789,15 @@ const saveRelationship = async () => {
       throw new Error(result.data.message || '更新关系信息失败')
     }
 
+    console.log('[RelationshipView] 关系信息保存成功，准备重新加载详情')
     await showSuccess('关系信息已更新')
     showEditRelationshipDialog.value = false
+    
+    console.log('[RelationshipView] 开始重新加载用户详情')
     await loadPersonDetail()
+    console.log('[RelationshipView] 用户详情重新加载完成')
   } catch (err) {
+    console.error('[RelationshipView] 保存关系信息失败:', err)
     await showError(err instanceof Error ? err.message : '更新失败')
   } finally {
     saving.value = false
@@ -693,6 +808,11 @@ const saveRelationship = async () => {
 const saveImpression = async () => {
   if (!currentPersonId.value) return
 
+  console.log('[RelationshipView] 开始保存印象, personId:', currentPersonId.value)
+  console.log('[RelationshipView] 提交数据:', {
+    impression: editForm.impression,
+    short_impression: editForm.shortImpression
+  })
   saving.value = true
 
   try {
@@ -705,6 +825,8 @@ const saveImpression = async () => {
       editForm.shortImpression
     )
 
+    console.log('[RelationshipView] 保存印象响应:', result)
+
     if (!result.success) {
       throw new Error(result.error || '更新印象失败')
     }
@@ -714,10 +836,15 @@ const saveImpression = async () => {
       throw new Error(result.data.message || '更新印象失败')
     }
 
+    console.log('[RelationshipView] 印象保存成功，准备重新加载详情')
     await showSuccess('印象已更新')
     showEditImpressionDialog.value = false
+    
+    console.log('[RelationshipView] 开始重新加载用户详情')
     await loadPersonDetail()
+    console.log('[RelationshipView] 用户详情重新加载完成')
   } catch (err) {
+    console.error('[RelationshipView] 保存印象失败:', err)
     await showError(err instanceof Error ? err.message : '更新失败')
   } finally {
     saving.value = false
@@ -728,6 +855,8 @@ const saveImpression = async () => {
 const saveMemoryPoints = async () => {
   if (!currentPersonId.value) return
 
+  console.log('[RelationshipView] 开始保存记忆点, personId:', currentPersonId.value)
+  console.log('[RelationshipView] 提交数据:', editForm.memoryPoints)
   saving.value = true
 
   try {
@@ -739,6 +868,8 @@ const saveMemoryPoints = async () => {
       editForm.memoryPoints
     )
 
+    console.log('[RelationshipView] 保存记忆点响应:', result)
+
     if (!result.success) {
       throw new Error(result.error || '更新记忆点失败')
     }
@@ -748,10 +879,15 @@ const saveMemoryPoints = async () => {
       throw new Error(result.data.message || '更新记忆点失败')
     }
 
+    console.log('[RelationshipView] 记忆点保存成功，准备重新加载详情')
     await showSuccess('记忆点已更新')
     showEditMemoryPointsDialog.value = false
+    
+    console.log('[RelationshipView] 开始重新加载用户详情')
     await loadPersonDetail()
+    console.log('[RelationshipView] 用户详情重新加载完成')
   } catch (err) {
+    console.error('[RelationshipView] 保存记忆点失败:', err)
     await showError(err instanceof Error ? err.message : '更新失败')
   } finally {
     saving.value = false
@@ -768,6 +904,19 @@ const formatDate = (dateStr?: string) => {
   }
 }
 
+// 根据分数获取描述
+const getScoreDescription = (score: number) => {
+  if (score >= 90) return '🌟 亲密无间'
+  if (score >= 80) return '💖 非常亲密'
+  if (score >= 70) return '😊 关系良好'
+  if (score >= 60) return '👍 比较熟悉'
+  if (score >= 50) return '🙂 一般熟悉'
+  if (score >= 40) return '😐 略有了解'
+  if (score >= 30) return '🤔 初步认识'
+  if (score >= 20) return '👋 刚刚见面'
+  return '❓ 陌生人'
+}
+
 const isSearchFocused = ref(false)
 </script>
 
@@ -782,6 +931,531 @@ const isSearchFocused = ref(false)
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* 弹窗基础样式 */
+.m3-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.m3-dialog {
+  background: var(--md-sys-color-surface-container-high);
+  border-radius: 28px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.24);
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+}
+
+.dialog-header {
+  padding: 24px;
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dialog-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface);
+}
+
+.dialog-content {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.dialog-actions {
+  padding: 16px 24px;
+  border-top: 1px solid var(--md-sys-color-outline-variant);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* 弹窗动画 */
+.dialog-fade-enter-active,
+.dialog-fade-leave-active {
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dialog-fade-enter-from,
+.dialog-fade-leave-to {
+  opacity: 0;
+}
+
+.dialog-scale-enter-active,
+.dialog-scale-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dialog-scale-enter-from {
+  opacity: 0;
+  transform: scale(0.9) translateY(20px);
+}
+
+.dialog-scale-leave-to {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+/* 列表动画 */
+.list-move,
+.list-enter-active,
+.list-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.list-enter-from {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+.list-leave-to {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+.list-leave-active {
+  position: absolute;
+  width: 100%;
+}
+
+/* 现代化弹窗样式 */
+.m3-dialog.modern {
+  max-width: 600px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  border-radius: 28px;
+  overflow: hidden;
+}
+
+.m3-dialog.modern.large {
+  max-width: 700px;
+}
+
+.m3-dialog.modern.extra-large {
+  max-width: 800px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.m3-dialog.modern .dialog-header {
+  background: linear-gradient(135deg, var(--md-sys-color-primary-container) 0%, var(--md-sys-color-secondary-container) 100%);
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border: none;
+}
+
+.header-icon-wrapper {
+  width: 56px;
+  height: 56px;
+  background: var(--md-sys-color-surface);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.header-icon-wrapper .header-icon {
+  font-size: 32px;
+  color: var(--md-sys-color-primary);
+}
+
+.header-content {
+  flex: 1;
+}
+
+.header-content h3 {
+  margin: 0 0 4px 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--md-sys-color-on-primary-container);
+}
+
+.header-subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: var(--md-sys-color-on-surface-variant);
+  opacity: 0.8;
+}
+
+.m3-dialog.modern .dialog-header .m3-icon-button {
+  background: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+}
+
+.dialog-content.scrollable {
+  max-height: calc(90vh - 200px);
+  overflow-y: auto;
+}
+
+.dialog-content.scrollable::-webkit-scrollbar {
+  width: 8px;
+}
+
+.dialog-content.scrollable::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dialog-content.scrollable::-webkit-scrollbar-thumb {
+  background: var(--md-sys-color-outline-variant);
+  border-radius: 4px;
+}
+
+.dialog-content.scrollable::-webkit-scrollbar-thumb:hover {
+  background: var(--md-sys-color-outline);
+}
+
+.form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.m3-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.m3-label .label-icon {
+  font-size: 20px;
+  color: var(--md-sys-color-primary);
+}
+
+/* 滑块样式 */
+.m3-slider {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--md-sys-color-surface-container-highest);
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+.m3-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--md-sys-color-primary);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s;
+}
+
+.m3-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.m3-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--md-sys-color-primary);
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s;
+}
+
+.m3-slider::-moz-range-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.m3-slider.small {
+  height: 4px;
+}
+
+.m3-slider.small::-webkit-slider-thumb {
+  width: 16px;
+  height: 16px;
+}
+
+.m3-slider.small::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+}
+
+/* 分数输入容器 */
+.score-input-container {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: var(--md-sys-color-surface-container);
+  border-radius: 16px;
+}
+
+.score-value-display {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 80px;
+  padding: 8px 16px;
+  background: var(--md-sys-color-primary-container);
+  border-radius: 12px;
+  justify-content: center;
+}
+
+.score-number {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--md-sys-color-on-primary-container);
+}
+
+.score-unit {
+  font-size: 14px;
+  color: var(--md-sys-color-on-primary-container);
+  opacity: 0.8;
+}
+
+.score-preview {
+  height: 12px;
+  background: var(--md-sys-color-surface-container-highest);
+  border-radius: 6px;
+  overflow: hidden;
+  position: relative;
+}
+
+.score-preview .score-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--md-sys-color-tertiary) 0%, var(--md-sys-color-primary) 100%);
+  border-radius: 6px;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.score-preview .score-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%);
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.score-hint {
+  text-align: center;
+  padding: 8px 16px;
+  background: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* 文本域样式 */
+.m3-textarea {
+  width: 100%;
+  padding: 16px;
+  border: 2px solid var(--md-sys-color-outline-variant);
+  border-radius: 12px;
+  background: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+  font-size: 14px;
+  font-family: inherit;
+  line-height: 1.6;
+  resize: vertical;
+  transition: all 0.2s;
+  outline: none;
+}
+
+.m3-textarea:focus {
+  border-color: var(--md-sys-color-primary);
+  background: var(--md-sys-color-surface-container);
+  box-shadow: 0 0 0 4px var(--md-sys-color-primary-container);
+}
+
+.m3-textarea::placeholder {
+  color: var(--md-sys-color-on-surface-variant);
+  opacity: 0.6;
+}
+
+.m3-textarea.short {
+  min-height: 80px;
+}
+
+.char-count {
+  text-align: right;
+  font-size: 12px;
+  color: var(--md-sys-color-on-surface-variant);
+  padding: 0 4px;
+}
+
+.char-count.warning {
+  color: var(--md-sys-color-error);
+  font-weight: 600;
+}
+
+/* 记忆点部分样式 */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.section-title .material-symbols-rounded {
+  font-size: 24px;
+  color: var(--md-sys-color-primary);
+}
+
+.section-title h4 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface);
+}
+
+.empty-hint.modern {
+  padding: 48px 24px;
+  text-align: center;
+  background: var(--md-sys-color-surface-container-low);
+  border: 2px dashed var(--md-sys-color-outline-variant);
+  border-radius: 16px;
+}
+
+.empty-hint.modern .empty-icon {
+  font-size: 64px;
+  color: var(--md-sys-color-outline);
+  margin-bottom: 16px;
+  display: block;
+}
+
+.empty-hint.modern p {
+  margin: 0;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 14px;
+}
+
+.memory-points-edit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: relative;
+}
+
+.memory-point-edit {
+  padding: 20px;
+  background: var(--md-sys-color-surface-container);
+  border: 2px solid var(--md-sys-color-outline-variant);
+  border-radius: 16px;
+  transition: all 0.2s;
+}
+
+.memory-point-edit:hover {
+  border-color: var(--md-sys-color-primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.point-edit-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.point-index {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface);
+}
+
+.point-index .material-symbols-rounded {
+  font-size: 20px;
+  color: var(--md-sys-color-primary);
+}
+
+.point-weight-control {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.weight-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface-variant);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.weight-slider-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.weight-value {
+  min-width: 48px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--md-sys-color-primary);
+  padding: 4px 8px;
+  background: var(--md-sys-color-primary-container);
+  border-radius: 8px;
+}
+
+.point-edit-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 /* 顶部栏 */
@@ -1287,60 +1961,392 @@ const isSearchFocused = ref(false)
   color: var(--md-sys-color-on-surface-variant);
 }
 
-/* 弹窗内容 */
-.m3-dialog.large {
+/* 弹窗动画 */
+.dialog-fade-enter-active,
+.dialog-fade-leave-active {
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dialog-fade-enter-from,
+.dialog-fade-leave-to {
+  opacity: 0;
+}
+
+.dialog-scale-enter-active,
+.dialog-scale-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dialog-scale-enter-from {
+  opacity: 0;
+  transform: scale(0.9) translateY(20px);
+}
+
+.dialog-scale-leave-to {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+/* 列表动画 */
+.list-move,
+.list-enter-active,
+.list-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.list-enter-from {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+.list-leave-to {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+.list-leave-active {
+  position: absolute;
+  width: 100%;
+}
+
+/* 现代化弹窗样式 */
+.m3-dialog.modern {
+  max-width: 600px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  border-radius: 28px;
+  overflow: hidden;
+}
+
+.m3-dialog.modern.large {
   max-width: 700px;
+}
+
+.m3-dialog.modern.extra-large {
+  max-width: 800px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.m3-dialog.modern .dialog-header {
+  background: linear-gradient(135deg, var(--md-sys-color-primary-container) 0%, var(--md-sys-color-secondary-container) 100%);
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border: none;
+}
+
+.header-icon-wrapper {
+  width: 56px;
+  height: 56px;
+  background: var(--md-sys-color-surface);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.header-icon-wrapper .header-icon {
+  font-size: 32px;
+  color: var(--md-sys-color-primary);
+}
+
+.header-content {
+  flex: 1;
+}
+
+.header-content h3 {
+  margin: 0 0 4px 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--md-sys-color-on-primary-container);
+}
+
+.header-subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: var(--md-sys-color-on-surface-variant);
+  opacity: 0.8;
+}
+
+.m3-dialog.modern .dialog-header .m3-icon-button {
+  background: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+}
+
+.dialog-content.scrollable {
+  max-height: calc(90vh - 200px);
+  overflow-y: auto;
+}
+
+.dialog-content.scrollable::-webkit-scrollbar {
+  width: 8px;
+}
+
+.dialog-content.scrollable::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dialog-content.scrollable::-webkit-scrollbar-thumb {
+  background: var(--md-sys-color-outline-variant);
+  border-radius: 4px;
+}
+
+.dialog-content.scrollable::-webkit-scrollbar-thumb:hover {
+  background: var(--md-sys-color-outline);
 }
 
 .form-section {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
 }
 
 .m3-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 14px;
-  font-weight: 500;
-  color: var(--md-sys-color-on-surface-variant);
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.m3-label .label-icon {
+  font-size: 20px;
+  color: var(--md-sys-color-primary);
+}
+
+/* 滑块样式 */
+.m3-slider {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--md-sys-color-surface-container-highest);
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+.m3-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--md-sys-color-primary);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s;
+}
+
+.m3-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.m3-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--md-sys-color-primary);
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s;
+}
+
+.m3-slider::-moz-range-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.m3-slider.small {
+  height: 4px;
+}
+
+.m3-slider.small::-webkit-slider-thumb {
+  width: 16px;
+  height: 16px;
+}
+
+.m3-slider.small::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+}
+
+/* 分数输入容器 */
+.score-input-container {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: var(--md-sys-color-surface-container);
+  border-radius: 16px;
+}
+
+.score-value-display {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 80px;
+  padding: 8px 16px;
+  background: var(--md-sys-color-primary-container);
+  border-radius: 12px;
+  justify-content: center;
+}
+
+.score-number {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--md-sys-color-on-primary-container);
+}
+
+.score-unit {
+  font-size: 14px;
+  color: var(--md-sys-color-on-primary-container);
+  opacity: 0.8;
 }
 
 .score-preview {
-  margin-top: 8px;
-  height: 8px;
+  height: 12px;
   background: var(--md-sys-color-surface-container-highest);
-  border-radius: 4px;
+  border-radius: 6px;
   overflow: hidden;
+  position: relative;
 }
 
+.score-preview .score-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--md-sys-color-tertiary) 0%, var(--md-sys-color-primary) 100%);
+  border-radius: 6px;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.score-preview .score-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%);
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.score-hint {
+  text-align: center;
+  padding: 8px 16px;
+  background: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* 文本域样式 */
+.m3-textarea {
+  width: 100%;
+  padding: 16px;
+  border: 2px solid var(--md-sys-color-outline-variant);
+  border-radius: 12px;
+  background: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+  font-size: 14px;
+  font-family: inherit;
+  line-height: 1.6;
+  resize: vertical;
+  transition: all 0.2s;
+  outline: none;
+}
+
+.m3-textarea:focus {
+  border-color: var(--md-sys-color-primary);
+  background: var(--md-sys-color-surface-container);
+  box-shadow: 0 0 0 4px var(--md-sys-color-primary-container);
+}
+
+.m3-textarea::placeholder {
+  color: var(--md-sys-color-on-surface-variant);
+  opacity: 0.6;
+}
+
+.m3-textarea.short {
+  min-height: 80px;
+}
+
+.char-count {
+  text-align: right;
+  font-size: 12px;
+  color: var(--md-sys-color-on-surface-variant);
+  padding: 0 4px;
+}
+
+.char-count.warning {
+  color: var(--md-sys-color-error);
+  font-weight: 600;
+}
+
+/* 记忆点部分样式 */
 .section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 16px;
 }
 
-.section-header h4 {
+.section-title {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
+}
+
+.section-title .material-symbols-rounded {
+  font-size: 24px;
+  color: var(--md-sys-color-primary);
+}
+
+.section-title h4 {
   margin: 0;
   font-size: 16px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--md-sys-color-on-surface);
 }
 
-.empty-hint {
-  padding: 24px;
+.empty-hint.modern {
+  padding: 48px 24px;
   text-align: center;
+  background: var(--md-sys-color-surface-container-low);
+  border: 2px dashed var(--md-sys-color-outline-variant);
+  border-radius: 16px;
+}
+
+.empty-hint.modern .empty-icon {
+  font-size: 64px;
+  color: var(--md-sys-color-outline);
+  margin-bottom: 16px;
+  display: block;
+}
+
+.empty-hint.modern p {
+  margin: 0;
   color: var(--md-sys-color-on-surface-variant);
-  background: var(--md-sys-color-surface-container-highest);
-  border-radius: 12px;
   font-size: 14px;
 }
 
@@ -1348,29 +2354,149 @@ const isSearchFocused = ref(false)
   display: flex;
   flex-direction: column;
   gap: 16px;
+  position: relative;
 }
 
 .memory-point-edit {
-  padding: 16px;
-  background: var(--md-sys-color-surface-container-low);
-  border: 1px solid var(--md-sys-color-outline-variant);
-  border-radius: 12px;
+  padding: 20px;
+  background: var(--md-sys-color-surface-container);
+  border: 2px solid var(--md-sys-color-outline-variant);
+  border-radius: 16px;
+  transition: all 0.2s;
+}
+
+.memory-point-edit:hover {
+  border-color: var(--md-sys-color-primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .point-edit-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
 }
 
-.weight-input {
-  width: 100px;
+.point-index {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface);
+}
+
+.point-index .material-symbols-rounded {
+  font-size: 20px;
+  color: var(--md-sys-color-primary);
+}
+
+.point-weight-control {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.weight-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface-variant);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.weight-slider-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.weight-value {
+  min-width: 48px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--md-sys-color-primary);
+  padding: 4px 8px;
+  background: var(--md-sys-color-primary-container);
+  border-radius: 8px;
+}
+
+.point-edit-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.point-timestamp {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.point-timestamp .material-symbols-rounded {
+  font-size: 16px;
 }
 
 .m3-icon-button.error {
   color: var(--md-sys-color-error);
-  margin-left: auto;
+}
+
+.m3-icon-button.error:hover {
+  background: var(--md-sys-color-error-container);
+}
+
+/* 对话框按钮样式增强 */
+.m3-dialog.modern .dialog-actions {
+  padding: 20px 24px;
+  gap: 12px;
+}
+
+.m3-dialog.modern .dialog-actions .m3-button {
+  gap: 8px;
+}
+
+.m3-dialog.modern .dialog-actions .m3-button .material-symbols-rounded {
+  font-size: 20px;
+}
+
+.m3-button.filled-tonal {
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  border: none;
+  padding: 10px 24px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.m3-button.filled-tonal:hover {
+  background: var(--md-sys-color-secondary-container);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.m3-badge {
+  padding: 4px 12px;
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.m3-badge.secondary {
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
 }
 
 /* 响应式 */
