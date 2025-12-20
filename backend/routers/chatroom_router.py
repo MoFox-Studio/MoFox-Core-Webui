@@ -18,6 +18,7 @@ from src.common.logger import get_logger
 from src.person_info.person_info import get_person_info_manager
 from src.plugin_system.apis import message_api
 from src.plugin_system.base import BaseRouterComponent
+from src.config.config import global_config
 
 from ..adapters.ui_chatroom_adapter import get_ui_chatroom_adapter
 from ..utils.chatroom_storage import get_chatroom_storage
@@ -149,6 +150,8 @@ class ChatroomRouterComponent(BaseRouterComponent):
                     virtual_user = self.storage.get_user(user_id)
                     if virtual_user:
                         nickname = virtual_user["nickname"]
+                    elif user_id == "mofox_bot":
+                        nickname = global_config.bot.nickname
 
                     result.append({
                         "message_id": msg.get("message_id"),

@@ -17,6 +17,7 @@ from mofox_wire import CoreSink, MessageEnvelope
 
 from src.common.logger import get_logger
 from src.plugin_system.base import BaseAdapter
+from src.config.config import global_config
 
 logger = get_logger("ui_chatroom_adapter")
 
@@ -221,7 +222,7 @@ class UIChatroomAdapter(BaseAdapter):
             response_message = {
                 "message_id": message_info.get("message_id", str(uuid.uuid4())),
                 "user_id": "mofox_bot",  # 机器人的ID
-                "nickname": "麦麦",
+                "nickname": global_config.bot.nickname,
                 "content": text_content,
                 "images": image_urls,
                 "timestamp": time.time(),
