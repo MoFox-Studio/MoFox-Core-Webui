@@ -1331,7 +1331,7 @@ onUnmounted(() => {
   background: var(--md-sys-color-surface);
   border: 1px solid var(--md-sys-color-outline-variant);
   border-radius: 8px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Roboto Mono', monospace;
   font-size: 16px;
   font-weight: 500;
   color: var(--md-sys-color-on-surface);
