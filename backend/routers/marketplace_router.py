@@ -182,10 +182,29 @@ class MarketplaceRouterComponent(BaseRouterComponent):
                 except Exception as e:
                         logger.warning(f"无法获取 README: {e}")
 
+                # 获取真实的插件名称（通过路径映射）
+                real_plugin_name = None
+                if is_installed:
+                    from src.plugin_system.core.plugin_manager import plugin_manager
+                    
+                    try:
+                        plugin_dir_abs = str(plugin_dir.resolve())
+                        for name in plugin_manager.list_loaded_plugins():
+                            path = plugin_manager.get_plugin_path(name)
+                            if path:
+                                try:
+                                    if str(Path(path).resolve()) == plugin_dir_abs:
+                                        real_plugin_name = name
+                                        break
+                                except Exception:
+                                    continue
+                    except Exception as e:
+                        logger.warning(f"获取真实插件名失败: {e}")
+
                 # 获取已安装版本
                 installed_version = None
-                if is_installed:
-                    plugin_details = plugin_info_api.get_plugin_details(plugin_name)
+                if is_installed and real_plugin_name:
+                    plugin_details = plugin_info_api.get_plugin_details(real_plugin_name)
                     if plugin_details:
                         installed_version = plugin_details.get("version", "unknown")
 
@@ -447,6 +466,20 @@ class MarketplaceRouterComponent(BaseRouterComponent):
 
                 updates = []
 
+                # 获取已加载插件的路径映射
+                from src.plugin_system.core.plugin_manager import plugin_manager
+                loaded_paths = {}
+                try:
+                    for name in plugin_manager.list_loaded_plugins():
+                        path = plugin_manager.get_plugin_path(name)
+                        if path:
+                            try:
+                                loaded_paths[str(Path(path).resolve())] = name
+                            except Exception:
+                                pass
+                except Exception as e:
+                    logger.warning(f"获取已加载插件路径失败: {e}")
+
                 # 检查已安装的插件
                 if PLUGINS_DIR.exists():
                     for plugin_dir in PLUGINS_DIR.iterdir():
@@ -456,8 +489,19 @@ class MarketplaceRouterComponent(BaseRouterComponent):
                         # plugin_dir.name 是仓库名
                         repo_name = plugin_dir.name
 
+                        # 找到真实的插件名称
+                        real_plugin_name = None
+                        try:
+                            dir_abs_path = str(plugin_dir.resolve())
+                            real_plugin_name = loaded_paths.get(dir_abs_path)
+                        except Exception:
+                            pass
+
+                        if not real_plugin_name:
+                            continue
+
                         # 获取本地版本
-                        plugin_details = plugin_info_api.get_plugin_details(repo_name)
+                        plugin_details = plugin_info_api.get_plugin_details(real_plugin_name)
                         if not plugin_details:
                             continue
 
