@@ -788,21 +788,21 @@ onMounted(() => {
   gap: 24px;
   align-items: stretch;
   margin-bottom: 24px;
-  height: 55vh;
-  min-height: 500px;
 }
 
 .chart-column {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  height: 55vh;
+  min-height: 500px;
 }
 
 .plans-column {
   display: flex;
   flex-direction: column;
   gap: 24px;
-  height: 100%;
+  height: 55vh;
+  min-height: 500px;
 }
 
 .plans-column .plans-card {
