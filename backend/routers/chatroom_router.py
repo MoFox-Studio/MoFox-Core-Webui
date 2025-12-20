@@ -129,7 +129,7 @@ class ChatroomRouterComponent(BaseRouterComponent):
                 # 过滤出UI平台的消息
                 ui_messages = [
                     msg for msg in messages
-                    if msg.get("platform") == "web_ui_chatroom"
+                    if msg.get("user_platform") == "web_ui_chatroom"
                 ]
                 logger.info(ui_messages)
 
