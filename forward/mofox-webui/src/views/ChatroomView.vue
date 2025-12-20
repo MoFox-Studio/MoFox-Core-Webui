@@ -29,7 +29,7 @@
             <div class="user-id">{{ user.user_id }}</div>
           </div>
           <button 
-            class="icon-button delete-btn" 
+            class="m3-icon-button delete-btn" 
             @click.stop="confirmDeleteUser(user)"
             title="删除用户"
           >
@@ -190,7 +190,7 @@
           <div class="m3-dialog">
             <div class="dialog-header">
               <h3>创建虚拟用户</h3>
-              <button class="icon-button" @click="showCreateUserDialog = false">
+              <button class="m3-icon-button" @click="showCreateUserDialog = false">
                 <span class="material-symbols-rounded">close</span>
               </button>
             </div>
@@ -254,7 +254,7 @@
           <div class="m3-dialog">
             <div class="dialog-header">
               <h3>编辑用户</h3>
-              <button class="icon-button" @click="showEditUserDialog = false">
+              <button class="m3-icon-button" @click="showEditUserDialog = false">
                 <span class="material-symbols-rounded">close</span>
               </button>
             </div>
@@ -313,7 +313,7 @@
           <div class="m3-dialog small">
             <div class="dialog-header">
               <h3>确认删除</h3>
-              <button class="icon-button" @click="showDeleteConfirm = false">
+              <button class="m3-icon-button" @click="showDeleteConfirm = false">
                 <span class="material-symbols-rounded">close</span>
               </button>
             </div>
@@ -895,7 +895,12 @@ function showToast(message: string, type: 'success' | 'error' = 'success') {
 
 .delete-btn {
   opacity: 0;
-  transition: opacity 0.2s;
+  transition: opacity 0.2s, background-color 0.2s, color 0.2s;
+}
+
+.delete-btn:hover {
+  background-color: var(--md-sys-color-error-container) !important;
+  color: var(--md-sys-color-on-error-container) !important;
 }
 
 .user-item:hover .delete-btn {
