@@ -4,14 +4,18 @@
 """
 
 from typing import Any, Optional
+import orjson
 
 from fastapi import HTTPException
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 
 from src.common.logger import get_logger
 from src.common.security import VerifiedDep
+from src.common.database.api.crud import CRUDBase
+from src.common.database.core.models import PersonInfo
+from src.common.database.core.session import get_db_session
 from src.plugin_system import BaseRouterComponent
-from src.plugin_system.apis import person_api
 
 logger = get_logger("WebUI.RelationshipRouter")
 
@@ -135,21 +139,17 @@ class RelationshipRouterComponent(BaseRouterComponent):
         async def get_person_list(page: int = 1, page_size: int = 20, _=VerifiedDep):
             """获取用户列表"""
             try:
-                from src.common.database.core.models import PersonInfo
-                from src.common.database.core.session import get_db_session
-                from sqlalchemy import select, func
+                crud = CRUDBase(PersonInfo)
                 
+                # 获取总数
+                total = await crud.count()
+                
+                # 计算分页
+                total_pages = (total + page_size - 1) // page_size
+                offset = (page - 1) * page_size
+                
+                # 使用原生SQL查询按最后交互时间排序
                 async with get_db_session() as session:
-                    # 获取总数
-                    count_stmt = select(func.count()).select_from(PersonInfo)
-                    result = await session.execute(count_stmt)
-                    total = result.scalar() or 0
-                    
-                    # 计算分页
-                    total_pages = (total + page_size - 1) // page_size
-                    offset = (page - 1) * page_size
-                    
-                    # 查询用户列表，按最后交互时间排序
                     stmt = (
                         select(PersonInfo)
                         .order_by(PersonInfo.last_know.desc())
@@ -158,45 +158,32 @@ class RelationshipRouterComponent(BaseRouterComponent):
                     )
                     result = await session.execute(stmt)
                     persons_data = result.scalars().all()
+                
+                # 构建响应
+                persons = []
+                for person in persons_data:
+                    # 关系分数默认为0，关系文本从relation_value字段读取
+                    relationship_score = 0.0
+                    relationship_text = person.relation_value if hasattr(person, 'relation_value') else None
                     
-                    # 构建响应
-                    persons = []
-                    for person in persons_data:
-                        person_id = person.person_id
-                        
-                        # 获取关系数据
-                        try:
-                            relationship_data = await person_api.get_user_relationship_data(person_id)
-                            relationship_score = relationship_data.get("relationship_score", 0.0)
-                            relationship_text = relationship_data.get("relationship_text")
-                        except Exception:
-                            relationship_score = 0.0
-                            relationship_text = None
-                        
-                        # 获取简短印象
-                        try:
-                            short_impression = await person_api.get_person_impression(person_id, short=True)
-                        except Exception:
-                            short_impression = None
-                        
-                        persons.append(PersonCardResponse(
-                            person_id=person_id,
-                            person_name=person.person_name or "未知用户",
-                            nickname=person.nickname,
-                            relationship_score=relationship_score,
-                            relationship_text=relationship_text,
-                            short_impression=short_impression,
-                            know_times=person.know_times or 0,
-                            last_know=person.last_know
-                        ))
-                    
-                    return PersonListResponse(
-                        persons=persons,
-                        total=total,
-                        page=page,
-                        page_size=page_size,
-                        total_pages=total_pages
-                    )
+                    persons.append(PersonCardResponse(
+                        person_id=person.person_id,
+                        person_name=person.person_name or "未知用户",
+                        nickname=person.nickname,
+                        relationship_score=relationship_score,
+                        relationship_text=relationship_text,
+                        short_impression=person.short_impression,
+                        know_times=int(person.know_times or 0),
+                        last_know=str(person.last_know) if person.last_know else None
+                    ))
+                
+                return PersonListResponse(
+                    persons=persons,
+                    total=total,
+                    page=page,
+                    page_size=page_size,
+                    total_pages=total_pages
+                )
                     
             except Exception as e:
                 logger.error(f"获取用户列表失败: {e}")
@@ -217,54 +204,52 @@ class RelationshipRouterComponent(BaseRouterComponent):
         async def get_person_detail(person_id: str, _=VerifiedDep):
             """获取用户详情"""
             try:
-                # 获取基础信息
-                basic_info = await person_api.get_person_info(person_id)
-                if not basic_info:
+                # 使用CRUD获取用户信息
+                crud = CRUDBase(PersonInfo)
+                person = await crud.get_by(person_id=person_id,use_cache = False)
+                
+                if not person:
                     raise HTTPException(status_code=404, detail="用户不存在")
 
-                # 获取关系数据
-                try:
-                    relationship_data = await person_api.get_user_relationship_data(person_id)
-                except Exception as e:
-                    logger.warning(f"获取关系数据失败: {e}, 使用默认值")
-                    relationship_data = {"relationship_score": 0.0, "relationship_text": None}
-
                 # 获取印象
-                try:
-                    impression = await person_api.get_person_impression(person_id, short=False)
-                except Exception as e:
-                    logger.warning(f"获取完整印象失败: {e}, 使用默认值")
-                    impression = "暂无印象"
-                
-                try:
-                    short_impression = await person_api.get_person_impression(person_id, short=True)
-                except Exception as e:
-                    logger.warning(f"获取简短印象失败: {e}, 使用默认值")
-                    short_impression = "暂无印象"
+                impression = person.impression or "暂无印象"
+                short_impression = person.short_impression or "暂无印象"
 
-                # 获取记忆点
-                try:
-                    points = await person_api.get_person_points(person_id, limit=10)
-                    memory_points = [{"content": p[0], "weight": p[1], "timestamp": str(p[2])} for p in points]
-                except Exception as e:
-                    logger.warning(f"获取记忆点失败: {e}, 使用空列表")
-                    memory_points = []
+                # 解析记忆点
+                memory_points = []
+                if person.points:
+                    try:
+                        if isinstance(person.points, str):
+                            points_data = orjson.loads(person.points)
+                        else:
+                            points_data = person.points
+                        
+                        # 限制返回10条
+                        for p in points_data[:10]:
+                            if isinstance(p, (list, tuple)) and len(p) >= 3:
+                                memory_points.append({
+                                    "content": p[0],
+                                    "weight": float(p[1]),
+                                    "timestamp": str(p[2])
+                                })
+                    except Exception as e:
+                        logger.warning(f"解析记忆点失败: {e}")
 
                 return PersonDetailResponse(
                     basic_info=PersonBasicInfoResponse(
                         person_id=person_id,
-                        person_name=basic_info.get("person_name", "未知用户"),
-                        nickname=basic_info.get("nickname"),
-                        know_times=basic_info.get("know_times", 0),
-                        know_since=basic_info.get("know_since"),
-                        last_know=basic_info.get("last_know"),
-                        attitude=basic_info.get("attitude")
+                        person_name=person.person_name or "未知用户",
+                        nickname=person.nickname,
+                        know_times=int(person.know_times or 0),
+                        know_since=str(person.know_since) if person.know_since else None,
+                        last_know=str(person.last_know) if person.last_know else None,
+                        attitude=int(person.attitude) if person.attitude is not None else None
                     ),
                     relationship=PersonRelationshipResponse(
                         person_id=person_id,
-                        person_name=basic_info.get("person_name", "未知用户"),
-                        relationship_score=relationship_data.get("relationship_score", 0.0),
-                        relationship_text=relationship_data.get("relationship_text")
+                        person_name=person.person_name or "未知用户",
+                        relationship_score=0.0,
+                        relationship_text=person.relation_value if hasattr(person, 'relation_value') else None
                     ),
                     impression=impression,
                     short_impression=short_impression,
@@ -285,16 +270,30 @@ class RelationshipRouterComponent(BaseRouterComponent):
         async def update_person_relationship(person_id: str, request: UpdateRelationshipRequest, _=VerifiedDep):
             """更新用户关系"""
             try:
-                # 获取用户名
-                basic_info = await person_api.get_person_info(person_id)
-                if not basic_info:
+                # 使用CRUD检查用户是否存在
+                crud = CRUDBase(PersonInfo)
+                person = await crud.get_by(person_id=person_id,use_cache = False)
+                
+                if not person:
                     return UpdateRelationshipResponse(success=False, message="用户不存在")
 
-                user_name = basic_info.get("person_name", "")
-
-                # 更新关系
-                await person_api.update_user_relationship(user_id=person_id, relationship_score=request.relationship_score, relationship_text=request.relationship_text, user_name=user_name)
-
+                # 更新关系值
+                update_data = {}
+                if hasattr(PersonInfo, 'relation_value'):
+                    update_data['relation_value'] = request.relationship_text
+                
+                if update_data:
+                    async with get_db_session() as session:
+                        stmt = select(PersonInfo).where(PersonInfo.person_id == person_id)
+                        result = await session.execute(stmt)
+                        db_person = result.scalar_one_or_none()
+                        
+                        if db_person:
+                            for key, value in update_data.items():
+                                setattr(db_person, key, value)
+                            await session.commit()
+                
+                logger.info(f"用户 {person_id} 的关系更新成功")
                 return UpdateRelationshipResponse(success=True, message="关系更新成功")
             except Exception as e:
                 logger.error(f"更新用户关系失败: {e}")
@@ -388,7 +387,19 @@ class RelationshipRouterComponent(BaseRouterComponent):
         async def get_relationship_report(person_id: str, _=VerifiedDep):
             """获取关系报告"""
             try:
-                report = await person_api.get_full_relationship_report(person_id)
+                crud = CRUDBase(PersonInfo)
+                person = await crud.get_by(person_id=person_id,use_cache = False)
+                
+                if not person:
+                    return {"error": "用户不存在"}
+                
+                # 生成简单的关系报告
+                report = f"""用户: {person.person_name or '未知'}
+昵称: {person.nickname or '无'}
+认识次数: {person.know_times or 0}
+印象: {person.impression or '暂无'}
+关系描述: {person.relation_value if hasattr(person, 'relation_value') and person.relation_value else '无'}"""
+                
                 return RelationshipReportResponse(person_id=person_id, report=report)
             except Exception as e:
                 logger.error(f"获取关系报告失败: {e}")
@@ -402,8 +413,19 @@ class RelationshipRouterComponent(BaseRouterComponent):
         async def get_relationship_stats(_=VerifiedDep):
             """获取关系统计"""
             try:
-                stats = person_api.get_system_stats()
-                return stats
+                crud = CRUDBase(PersonInfo)
+                total_users = await crud.count()
+                
+                # 统计有印象的用户
+                async with get_db_session() as session:
+                    stmt = select(PersonInfo).where(PersonInfo.impression.isnot(None))
+                    result = await session.execute(stmt)
+                    users_with_impression = len(result.scalars().all())
+                
+                return {
+                    "total_users": total_users,
+                    "users_with_impression": users_with_impression,
+                }
             except Exception as e:
                 logger.error(f"获取关系统计失败: {e}")
                 return {"error": str(e)}
@@ -416,7 +438,18 @@ class RelationshipRouterComponent(BaseRouterComponent):
         async def clear_relationship_cache(person_id: Optional[str] = None, _=VerifiedDep):
             """清理关系缓存"""
             try:
-                person_api.clear_caches(person_id)
+                from src.common.database.optimization import get_cache
+                cache = await get_cache()
+                
+                if person_id:
+                    # 清理特定用户的缓存
+                    await cache.delete(f"person_info:id:{person_id}")
+                    logger.info(f"已清理用户 {person_id} 的缓存")
+                else:
+                    # 清理所有缓存
+                    await cache.clear()
+                    logger.info("已清理所有关系缓存")
+                
                 return {"success": True, "message": "缓存清理成功"}
             except Exception as e:
                 logger.error(f"清理关系缓存失败: {e}")
@@ -430,16 +463,27 @@ class RelationshipRouterComponent(BaseRouterComponent):
         async def search_person(query: str, _=VerifiedDep):
             """搜索用户"""
             try:
-                person_id = await person_api.get_person_id_by_name(query)
-                if not person_id:
+                crud = CRUDBase(PersonInfo)
+                
+                # 先按person_name搜索
+                person = await crud.get_by(person_name=query,use_cache = False)
+                
+                # 如果没找到，按nickname搜索
+                if not person:
+                    person = await crud.get_by(nickname=query,use_cache = False)
+                
+                if not person:
                     return {"error": "未找到用户"}
 
-                # 获取基础信息
-                basic_info = await person_api.get_person_info(person_id)
-                if not basic_info:
-                    return {"error": "用户信息不存在"}
-
-                return PersonBasicInfoResponse(person_id=person_id, person_name=basic_info.get("person_name", ""), nickname=basic_info.get("nickname"), know_times=basic_info.get("know_times", 0), know_since=basic_info.get("know_since"), last_know=basic_info.get("last_know"), attitude=basic_info.get("attitude"))
+                return PersonBasicInfoResponse(
+                    person_id=person.person_id,
+                    person_name=person.person_name or "",
+                    nickname=person.nickname,
+                    know_times=int(person.know_times or 0),
+                    know_since=str(person.know_since) if person.know_since else None,
+                    last_know=str(person.last_know) if person.last_know else None,
+                    attitude=int(person.attitude) if person.attitude is not None else None
+                )
             except Exception as e:
                 logger.error(f"搜索用户失败: {e}")
                 return {"error": str(e)}

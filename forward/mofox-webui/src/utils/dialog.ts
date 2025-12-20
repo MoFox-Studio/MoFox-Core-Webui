@@ -21,6 +21,16 @@ export function showConfirm(options: DialogOptions): Promise<boolean> {
   return new Promise((resolve) => {
     const container = document.createElement('div')
     document.body.appendChild(container)
+    let isDestroyed = false
+
+    const cleanup = () => {
+      if (isDestroyed) return
+      isDestroyed = true
+      app.unmount()
+      if (container.parentNode) {
+        container.parentNode.removeChild(container)
+      }
+    }
 
     const app = createApp({
       data() {
@@ -32,16 +42,14 @@ export function showConfirm(options: DialogOptions): Promise<boolean> {
         handleConfirm() {
           this.visible = false
           setTimeout(() => {
-            app.unmount()
-            document.body.removeChild(container)
+            cleanup()
             resolve(true)
           }, 300)
         },
         handleCancel() {
           this.visible = false
           setTimeout(() => {
-            app.unmount()
-            document.body.removeChild(container)
+            cleanup()
             resolve(false)
           }, 300)
         }
@@ -77,6 +85,16 @@ export function showAlert(options: DialogOptions): Promise<void> {
   return new Promise((resolve) => {
     const container = document.createElement('div')
     document.body.appendChild(container)
+    let isDestroyed = false
+
+    const cleanup = () => {
+      if (isDestroyed) return
+      isDestroyed = true
+      app.unmount()
+      if (container.parentNode) {
+        container.parentNode.removeChild(container)
+      }
+    }
 
     const app = createApp({
       data() {
@@ -88,8 +106,7 @@ export function showAlert(options: DialogOptions): Promise<void> {
         handleConfirm() {
           this.visible = false
           setTimeout(() => {
-            app.unmount()
-            document.body.removeChild(container)
+            cleanup()
             resolve()
           }, 300)
         }

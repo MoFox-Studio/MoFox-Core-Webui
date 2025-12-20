@@ -484,11 +484,12 @@ function goBack() {
 
 function goToConfig() {
   // 使用配置文件的完整路径跳转
-  if (currentPlugin.value?.config.path) {
-    console.log('[PluginDetail] 跳转到配置编辑器:', currentPlugin.value.config.path)
+  if (currentPlugin.value?.name) {
+    const configPath = `plugins/${currentPlugin.value.name}/config.toml`
+    console.log('[PluginDetail] 跳转到配置编辑器:', configPath)
     router.push({
       name: 'PluginConfigView',
-      query: { path: currentPlugin.value.config.path }
+      params: { path: configPath }
     })
   } else {
     console.warn('[PluginDetail] 配置文件路径不存在')

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { 
   argbFromHex, 
   themeFromSourceColor, 
@@ -114,9 +114,12 @@ export const useThemeStore = defineStore('theme', () => {
     updateTheme()
   }, { immediate: true })
 
+  const isDark = computed(() => theme.value === 'dark')
+
   return {
     theme,
     sourceColor,
+    isDark,
     toggleTheme,
     setSourceColor
   }

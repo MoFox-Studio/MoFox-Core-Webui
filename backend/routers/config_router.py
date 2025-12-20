@@ -19,6 +19,7 @@ from src.common.logger import get_logger
 from src.common.security import VerifiedDep
 from src.config.config import CONFIG_DIR
 from src.plugin_system import BaseRouterComponent
+from src.plugin_system.core.plugin_manager import plugin_manager
 
 logger = get_logger("WebUI.ConfigRouter")
 
@@ -334,8 +335,14 @@ class WebUIConfigRouter(BaseRouterComponent):
                         if plugin_folder.is_dir():
                             config_file = plugin_folder / "config.toml"
                             if config_file.exists():
-                                stat = config_file.stat()
                                 plugin_name = plugin_folder.name
+                                
+                                # 只列出已成功注册的插件配置文件
+                                if plugin_name not in plugin_manager.loaded_plugins:
+                                    logger.debug(f"跳过未注册的插件配置: {plugin_name}")
+                                    continue
+                                
+                                stat = config_file.stat()
                                 display_name = get_plugin_display_name(plugin_name)
                                 
                                 configs.append(ConfigFileInfo(

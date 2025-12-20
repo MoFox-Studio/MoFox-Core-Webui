@@ -9,8 +9,9 @@ from pathlib import Path
 from typing import Optional
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -30,6 +31,22 @@ class ServerInfo(BaseModel):
     """主程序服务器信息"""
     host: str
     port: int
+
+
+class SPAStaticFiles(StaticFiles):
+    """
+    支持单页应用(SPA)的静态文件服务
+    对于不存在的路径，返回index.html而不是404，让前端路由处理
+    """
+    async def get_response(self, path: str, scope):
+        try:
+            return await super().get_response(path, scope)
+        except Exception:
+            # 如果文件不存在，返回index.html
+            # 但排除API路径
+            if path.startswith("api/"):
+                raise
+            return await super().get_response("index.html", scope)
 
 
 def create_discovery_app(main_host: str, main_port: int) -> FastAPI:
@@ -58,23 +75,7 @@ def create_discovery_app(main_host: str, main_port: int) -> FastAPI:
         allow_headers=["*"],
     )
     
-    # 检查是否存在编译好的前端静态文件
-    # 使用相对于当前文件的路径定位static目录
-    current_dir = Path(__file__).parent
-    static_dir = current_dir / "static"
-    
-    if static_dir.exists() and static_dir.is_dir():
-        # 检查是否有index.html文件
-        index_file = static_dir / "index.html"
-        if index_file.exists():
-            logger.info(f"发现编译好的前端文件，将托管静态文件: {static_dir}")
-            # 挂载静态文件目录
-            app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
-        else:
-            logger.info("静态目录存在但未找到index.html，不托管静态文件")
-    else:
-        logger.info(f"未找到编译好的前端文件(路径: {static_dir})，不托管静态文件")
-    
+    # 先定义API路由，确保它们不会被静态文件拦截
     @app.get("/api/health", summary="服务状态检查")
     def health_check():
         """检查服务是否运行"""
@@ -90,6 +91,24 @@ def create_discovery_app(main_host: str, main_port: int) -> FastAPI:
             host=main_host,
             port=main_port
         )
+    
+    # 最后挂载静态文件，避免拦截API路由
+    # 检查是否存在编译好的前端静态文件
+    # 使用相对于当前文件的路径定位static目录
+    current_dir = Path(__file__).parent
+    static_dir = current_dir / "static"
+    
+    if static_dir.exists() and static_dir.is_dir():
+        # 检查是否有index.html文件
+        index_file = static_dir / "index.html"
+        if index_file.exists():
+            logger.info(f"发现编译好的前端文件，将托管静态文件: {static_dir}")
+            # 挂载静态文件目录到根路径，使用SPA模式支持前端路由
+            app.mount("/", SPAStaticFiles(directory=str(static_dir), html=True), name="static")
+        else:
+            logger.info("静态目录存在但未找到index.html，不托管静态文件")
+    else:
+        logger.info(f"未找到编译好的前端文件(路径: {static_dir})，不托管静态文件")
     
     return app
 

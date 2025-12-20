@@ -412,12 +412,13 @@ function openObjectEditor() {
 .toggle-slider::after {
   content: '';
   position: absolute;
-  top: 3px;
+  top: 50%;
   left: 3px;
   width: 20px;
   height: 20px;
   background: white;
   border-radius: 50%;
+  transform: translateY(-50%);
   transition: transform var(--transition-fast);
   box-shadow: var(--shadow-sm);
 }
@@ -427,7 +428,7 @@ function openObjectEditor() {
 }
 
 .toggle-switch input:checked + .toggle-slider::after {
-  transform: translateX(22px);
+  transform: translate(22px, -50%);
 }
 
 .toggle-label {

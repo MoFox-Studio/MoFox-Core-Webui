@@ -290,8 +290,8 @@ class WebUIPluginRouter(BaseRouterComponent):
                     )
 
                 # 构建详情响应
-                config_path = f"{CONFIG_DIR}/plugins/{plugin_name}/config.toml"
-                config_file_exists = Path(config_path).exists()
+                config_path = Path(f"{CONFIG_DIR}/plugins/{plugin_name}/config.toml")
+                config_file_exists = config_path.exists()
 
                 plugin_enabled = plugin_instance.enable_plugin if plugin_instance else False
 

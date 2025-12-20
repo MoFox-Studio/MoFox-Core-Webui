@@ -111,7 +111,7 @@ const availableEngines: Engine[] = [
   {
     id: 'bing',
     name: 'Bing',
-    icon: 'simple-icons:bing',
+    icon: 'logos:bing',
     description: '微软必应搜索，无需 API 密钥',
     needsApiKey: false
   },
