@@ -41,12 +41,9 @@
         <div class="rule-fields">
           <div class="field-row">
             <label>聊天流ID</label>
-            <input 
-              type="text" 
-              class="input"
+            <ChatStreamIdInput
               :value="rule.chat_stream_id || ''"
-              @input="updateRule(index, 'chat_stream_id', ($event.target as HTMLInputElement).value)"
-              placeholder='留空为全局，格式: "platform:id:type"'
+              @update="(v: string) => updateRule(index, 'chat_stream_id', v)"
             />
           </div>
           
@@ -151,6 +148,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
+import ChatStreamIdInput from '../ChatStreamIdInput.vue'
 
 interface ReactionRule {
   chat_stream_id?: string

@@ -75,8 +75,25 @@
           <template v-for="field in getVisibleFields(group)" :key="field.key">
             <!-- 特殊编辑器 -->
             <div v-if="field.specialEditor" class="field-card special-editor-card">
+              <StringArrayEditor
+                v-if="field.specialEditor === 'string_array'"
+                :value="getFieldValue(field.key)"
+                :title="field.name"
+                :description="field.description"
+                :placeholder="field.placeholder"
+                :emptyText="'暂无' + field.name"
+                :addButtonText="'添加' + field.name"
+                @update="(v: unknown) => emit('update', field.key, v)"
+              />
+              <KeyValueEditor
+                v-else-if="field.specialEditor === 'key_value'"
+                :value="getFieldValue(field.key)"
+                :title="field.name"
+                :description="field.description"
+                @update="(v: unknown) => emit('update', field.key, v)"
+              />
               <MasterUsersEditor 
-                v-if="field.specialEditor === 'master_users'"
+                v-else-if="field.specialEditor === 'master_users'"
                 :value="getFieldValue(field.key)"
                 @update="(v: unknown) => emit('update', field.key, v)"
               />
@@ -338,6 +355,8 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import type { ConfigSection } from '@/api'
 import FieldEditor from './FieldEditor.vue'
+import StringArrayEditor from './StringArrayEditor.vue'
+import KeyValueEditor from './KeyValueEditor.vue'
 import MasterUsersEditor from './special/MasterUsersEditor.vue'
 import ExpressionRulesEditor from './special/ExpressionRulesEditor.vue'
 import ReactionRulesEditor from './special/ReactionRulesEditor.vue'
