@@ -124,19 +124,52 @@
                   />
                 </div>
                 <div class="form-group full-width">
-                  <label>API 密钥</label>
-                  <div class="input-with-action">
+                  <div class="label-row" style="display: flex; justify-content: space-between; align-items: center;">
+                    <label>API 密钥</label>
+                    <button 
+                      v-if="!Array.isArray(provider.api_key)" 
+                      class="btn-text-xs" 
+                      @click="updateProvider(index, 'api_key', [String(provider.api_key || '')])"
+                      style="font-size: 12px; color: var(--primary); background: none; border: none; cursor: pointer; padding: 0;"
+                      title="切换到列表模式以管理多个密钥"
+                    >
+                      <Icon icon="lucide:list" style="vertical-align: middle; margin-right: 2px;" />
+                      列表模式
+                    </button>
+                    <button 
+                      v-else 
+                      class="btn-text-xs" 
+                      @click="updateProvider(index, 'api_key', Array.isArray(provider.api_key) && provider.api_key.length > 0 ? provider.api_key[0] : '')"
+                      style="font-size: 12px; color: var(--text-tertiary); background: none; border: none; cursor: pointer; padding: 0;"
+                      title="切换回单行模式"
+                    >
+                      <Icon icon="lucide:minus" style="vertical-align: middle; margin-right: 2px;" />
+                      单行模式
+                    </button>
+                  </div>
+                  
+                  <div v-if="!Array.isArray(provider.api_key)" class="input-with-action">
                     <input 
                       :type="showApiKey[index] ? 'text' : 'password'" 
                       class="form-input" 
                       :value="formatApiKey(provider.api_key)"
                       @input="updateProvider(index, 'api_key', parseApiKey(($event.target as HTMLInputElement).value))"
-                      placeholder="sk-xxx 或多个密钥用逗号分隔"
+                      placeholder="sk-xxx (输入逗号将自动切换为列表模式)"
                     />
                     <button class="input-action" @click="toggleApiKeyVisibility(index)">
                       <Icon :icon="showApiKey[index] ? 'lucide:eye-off' : 'lucide:eye'" />
                     </button>
                   </div>
+                  
+                  <StringArrayEditor
+                    v-else
+                    :value="provider.api_key"
+                    @update="updateProvider(index, 'api_key', $event)"
+                    placeholder="输入 API 密钥"
+                    add-button-text="添加备用密钥"
+                    empty-text="请添加至少一个 API 密钥"
+                    :is-secret="true"
+                  />
                 </div>
                 <div class="form-group">
                   <label>最大重试</label>
@@ -810,6 +843,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { Icon } from '@iconify/vue'
+import StringArrayEditor from './StringArrayEditor.vue'
 import { providerPresets, modelTaskConfigs } from '@/config/configDescriptions'
 
 // API 提供商接口

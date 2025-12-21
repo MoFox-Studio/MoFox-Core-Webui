@@ -1,10 +1,20 @@
 <template>
   <div class="string-array-editor">
-    <div v-if="title || description" class="editor-header">
-      <h4 v-if="title">
-        <Icon icon="lucide:list" />
-        {{ title }}
-      </h4>
+    <div v-if="title || description || isSecret" class="editor-header">
+      <div class="header-top">
+        <h4 v-if="title">
+          <Icon icon="lucide:list" />
+          {{ title }}
+        </h4>
+        <button 
+          v-if="isSecret" 
+          class="icon-btn toggle-secret-btn" 
+          @click="showSecret = !showSecret" 
+          :title="showSecret ? '隐藏内容' : '显示内容'"
+        >
+          <Icon :icon="showSecret ? 'lucide:eye-off' : 'lucide:eye'" />
+        </button>
+      </div>
       <p v-if="description" class="editor-hint">{{ description }}</p>
     </div>
     
@@ -15,7 +25,7 @@
         class="array-item"
       >
         <input 
-          type="text" 
+          :type="isSecret && !showSecret ? 'password' : 'text'"
           class="input"
           :value="item"
           :placeholder="placeholder || `项 ${index + 1}`"
@@ -44,7 +54,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { Icon } from '@iconify/vue'
 
 const props = defineProps<{
@@ -54,11 +64,14 @@ const props = defineProps<{
   placeholder?: string
   emptyText?: string
   addButtonText?: string
+  isSecret?: boolean
 }>()
 
 const emit = defineEmits<{
   (e: 'update', value: string[]): void
 }>()
+
+const showSecret = ref(false)
 
 // 确保数据是字符串数组
 const items = computed(() => {
@@ -97,14 +110,40 @@ function updateItem(index: number, value: string) {
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
-}editor-header h4 {
+}
+
+.header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.editor-header h4 {
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
-  margin: 0 0 4px 0;
+  margin: 0;
+}
+
+.toggle-secret-btn {
+  padding: 4px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toggle-secret-btn:hover {
+  background: var(--bg-primary);
+  color: var(--primary);
 }
 
 .editor-header h4 svg {
