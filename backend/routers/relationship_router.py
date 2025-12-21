@@ -169,11 +169,23 @@ class RelationshipRouterComponent(BaseRouterComponent):
                     result = await session.execute(stmt)
                     persons_data = result.scalars().all()
                     logger.info(f"[get_person_list] 查询到 {len(persons_data)} 个用户")
+                    
+                    # 批量查询关系数据
+                    user_ids = [person.user_id for person in persons_data]
+                    stmt_rel = select(UserRelationships).where(UserRelationships.user_id.in_(user_ids))
+                    result_rel = await session.execute(stmt_rel)
+                    relationships = result_rel.scalars().all()
+                    
+                    # 构建 user_id -> relationship 的映射
+                    relationship_map = {rel.user_id: rel for rel in relationships}
+                    logger.debug(f"[get_person_list] 查询到 {len(relationships)} 条关系数据")
                 
                 # 构建响应
                 persons = []
                 for person in persons_data:
-                    relationship_score = 0.0
+                    # 从关系映射中获取关系分数
+                    user_rel = relationship_map.get(person.user_id)
+                    relationship_score = user_rel.relationship_score if user_rel else 0.0
                     relationship_text = person.relation_value if hasattr(person, 'relation_value') else None
                     
                     persons.append(PersonCardResponse(
