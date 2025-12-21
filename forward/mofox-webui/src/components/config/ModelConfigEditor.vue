@@ -29,6 +29,7 @@
           </button>
         </div>
         <button 
+          v-if="activeTab !== 'tasks'"
           class="add-btn" 
           @click="activeTab === 'providers' ? showAddProviderModal = true : showAddModelModal = true"
           :title="activeTab === 'providers' ? '添加提供商' : '添加模型'"
@@ -94,14 +95,23 @@
                 </div>
                 <div class="form-group">
                   <label>客户端类型</label>
-                  <select 
-                    class="form-input"
-                    :value="provider.client_type || 'openai'"
-                    @change="updateProvider(index, 'client_type', ($event.target as HTMLSelectElement).value)"
-                  >
-                    <option value="openai">OpenAI 兼容</option>
-                    <option value="aiohttp_gemini">Gemini（Google）</option>
-                  </select>
+                  <div class="custom-select" :class="{ open: activeDropdown === `provider-client-${index}` }">
+                    <div class="select-trigger" @click.stop="toggleDropdown(`provider-client-${index}`)">
+                      <span>{{ getClientTypeLabel(provider.client_type) }}</span>
+                      <Icon icon="lucide:chevron-down" class="chevron" :class="{ rotated: activeDropdown === `provider-client-${index}` }" />
+                    </div>
+                    <Transition name="dropdown-fade">
+                      <div v-if="activeDropdown === `provider-client-${index}`" class="select-options">
+                        <div class="select-option" @click="updateProvider(index, 'client_type', 'openai'); activeDropdown = null">
+                          <span>OpenAI 兼容</span>
+                        </div>
+                        <div class="select-option" @click="updateProvider(index, 'client_type', 'aiohttp_gemini'); activeDropdown = null">
+                          <span>Gemini（Google）</span>
+                        </div>
+                      </div>
+                    </Transition>
+                    <div v-if="activeDropdown === `provider-client-${index}`" class="dropdown-overlay" @click.stop="activeDropdown = null"></div>
+                  </div>
                 </div>
                 <div class="form-group full-width">
                   <label>API 地址</label>
@@ -234,14 +244,28 @@
                 </div>
                 <div class="form-group">
                   <label>API 提供商</label>
-                  <select 
-                    class="form-input"
-                    :value="model.api_provider"
-                    @change="updateModel(index, 'api_provider', ($event.target as HTMLSelectElement).value)"
-                  >
-                    <option value="">请选择</option>
-                    <option v-for="p in apiProviders" :key="p.name" :value="p.name">{{ p.name }}</option>
-                  </select>
+                  <div class="custom-select" :class="{ open: activeDropdown === `model-provider-${index}` }">
+                    <div class="select-trigger" @click.stop="toggleDropdown(`model-provider-${index}`)">
+                      <span>{{ model.api_provider || '请选择' }}</span>
+                      <Icon icon="lucide:chevron-down" class="chevron" :class="{ rotated: activeDropdown === `model-provider-${index}` }" />
+                    </div>
+                    <Transition name="dropdown-fade">
+                      <div v-if="activeDropdown === `model-provider-${index}`" class="select-options">
+                        <div class="select-option" @click="updateModel(index, 'api_provider', ''); activeDropdown = null">
+                          <span>请选择</span>
+                        </div>
+                        <div 
+                          v-for="p in apiProviders" 
+                          :key="p.name" 
+                          class="select-option"
+                          @click="updateModel(index, 'api_provider', p.name); activeDropdown = null"
+                        >
+                          <span>{{ p.name }}</span>
+                        </div>
+                      </div>
+                    </Transition>
+                    <div v-if="activeDropdown === `model-provider-${index}`" class="dropdown-overlay" @click.stop="activeDropdown = null"></div>
+                  </div>
                 </div>
                 <div class="form-group half">
                   <label>输入价格(元/M)</label>
@@ -350,15 +374,26 @@
                       <div v-if="model.enable_prompt_perturbation" class="perturbation-options">
                         <div class="form-group">
                           <label>扰动强度</label>
-                          <select 
-                            class="form-input"
-                            :value="model.perturbation_strength || 'light'"
-                            @change="updateModel(index, 'perturbation_strength', ($event.target as HTMLSelectElement).value)"
-                          >
-                            <option value="light">轻度</option>
-                            <option value="medium">中度</option>
-                            <option value="heavy">重度</option>
-                          </select>
+                          <div class="custom-select" :class="{ open: activeDropdown === `model-perturbation-${index}` }">
+                            <div class="select-trigger" @click.stop="toggleDropdown(`model-perturbation-${index}`)">
+                              <span>{{ {'light': '轻度', 'medium': '中度', 'heavy': '重度'}[model.perturbation_strength as string] || '轻度' }}</span>
+                              <Icon icon="lucide:chevron-down" class="chevron" :class="{ rotated: activeDropdown === `model-perturbation-${index}` }" />
+                            </div>
+                            <Transition name="dropdown-fade">
+                              <div v-if="activeDropdown === `model-perturbation-${index}`" class="select-options">
+                                <div class="select-option" @click="updateModel(index, 'perturbation_strength', 'light'); activeDropdown = null">
+                                  <span>轻度</span>
+                                </div>
+                                <div class="select-option" @click="updateModel(index, 'perturbation_strength', 'medium'); activeDropdown = null">
+                                  <span>中度</span>
+                                </div>
+                                <div class="select-option" @click="updateModel(index, 'perturbation_strength', 'heavy'); activeDropdown = null">
+                                  <span>重度</span>
+                                </div>
+                              </div>
+                            </Transition>
+                            <div v-if="activeDropdown === `model-perturbation-${index}`" class="dropdown-overlay" @click.stop="activeDropdown = null"></div>
+                          </div>
                         </div>
                         <div class="toggle-item compact">
                           <div class="toggle-info">
@@ -410,15 +445,38 @@
           <div class="task-controls">
             <div class="control-row">
               <div class="control-group model-select">
-                <label>模型</label>
-                <select 
-                  class="form-input"
-                  :value="getTaskModel(taskKey)"
-                  @change="updateTaskModel(taskKey, ($event.target as HTMLSelectElement).value)"
-                >
-                  <option value="">未配置</option>
-                  <option v-for="m in models" :key="m.name" :value="m.name">{{ m.name }}</option>
-                </select>
+                <label>模型 (可多选)</label>
+                <div class="custom-select" :class="{ open: openTaskModelDropdown === taskKey }">
+                  <div class="select-trigger" @click="toggleTaskModelDropdown(taskKey)">
+                    <span v-if="getTaskModel(taskKey).length === 0" class="placeholder">未配置</span>
+                    <div v-else class="selected-tags">
+                      <span 
+                        v-for="model in getTaskModel(taskKey)" 
+                        :key="model" 
+                        class="selected-tag"
+                      >
+                        {{ model }}
+                      </span>
+                    </div>
+                    <Icon icon="lucide:chevron-down" class="chevron" :class="{ rotated: openTaskModelDropdown === taskKey }" />
+                  </div>
+                  <Transition name="dropdown-fade">
+                    <div v-if="openTaskModelDropdown === taskKey" class="select-options">
+                      <div 
+                        v-for="m in models" 
+                        :key="m.name" 
+                        class="select-option"
+                        @click.stop="toggleTaskModelSelection(taskKey, m.name!)"
+                      >
+                        <div class="checkbox" :class="{ checked: getTaskModel(taskKey).includes(m.name!) }">
+                          <Icon icon="lucide:check" v-if="getTaskModel(taskKey).includes(m.name!)" />
+                        </div>
+                        <span>{{ m.name }}</span>
+                      </div>
+                    </div>
+                  </Transition>
+                </div>
+                <div v-if="openTaskModelDropdown === taskKey" class="dropdown-overlay" @click="openTaskModelDropdown = null"></div>
               </div>
               <div class="control-group small">
                 <label>温度</label>
@@ -509,10 +567,23 @@
             </div>
             <div class="config-field">
               <label>客户端类型</label>
-              <select v-model="newProvider.client_type" class="input">
-                <option value="openai">OpenAI 兼容</option>
-                <option value="aiohttp_gemini">Gemini（Google）</option>
-              </select>
+              <div class="custom-select" :class="{ open: activeDropdown === 'new-provider-client' }">
+                <div class="select-trigger" @click.stop="toggleDropdown('new-provider-client')">
+                  <span>{{ getClientTypeLabel(newProvider.client_type) }}</span>
+                  <Icon icon="lucide:chevron-down" class="chevron" :class="{ rotated: activeDropdown === 'new-provider-client' }" />
+                </div>
+                <Transition name="dropdown-fade">
+                  <div v-if="activeDropdown === 'new-provider-client'" class="select-options">
+                    <div class="select-option" @click="newProvider.client_type = 'openai'; activeDropdown = null">
+                      <span>OpenAI 兼容</span>
+                    </div>
+                    <div class="select-option" @click="newProvider.client_type = 'aiohttp_gemini'; activeDropdown = null">
+                      <span>Gemini（Google）</span>
+                    </div>
+                  </div>
+                </Transition>
+                <div v-if="activeDropdown === 'new-provider-client'" class="dropdown-overlay" @click.stop="activeDropdown = null"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -563,12 +634,28 @@
           </div>
           <div class="config-field">
             <label>API 提供商</label>
-            <select v-model="newModel.api_provider" class="input" @change="fetchAvailableModels">
-              <option value="">请选择提供商</option>
-              <option v-for="provider in apiProviders" :key="provider.name" :value="provider.name">
-                {{ provider.name }}
-              </option>
-            </select>
+            <div class="custom-select" :class="{ open: activeDropdown === 'new-model-provider' }">
+              <div class="select-trigger" @click.stop="toggleDropdown('new-model-provider')">
+                <span>{{ newModel.api_provider || '请选择提供商' }}</span>
+                <Icon icon="lucide:chevron-down" class="chevron" :class="{ rotated: activeDropdown === 'new-model-provider' }" />
+              </div>
+              <Transition name="dropdown-fade">
+                <div v-if="activeDropdown === 'new-model-provider'" class="select-options">
+                  <div class="select-option" @click="newModel.api_provider = ''; fetchAvailableModels(); activeDropdown = null">
+                    <span>请选择提供商</span>
+                  </div>
+                  <div 
+                    v-for="provider in apiProviders" 
+                    :key="provider.name" 
+                    class="select-option"
+                    @click="newModel.api_provider = provider.name || ''; fetchAvailableModels(); activeDropdown = null"
+                  >
+                    <span>{{ provider.name }}</span>
+                  </div>
+                </div>
+              </Transition>
+              <div v-if="activeDropdown === 'new-model-provider'" class="dropdown-overlay" @click.stop="activeDropdown = null"></div>
+            </div>
           </div>
           
           <!-- 模型列表区域 -->
@@ -819,6 +906,15 @@ const showModelAdvanced = ref<Record<number, boolean>>({})
 const showAddProviderModal = ref(false)
 const showAddModelModal = ref(false)
 const showAddModelAdvanced = ref(false)
+const activeDropdown = ref<string | null>(null)
+
+function toggleDropdown(id: string) {
+  if (activeDropdown.value === id) {
+    activeDropdown.value = null
+  } else {
+    activeDropdown.value = id
+  }
+}
 
 // 新提供商表单
 const newProvider = ref({
@@ -843,6 +939,9 @@ const newModel = ref({
 
 // 计算 API 提供商列表
 const apiProviders = computed(() => {
+  if (props.editedValues && 'api_providers' in props.editedValues) {
+    return props.editedValues['api_providers'] as ApiProvider[]
+  }
   const data = props.parsedData
   if (Array.isArray(data.api_providers)) {
     return data.api_providers as ApiProvider[]
@@ -852,6 +951,9 @@ const apiProviders = computed(() => {
 
 // 计算模型列表
 const models = computed(() => {
+  if (props.editedValues && 'models' in props.editedValues) {
+    return props.editedValues['models'] as Model[]
+  }
   const data = props.parsedData
   if (Array.isArray(data.models)) {
     return data.models as Model[]
@@ -942,11 +1044,17 @@ function parseApiKey(value: string): string | string[] {
 }
 
 function updateProvider(index: number, key: string, value: unknown) {
-  emit('update', `api_providers.${index}.${key}`, value)
+  const updatedProvider = { ...apiProviders.value[index], [key]: value }
+  const newProviders = [...apiProviders.value]
+  newProviders[index] = updatedProvider
+  emit('update', 'api_providers', newProviders)
 }
 
 function updateModel(index: number, key: string, value: unknown) {
-  emit('update', `models.${index}.${key}`, value)
+  const updatedModel = { ...models.value[index], [key]: value }
+  const newModels = [...models.value]
+  newModels[index] = updatedModel
+  emit('update', 'models', newModels)
 }
 
 function selectPreset(preset: typeof providerPresets[0]) {
@@ -1060,21 +1168,54 @@ function removeModel(index: number) {
 }
 
 // 任务模型配置
-function getTaskModel(taskKey: string): string {
+function getTaskModel(taskKey: string): string[] {
+  const key = `model_task_config.${taskKey}.model_list`
+  if (props.editedValues && key in props.editedValues) {
+    return props.editedValues[key] as string[]
+  }
+
   const data = props.parsedData
   const taskConfig = data.model_task_config as Record<string, Record<string, unknown>> | undefined
-  if (!taskConfig || !taskConfig[taskKey]) return ''
+  if (!taskConfig || !taskConfig[taskKey]) return []
   
   const modelList = taskConfig[taskKey].model_list as string[] | undefined
-  return modelList?.[0] || ''
+  return modelList || []
 }
 
-function updateTaskModel(taskKey: string, modelName: string) {
-  emit('update', `model_task_config.${taskKey}.model_list`, modelName ? [modelName] : [])
+function updateTaskModel(taskKey: string, modelNames: string[]) {
+  emit('update', `model_task_config.${taskKey}.model_list`, modelNames)
+}
+
+// 任务模型下拉框状态
+const openTaskModelDropdown = ref<string | null>(null)
+
+function toggleTaskModelDropdown(taskKey: string) {
+  if (openTaskModelDropdown.value === taskKey) {
+    openTaskModelDropdown.value = null
+  } else {
+    openTaskModelDropdown.value = taskKey
+  }
+}
+
+function toggleTaskModelSelection(taskKey: string, modelName: string) {
+  const currentModels = getTaskModel(taskKey)
+  const index = currentModels.indexOf(modelName)
+  let newModels: string[]
+  if (index >= 0) {
+    newModels = currentModels.filter(m => m !== modelName)
+  } else {
+    newModels = [...currentModels, modelName]
+  }
+  updateTaskModel(taskKey, newModels)
 }
 
 // 获取任务温度
 function getTaskTemperature(taskKey: string): number | undefined {
+  const key = `model_task_config.${taskKey}.temperature`
+  if (props.editedValues && key in props.editedValues) {
+    return props.editedValues[key] as number | undefined
+  }
+
   const data = props.parsedData
   const taskConfig = data.model_task_config as Record<string, Record<string, unknown>> | undefined
   if (!taskConfig || !taskConfig[taskKey]) return undefined
@@ -1089,6 +1230,11 @@ function updateTaskTemperature(taskKey: string, temp: number) {
 
 // 获取任务最大token
 function getTaskMaxTokens(taskKey: string): number | undefined {
+  const key = `model_task_config.${taskKey}.max_tokens`
+  if (props.editedValues && key in props.editedValues) {
+    return props.editedValues[key] as number | undefined
+  }
+
   const data = props.parsedData
   const taskConfig = data.model_task_config as Record<string, Record<string, unknown>> | undefined
   if (!taskConfig || !taskConfig[taskKey]) return undefined
@@ -1103,6 +1249,11 @@ function updateTaskMaxTokens(taskKey: string, tokens: number) {
 
 // 获取任务并发数
 function getTaskConcurrency(taskKey: string): number {
+  const key = `model_task_config.${taskKey}.concurrency_count`
+  if (props.editedValues && key in props.editedValues) {
+    return (props.editedValues[key] as number | undefined) ?? 1
+  }
+
   const data = props.parsedData
   const taskConfig = data.model_task_config as Record<string, Record<string, unknown>> | undefined
   if (!taskConfig || !taskConfig[taskKey]) return 1
@@ -1332,7 +1483,6 @@ watch(() => props.parsedData, () => {
   height: 100%;
   background: var(--bg-primary);
   border-radius: var(--radius-lg);
-  overflow: hidden;
 }
 
 /* 导航头部 */
@@ -1354,10 +1504,10 @@ watch(() => props.parsedData, () => {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 14px;
+  padding: 8px 16px;
   background: transparent;
   border: none;
-  border-radius: var(--radius);
+  border-radius: 20px;
   color: var(--text-secondary);
   font-size: 13px;
   font-weight: 500;
@@ -1397,11 +1547,12 @@ watch(() => props.parsedData, () => {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 12px;
+  padding: 6px 16px;
   background: var(--bg-primary);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius);
+  border-radius: 20px;
   color: var(--text-tertiary);
+  transition: all 0.2s;
 }
 
 .search-box:focus-within {
@@ -1439,10 +1590,10 @@ watch(() => props.parsedData, () => {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 14px;
+  padding: 8px 16px;
   background: var(--primary);
   border: none;
-  border-radius: var(--radius);
+  border-radius: 20px;
   color: white;
   font-size: 13px;
   font-weight: 500;
@@ -1510,14 +1661,25 @@ watch(() => props.parsedData, () => {
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
-  overflow: hidden;
-  transition: all 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.provider-item:hover,
+.model-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.1);
+  border-color: var(--primary);
+  background: linear-gradient(to bottom right, var(--bg-secondary), var(--bg-primary));
+  z-index: 10;
 }
 
 .provider-item.active,
 .model-item.active {
   border-color: var(--primary);
   box-shadow: 0 0 0 2px var(--primary-bg);
+  transform: translateY(-2px);
+  z-index: 10;
 }
 
 .provider-row,
@@ -1525,7 +1687,7 @@ watch(() => props.parsedData, () => {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 14px;
+  padding: 16px 18px;
   cursor: pointer;
   transition: background 0.15s ease;
 }
@@ -1579,16 +1741,19 @@ watch(() => props.parsedData, () => {
 }
 
 .meta-tag {
-  padding: 2px 8px;
+  padding: 2px 10px;
   background: var(--bg-primary);
-  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
   font-size: 11px;
   color: var(--text-tertiary);
+  font-weight: 500;
 }
 
 .meta-tag.provider {
   color: var(--primary);
   background: var(--primary-bg);
+  border-color: var(--primary);
 }
 
 .meta-tag.price {
@@ -1615,7 +1780,7 @@ watch(() => props.parsedData, () => {
   height: 32px;
   background: transparent;
   border: none;
-  border-radius: var(--radius);
+  border-radius: 50%;
   color: var(--text-tertiary);
   cursor: pointer;
   transition: all 0.15s ease;
@@ -1633,9 +1798,9 @@ watch(() => props.parsedData, () => {
 /* 详情面板 */
 .provider-detail,
 .model-detail {
-  padding: 16px;
+  padding: 20px;
   background: var(--bg-primary);
-  border-top: 1px solid var(--border-color);
+  border-top: 1px dashed var(--border-color);
 }
 
 .detail-grid {
@@ -1666,18 +1831,19 @@ watch(() => props.parsedData, () => {
 
 .form-input {
   width: 100%;
-  padding: 8px 12px;
+  padding: 10px 12px;
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
   color: var(--text-primary);
   font-size: 13px;
   outline: none;
-  transition: all 0.15s ease;
+  transition: all 0.2s;
 }
 
 .form-input:focus {
   border-color: var(--primary);
+  background: var(--bg-primary);
   box-shadow: 0 0 0 2px var(--primary-bg);
 }
 
@@ -1730,14 +1896,13 @@ select.form-input {
   margin-top: 16px;
   background: var(--bg-secondary);
   border-radius: var(--radius);
-  overflow: hidden;
 }
 
 .advanced-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 14px;
+  padding: 12px 16px;
   cursor: pointer;
   font-size: 13px;
   font-weight: 500;
@@ -1750,8 +1915,8 @@ select.form-input {
 }
 
 .advanced-content {
-  padding: 14px;
-  border-top: 1px solid var(--border-color);
+  padding: 16px;
+  border-top: 1px dashed var(--border-color);
 }
 
 .toggle-group {
@@ -1764,16 +1929,18 @@ select.form-input {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 12px;
+  padding: 12px 16px;
   background: var(--bg-primary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
 }
 
 .toggle-item:hover {
   border-color: var(--primary);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .toggle-item.compact {
@@ -1898,28 +2065,29 @@ select.form-input {
 .category-btn {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius);
+  gap: 8px;
+  padding: 8px 16px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 20px;
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
 }
 
 .category-btn:hover {
-  border-color: var(--primary);
-  color: var(--primary);
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .category-btn.active {
   background: var(--primary);
   border-color: var(--primary);
   color: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .task-list {
@@ -1929,14 +2097,27 @@ select.form-input {
 }
 
 .task-item {
-  padding: 14px;
+  padding: 18px;
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.task-item:hover,
+.task-item:has(.custom-select.open) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.1);
+  border-color: var(--primary);
+  background: linear-gradient(to bottom right, var(--bg-secondary), var(--bg-primary));
+  z-index: 10;
 }
 
 .task-header {
-  margin-bottom: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--border-color);
 }
 
 .task-name {
@@ -1984,13 +2165,25 @@ select.form-input {
 }
 
 .control-group label {
-  font-size: 11px;
-  color: var(--text-tertiary);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 2px;
 }
 
 .control-group .form-input {
-  padding: 6px 10px;
-  font-size: 12px;
+  padding: 8px 10px;
+  font-size: 13px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  transition: all 0.2s;
+}
+
+.control-group .form-input:focus {
+  border-color: var(--primary);
+  background: var(--bg-secondary);
+  box-shadow: 0 0 0 2px var(--primary-bg);
 }
 
 /* 模型测试区域 */
@@ -2175,7 +2368,6 @@ select.form-input {
   width: 90%;
   max-width: 480px;
   max-height: 85vh;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
   animation: modalIn 0.2s ease;
@@ -2338,7 +2530,6 @@ select.form-input {
 .advanced-params-section {
   background: var(--bg-secondary);
   border-radius: var(--radius);
-  overflow: hidden;
 }
 
 .slider-with-input {
@@ -2685,5 +2876,154 @@ select.input {
   color: var(--primary);
   font-size: 16px;
   flex-shrink: 0;
+}
+
+/* 自定义多选下拉框 */
+.custom-select {
+  position: relative;
+  width: 100%;
+}
+
+.select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9.5px 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 13px;
+  min-height: 38px;
+  transition: all 0.2s;
+}
+
+.select-trigger:hover {
+  border-color: var(--text-tertiary);
+  background: var(--bg-hover);
+}
+
+.custom-select.open .select-trigger {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-bg);
+  background: var(--bg-primary);
+}
+
+.selected-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  flex: 1;
+  margin-right: 8px;
+  overflow: hidden;
+}
+
+.selected-tag {
+  background: var(--primary-bg);
+  border: 1px solid var(--primary);
+  color: var(--primary);
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.placeholder {
+  color: var(--text-tertiary);
+}
+
+.chevron {
+  color: var(--text-tertiary);
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.chevron.rotated {
+  transform: rotate(180deg);
+}
+
+.select-options {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  z-index: 100;
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+/* 下拉框动画 */
+.dropdown-fade-enter-active,
+.dropdown-fade-leave-active {
+  transition: all 0.2s ease;
+}
+
+.dropdown-fade-enter-from,
+.dropdown-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-5px);
+}
+
+.select-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.select-option:hover {
+  background: var(--bg-hover);
+}
+
+.checkbox {
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--border-input);
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-input);
+}
+
+.checkbox.checked {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+}
+
+.checkbox svg {
+  width: 10px;
+  height: 10px;
+}
+
+.dropdown-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 99;
+  cursor: default;
 }
 </style>

@@ -825,7 +825,7 @@ function getSectionIcon(sectionName: string): string {
   font-size: 13px;
   color: var(--md-sys-color-on-surface-variant);
   margin: 0 0 4px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Roboto Mono', monospace;
   display: flex;
   align-items: center;
   gap: 6px;
