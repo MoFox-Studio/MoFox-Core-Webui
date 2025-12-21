@@ -20,9 +20,27 @@ import Sidebar from '@/components/Sidebar.vue'
 <style scoped>
 .dashboard-wrapper {
   height: 100vh;
-  background-color: var(--md-sys-color-background);
+  background-color: transparent;
   display: flex;
   overflow: hidden;
+  position: relative;
+  z-index: 0;
+}
+
+.dashboard-wrapper::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: var(--app-wallpaper);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: blur(20px);
+  opacity: 0.5;
+  z-index: -1;
 }
 
 .main-layout {
@@ -31,7 +49,23 @@ import Sidebar from '@/components/Sidebar.vue'
   flex-direction: column;
   overflow: hidden;
   min-width: 0;
-  background-color: var(--md-sys-color-background);
+  background-color: transparent;
+}
+
+.main-layout::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: var(--app-wallpaper);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: blur(20px);
+  opacity: 0.5;
+  z-index: -1;
 }
 
 .dashboard-content {

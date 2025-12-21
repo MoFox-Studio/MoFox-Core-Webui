@@ -36,33 +36,7 @@ body {
   display: flex;
   min-width: 320px;
   min-height: 100vh;
-  background-color: var(--md-sys-color-background);
   color: var(--md-sys-color-on-background);
-  
-  /* Wallpaper support */
-  background-image: var(--app-wallpaper);
-  background-size: cover;
-  background-position: center;
-  background-attachment: fixed;
-  transition: background-color 0.3s ease;
-}
-
-.has-wallpaper body {
-  background-color: transparent; /* Allow wallpaper to show */
-}
-
-/* Add an overlay for better readability when wallpaper is active */
-.has-wallpaper #app::before {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: var(--md-sys-color-background);
-  opacity: 0.85; /* Adjust opacity as needed */
-  z-index: -1;
-  pointer-events: none;
 }
 
 
