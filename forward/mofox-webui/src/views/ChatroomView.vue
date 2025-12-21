@@ -799,7 +799,6 @@ async function createUser() {
         attitude: null,
         memory_points: []
       }
-      newUserMemoryPointsStr.value = ''
       await loadUsers()
     } else {
       showToast(response.error || '创建用户失败', 'error')
