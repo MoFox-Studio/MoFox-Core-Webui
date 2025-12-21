@@ -3,9 +3,9 @@
 提供配置文件的读取、修改、备份等API接口
 """
 
-import os
 import re
 import shutil
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
@@ -17,7 +17,9 @@ from pydantic import BaseModel
 
 from src.common.logger import get_logger
 from src.common.security import VerifiedDep
-from src.config.config import CONFIG_DIR
+from src.config.config import CONFIG_DIR, model_config
+from src.llm_models.model_client.base_client import client_registry
+from src.llm_models.payload_content.message import MessageBuilder, RoleType
 from src.plugin_system import BaseRouterComponent
 from src.plugin_system.core.plugin_manager import plugin_manager
 
@@ -832,23 +834,27 @@ class WebUIConfigRouter(BaseRouterComponent):
             测试指定模型的连通性
             
             Args:
-                request: 包含模型名称的测求
+                request: 包含模型名称的请求
             
             返回：
             - 连接状态
             - 响应时间
             - 测试响应内容
             """
-            import time
-            from src.plugin_system.apis import llm_api
-            
             try:
-                # 获取可用的模型配置
-                models = llm_api.get_available_models()
-                logger.info(models)
-                model_config = models.get(request.model_name)
+                # 检查 model_config 是否已加载
+                if model_config is None:
+                    return ModelTestResponse(
+                        success=False,
+                        model_name=request.model_name,
+                        connected=False,
+                        error="模型配置未加载"
+                    )
                 
-                if not model_config:
+                # 获取模型信息
+                try:
+                    model_info = model_config.get_model_info(request.model_name)
+                except Exception:
                     return ModelTestResponse(
                         success=True,
                         model_name=request.model_name,
@@ -856,41 +862,75 @@ class WebUIConfigRouter(BaseRouterComponent):
                         error=f"未找到模型配置: {request.model_name}"
                     )
                 
-                # 简单的测试提示词
-                test_prompt = """你好，这是一条测试消息，请简单回复"好的"即可。"""
+                # 获取 API 提供商配置
+                try:
+                    api_provider = model_config.get_provider(model_info.api_provider)
+                except Exception:
+                    return ModelTestResponse(
+                        success=True,
+                        model_name=request.model_name,
+                        connected=False,
+                        error=f"未找到 API 提供商配置: {model_info.api_provider}"
+                    )
+                
+                # 获取客户端实例
+                try:
+                    client = client_registry.get_client_class_instance(api_provider)
+                except Exception as e:
+                    return ModelTestResponse(
+                        success=True,
+                        model_name=request.model_name,
+                        connected=False,
+                        error=f"无法创建客户端实例: {str(e)}"
+                    )
+                
+                # 构建测试消息
+                test_prompt = "你好，这是一条测试消息，请简单回复'好的'即可。"
+                message = MessageBuilder().set_role(RoleType.User).add_text_content(test_prompt).build()
                 
                 # 记录开始时间
                 start_time = time.time()
                 
-                # 使用 llm_api 发送测试请求
-                success, response, _, actual_model = await llm_api.generate_with_model(
-                    prompt=test_prompt,
-                    model_config=model_config,
-                    request_type="webui.model_test",
-                    temperature=0.7,
-                    max_tokens=50
-                )
-                
-                # 计算响应时间
-                response_time = time.time() - start_time
-                
-                if success and response:
-                    logger.info(f"模型 {request.model_name} 测试成功，响应时间: {response_time:.2f}秒")
-                    return ModelTestResponse(
-                        success=True,
-                        model_name=request.model_name,
-                        connected=True,
-                        response_time=round(response_time, 2),
-                        response_text=response[:200]  # 限制响应长度
+                # 发送测试请求
+                try:
+                    response = await client.get_response(
+                        model_info=model_info,
+                        message_list=[message],
+                        temperature=0.7,
+                        max_tokens=50
                     )
-                else:
-                    logger.warning(f"模型 {request.model_name} 测试失败: {response}")
+                    
+                    # 计算响应时间
+                    response_time = time.time() - start_time
+                    
+                    if response and response.content:
+                        logger.info(f"模型 {request.model_name} 测试成功，响应时间: {response_time:.2f}秒")
+                        return ModelTestResponse(
+                            success=True,
+                            model_name=request.model_name,
+                            connected=True,
+                            response_time=round(response_time, 2),
+                            response_text=response.content[:200]  # 限制响应长度
+                        )
+                    else:
+                        logger.warning(f"模型 {request.model_name} 返回空响应")
+                        return ModelTestResponse(
+                            success=True,
+                            model_name=request.model_name,
+                            connected=False,
+                            response_time=round(response_time, 2),
+                            error="模型返回空响应"
+                        )
+                        
+                except Exception as e:
+                    response_time = time.time() - start_time
+                    logger.error(f"模型 {request.model_name} 请求失败: {e}")
                     return ModelTestResponse(
                         success=True,
                         model_name=request.model_name,
                         connected=False,
                         response_time=round(response_time, 2),
-                        error=f"模型调用失败: {response}"
+                        error=f"请求失败: {str(e)}"
                     )
                     
             except Exception as e:
