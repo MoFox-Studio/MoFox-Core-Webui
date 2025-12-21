@@ -544,7 +544,15 @@
               模型标识符
               <span class="field-hint">API 服务商提供的模型标识符</span>
             </label>
-            <input v-model="newModel.model_identifier" type="text" class="input" placeholder="例如: deepseek-chat, gpt-4" />
+            <div style="display: flex; gap: 8px;">
+              <input 
+                v-model="newModel.model_identifier" 
+                type="text" 
+                class="input" 
+                placeholder="例如: deepseek-chat, gpt-4"
+                style="flex: 1;"
+              />
+            </div>
           </div>
           <div class="config-field">
             <label>
@@ -555,12 +563,53 @@
           </div>
           <div class="config-field">
             <label>API 提供商</label>
-            <select v-model="newModel.api_provider" class="input">
+            <select v-model="newModel.api_provider" class="input" @change="fetchAvailableModels">
               <option value="">请选择提供商</option>
               <option v-for="provider in apiProviders" :key="provider.name" :value="provider.name">
                 {{ provider.name }}
               </option>
             </select>
+          </div>
+          
+          <!-- 模型列表区域 -->
+          <div v-if="newModel.api_provider && (fetchingModels || availableModels.length > 0 || fetchModelsError)" 
+               class="models-section">
+            <div v-if="fetchingModels" class="loading-models">
+              <Icon icon="lucide:loader-2" class="spinning" />
+              <span>正在获取可用模型...</span>
+            </div>
+            <div v-else-if="fetchModelsError" class="fetch-error">
+              <Icon icon="lucide:alert-circle" />
+              <span>{{ fetchModelsError }}</span>
+              <button class="btn-retry" @click="fetchAvailableModels">
+                <Icon icon="lucide:refresh-cw" />
+                重试
+              </button>
+            </div>
+            <div v-else-if="availableModels.length > 0" class="available-models">
+              <div class="models-header">
+                <span>可用模型 ({{ availableModels.length }})</span>
+                <button class="btn-refresh" @click="fetchAvailableModels" title="刷新列表">
+                  <Icon icon="lucide:refresh-cw" />
+                </button>
+              </div>
+              <div class="models-list">
+                <button
+                  v-for="model in availableModels"
+                  :key="model.id"
+                  class="model-option"
+                  :class="{ active: newModel.model_identifier === model.id }"
+                  @click="newModel.model_identifier = model.id; newModel.name = model.name"
+                >
+                  <Icon icon="lucide:bot" />
+                  <div class="model-info">
+                    <span class="model-id">{{ model.id }}</span>
+                    <span v-if="model.name !== model.id" class="model-name">{{ model.name }}</span>
+                  </div>
+                  <Icon v-if="newModel.model_identifier === model.id" icon="lucide:check" class="check-icon" />
+                </button>
+              </div>
+            </div>
           </div>
           <div class="config-field-row">
             <div class="config-field">
@@ -981,6 +1030,8 @@ function confirmAddModel() {
   
   showAddModelModal.value = false
   showAddModelAdvanced.value = false
+  availableModels.value = []
+  fetchModelsError.value = null
   newModel.value = { 
     model_identifier: '', 
     name: '', 
@@ -1076,6 +1127,11 @@ const modelTestResults = ref<Record<string, {
   error?: string
 }>>({})
 
+// 获取模型列表相关
+const fetchingModels = ref(false)
+const availableModels = ref<Array<{ id: string; name: string }>>([])
+const fetchModelsError = ref<string | null>(null)
+
 // 测试模型连通性
 async function testModelConnection(modelName: string) {
   console.log('🧪 测试模型连通性:', modelName)
@@ -1135,6 +1191,106 @@ function getTestButtonText(modelName: string): string {
   if (testingModels.value[modelName]) return '测试中'
   if (modelTestResults.value[modelName]) return '重新测试'
   return '测试连接'
+}
+
+// 获取可用模型列表
+async function fetchAvailableModels() {
+  
+  // 检查是否在添加模型弹窗中选择了提供商
+  let targetProviderName: string | null = null
+  
+  if (showAddModelModal.value && newModel.value.api_provider) {
+    // 在添加模型弹窗中，使用 newModel.api_provider
+    targetProviderName = newModel.value.api_provider
+  } else if (selectedProvider.value !== null) {
+    // 在提供商列表中，使用 selectedProvider.value
+    const provider = apiProviders.value[selectedProvider.value]
+    targetProviderName = provider?.name || null
+  }
+  
+  if (!targetProviderName) {
+    const errorMsg = '请先选择一个提供商'
+    console.error('❌', errorMsg)
+    fetchModelsError.value = errorMsg
+    return
+  }
+  
+  // 查找提供商配置
+  const provider = apiProviders.value.find(p => p.name === targetProviderName)
+  
+  if (!provider || !provider.name || !provider.base_url) {
+    const errorMsg = '提供商配置不完整（需要名称和地址）'
+    fetchModelsError.value = errorMsg
+    return
+  }
+  
+  // 获取API密钥
+  let apiKey = ''
+  if (Array.isArray(provider.api_key)) {
+    apiKey = provider.api_key[0] || ''
+  } else {
+    apiKey = String(provider.api_key || '')
+  }
+  
+  if (!apiKey && provider.client_type !== 'ollama') {
+    const errorMsg = '请先配置API密钥'
+    console.warn('⚠️', errorMsg)
+    fetchModelsError.value = errorMsg
+    return
+  }
+  
+  fetchingModels.value = true
+  fetchModelsError.value = null
+  availableModels.value = []
+  
+  try {
+    const { getAvailableModels } = await import('@/api')
+    
+    const requestParams = {
+      provider_name: provider.name,
+      base_url: provider.base_url,
+      api_key: apiKey,
+      client_type: provider.client_type || 'openai'
+    }
+    console.log('📤 发送请求参数:', requestParams)
+    
+    const response = await getAvailableModels(requestParams)
+    console.log('📥 收到响应:', response)
+    
+    if (response.success && response.data) {
+      const modelsData = response.data
+      
+      if (modelsData.success && modelsData.models) {
+        availableModels.value = modelsData.models.map((m: { id: string; name: string }) => ({
+          id: m.id,
+          name: m.name || m.id
+        }))
+        console.log(`✅ 成功获取 ${availableModels.value.length} 个模型:`, availableModels.value.slice(0, 5))
+        
+        // 如果正在添加新模型，自动填充第一个模型
+        if (showAddModelModal.value && availableModels.value.length > 0 && !newModel.value.model_identifier) {
+          const firstModel = availableModels.value[0]
+          if (firstModel) {
+            newModel.value.model_identifier = firstModel.id
+            newModel.value.name = firstModel.name
+            console.log('✨ 自动填充第一个模型:', firstModel)
+          }
+        }
+      } else {
+        fetchModelsError.value = modelsData.error || '获取模型列表失败'
+        console.error('❌ 获取模型列表失败:', modelsData.error)
+      }
+    } else {
+      fetchModelsError.value = response.error || '获取模型列表失败'
+      console.error('❌ 获取模型列表失败:', response.error)
+    }
+  } catch (error: any) {
+    fetchModelsError.value = `请求失败: ${error.message || String(error)}`
+    console.error('❌ 获取模型列表异常:', error)
+  } finally {
+    fetchingModels.value = false
+    console.log('🏁 获取模型列表完成')
+  }
 }
 
 // 初始化
@@ -2376,5 +2532,158 @@ select.input {
   .preset-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+}
+
+/* 模型列表区域 */
+.models-section {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 12px;
+  margin-top: 8px;
+}
+
+.loading-models {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: center;
+  padding: 16px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.loading-models .spinning {
+  animation: spin 1s linear infinite;
+}
+
+.fetch-error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: var(--radius);
+  color: #ef4444;
+  font-size: 12px;
+}
+
+.btn-retry {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding: 6px 12px;
+  background: white;
+  border: 1px solid #ef4444;
+  border-radius: var(--radius-sm);
+  color: #ef4444;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-retry:hover {
+  background: #fef2f2;
+}
+
+.available-models {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.models-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.btn-refresh {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-refresh:hover {
+  background: var(--bg-hover);
+  color: var(--primary);
+}
+
+.models-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.model-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.model-option:hover {
+  border-color: var(--primary);
+  background: var(--bg-hover);
+}
+
+.model-option.active {
+  border-color: var(--primary);
+  background: var(--primary-bg);
+}
+
+.model-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.model-id {
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.model-name {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.check-icon {
+  color: var(--primary);
+  font-size: 16px;
+  flex-shrink: 0;
 }
 </style>

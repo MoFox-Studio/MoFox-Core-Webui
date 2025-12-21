@@ -288,8 +288,11 @@ export const API_ENDPOINTS = {
     UPDATE: (path: string) => `config/update/${path}`,
     BACKUPS: (path: string) => `config/backups/${path}`,
     RESTORE: (path: string) => `config/restore/${path}`,
-    VALIDATE: 'config/validate',
-    TEST_MODEL: 'config/test-model'
+    VALIDATE: 'config/validate'
+  },
+  MODEL: {
+    TEST_MODEL: 'model/test-model',
+    GET_MODELS: 'model/get-models'
   },
   PLUGIN: {
     LIST: 'plugin_manager/plugins',
@@ -654,6 +657,29 @@ export interface ModelTestResponse {
   error?: string
 }
 
+/** 模型信息 */
+export interface ModelInfo {
+  id: string
+  name: string
+  created?: number
+  owned_by?: string
+}
+
+/** 获取模型列表请求 */
+export interface GetModelsRequest {
+  provider_name: string
+  base_url: string
+  api_key: string
+  client_type?: string
+}
+
+/** 获取模型列表响应 */
+export interface GetModelsResponse {
+  success: boolean
+  models: ModelInfo[]
+  error?: string
+}
+
 // ==================== 配置管理 API 方法 ====================
 
 /**
@@ -952,9 +978,16 @@ export async function restoreConfigBackup(path: string, backupName: string) {
  * 测试模型连通性
  */
 export async function testModelConnection(modelName: string) {
-  return api.post<ModelTestResponse>(API_ENDPOINTS.CONFIG.TEST_MODEL, {
+  return api.post<ModelTestResponse>(API_ENDPOINTS.MODEL.TEST_MODEL, {
     model_name: modelName
   })
+}
+
+/**
+ * 获取可用模型列表
+ */
+export async function getAvailableModels(request: GetModelsRequest) {
+  return api.post<GetModelsResponse>(API_ENDPOINTS.MODEL.GET_MODELS, request)
 }
 
 /**

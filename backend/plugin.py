@@ -30,6 +30,7 @@ from .routers import (
     LogViewerRouterComponent,
     ExpressionRouterComponent,
     RelationshipRouterComponent,
+    WebUIModelRouter,
 )
 from .adapters import UIChatroomAdapter
 
@@ -122,4 +123,5 @@ class WebUIAuthPlugin(BasePlugin):
             (RelationshipRouterComponent.get_router_info(), RelationshipRouterComponent),
             (ChatroomRouterComponent.get_router_info(), ChatroomRouterComponent),
             (UIChatroomAdapter.get_adapter_info(), UIChatroomAdapter),
+            (WebUIModelRouter.get_router_info(),WebUIModelRouter),
         ]

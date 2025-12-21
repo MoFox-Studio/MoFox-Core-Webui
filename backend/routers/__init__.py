@@ -12,12 +12,14 @@ from .marketplace_router import MarketplaceRouterComponent
 from .plugin_router import WebUIPluginRouter
 from .relationship_router import RelationshipRouterComponent
 from .stats_router import WebUIStatsRouter
+from .model_router import WebUIModelRouter
 
 __all__ = [
     "ChatroomRouterComponent",
     "ExpressionRouterComponent",
     "GitUpdateRouterComponent",
     "LogViewerRouterComponent",
+    "WebUIModelRouter",
     "MarketplaceRouterComponent",
     "RelationshipRouterComponent",
     "WebUIAuthRouter",
