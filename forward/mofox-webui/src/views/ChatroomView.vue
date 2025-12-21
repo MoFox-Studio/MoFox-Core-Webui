@@ -70,6 +70,14 @@
           <button 
             v-if="selectedUser" 
             class="m3-button icon-only" 
+            @click="showResetConfirm = true"
+            title="重置关系"
+          >
+            <span class="material-symbols-rounded">restart_alt</span>
+          </button>
+          <button 
+            v-if="selectedUser" 
+            class="m3-button icon-only" 
             @click="showEditUserDialog = true"
             title="编辑用户"
           >
@@ -196,9 +204,100 @@
             </div>
             
             <div class="dialog-content">
+              <!-- 复制用户区域 -->
+              <div class="copy-user-section">
+                <div class="section-title">从现有用户复制</div>
+                <div class="input-row">
+                  <div class="input-group half">
+                    <label>平台</label>
+                    <div 
+                      class="custom-select-container"
+                      :class="{ 'is-open': isPlatformDropdownOpen }"
+                    >
+                      <div 
+                        class="custom-select-trigger"
+                        @click="togglePlatformDropdown"
+                      >
+                        <span>{{ copyPlatform || '全部平台' }}</span>
+                        <span class="material-symbols-rounded select-arrow">expand_more</span>
+                      </div>
+                      
+                      <Transition name="select-fade">
+                        <div v-if="isPlatformDropdownOpen" class="custom-select-dropdown">
+                          <div 
+                            class="custom-select-option"
+                            :class="{ 'is-selected': copyPlatform === '' }"
+                            @click="selectPlatform('')"
+                          >
+                            全部平台
+                            <span v-if="copyPlatform === ''" class="material-symbols-rounded check-icon">check</span>
+                          </div>
+                          <div 
+                            v-for="p in platforms" 
+                            :key="p" 
+                            class="custom-select-option"
+                            :class="{ 'is-selected': copyPlatform === p }"
+                            @click="selectPlatform(p)"
+                          >
+                            {{ p }}
+                            <span v-if="copyPlatform === p" class="material-symbols-rounded check-icon">check</span>
+                          </div>
+                        </div>
+                      </Transition>
+                    </div>
+                  </div>
+                  
+                  <div class="input-group half">
+                    <label>选择用户</label>
+                    <div 
+                      class="custom-select-container"
+                      :class="{ 'is-open': isUserDropdownOpen }"
+                    >
+                      <div 
+                        class="custom-select-trigger"
+                        @click="toggleUserDropdown"
+                      >
+                        <span>{{ selectedCopyUser ? `${selectedCopyUser.nickname} (${selectedCopyUser.platform})` : '不复制' }}</span>
+                        <span class="material-symbols-rounded select-arrow">expand_more</span>
+                      </div>
+                      
+                      <Transition name="select-fade">
+                        <div v-if="isUserDropdownOpen" class="custom-select-dropdown">
+                          <div 
+                            class="custom-select-option"
+                            :class="{ 'is-selected': selectedCopyUser === null }"
+                            @click="selectCopyUser(null)"
+                          >
+                            不复制
+                            <span v-if="selectedCopyUser === null" class="material-symbols-rounded check-icon">check</span>
+                          </div>
+                          <div 
+                            v-for="user in filteredCopyableUsers" 
+                            :key="user.person_id" 
+                            class="custom-select-option"
+                            :class="{ 'is-selected': selectedCopyUser?.person_id === user.person_id }"
+                            @click="selectCopyUser(user)"
+                          >
+                            {{ user.nickname }} ({{ user.platform }})
+                            <span v-if="selectedCopyUser?.person_id === user.person_id" class="material-symbols-rounded check-icon">check</span>
+                          </div>
+                        </div>
+                      </Transition>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="divider"></div>
+
               <div class="input-group">
                 <label>用户ID * <span class="hint">(仅限数字)</span></label>
-                <input v-model="newUser.user_id" type="text" class="m3-input" placeholder="例如: 10001" pattern="[0-9]+" />
+                <div class="input-with-action">
+                  <input v-model="newUser.user_id" type="text" class="m3-input" placeholder="例如: 10001" pattern="[0-9]+" />
+                  <button class="m3-icon-button" @click="generateRandomId" title="随机生成">
+                    <span class="material-symbols-rounded">refresh</span>
+                  </button>
+                </div>
               </div>
               
               <div class="input-group">
@@ -337,6 +436,38 @@
         </div>
       </Transition>
     </Teleport>
+
+    <!-- 确认重置对话框 -->
+    <Teleport to="body">
+      <Transition name="dialog">
+        <div v-if="showResetConfirm" class="dialog-overlay" @click.self="showResetConfirm = false">
+          <div class="m3-dialog small">
+            <div class="dialog-header">
+              <h3>确认重置</h3>
+              <button class="m3-icon-button" @click="showResetConfirm = false">
+                <span class="material-symbols-rounded">close</span>
+              </button>
+            </div>
+            
+            <div class="dialog-content">
+              <p>确定要重置与用户 "{{ selectedUser?.nickname }}" 的关系吗？</p>
+              <p class="warning-text">这将清除 Bot 对该用户的记忆和关系进展，恢复到初始设定。</p>
+            </div>
+            
+            <div class="dialog-actions">
+              <button class="m3-button text" @click="showResetConfirm = false">取消</button>
+              <button 
+                class="m3-button filled error" 
+                :disabled="resetting"
+                @click="resetUser"
+              >
+                {{ resetting ? '重置中...' : '重置' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -357,6 +488,16 @@ interface User {
   person_id?: string
   created_at: number
   updated_at: number
+}
+
+interface CopyableUser {
+  person_id: string
+  nickname: string
+  platform: string
+  user_id: string
+  impression: string
+  short_impression: string
+  attitude: number | null
 }
 
 interface Message {
@@ -390,7 +531,17 @@ const quotedMessagesCache: Ref<Map<string, Message>> = ref(new Map())
 const showCreateUserDialog = ref(false)
 const showEditUserDialog = ref(false)
 const showDeleteConfirm = ref(false)
+const showResetConfirm = ref(false)
 const userToDelete: Ref<User | null> = ref(null)
+
+// 复制用户状态
+const copyableUsers: Ref<CopyableUser[]> = ref([])
+const filteredCopyableUsers: Ref<CopyableUser[]> = ref([])
+const platforms: Ref<string[]> = ref([])
+const copyPlatform = ref('')
+const selectedCopyUser: Ref<CopyableUser | null> = ref(null)
+const isPlatformDropdownOpen = ref(false)
+const isUserDropdownOpen = ref(false)
 
 // 表单数据
 const newUser = ref({
@@ -414,6 +565,7 @@ const editUser = ref({
 const creating = ref(false)
 const updating = ref(false)
 const deleting = ref(false)
+const resetting = ref(false)
 
 // Refs
 const messagesContainer = ref<HTMLElement | null>(null)
@@ -425,11 +577,14 @@ onMounted(async () => {
   await loadUsers()
   // 启动轮询
   startPolling()
+  // 添加点击外部关闭下拉框的监听
+  window.addEventListener('click', handleClickOutside)
 })
 
 onUnmounted(() => {
   // 停止轮询
   stopPolling()
+  window.removeEventListener('click', handleClickOutside)
 })
 
 // ========== 监听 ==========
@@ -445,6 +600,17 @@ watch(selectedUser, async (newUser, oldUser) => {
   } else {
     messages.value = []
     stopPolling()
+  }
+})
+
+watch(showCreateUserDialog, (newVal) => {
+  if (newVal) {
+    // 打开对话框时，加载可复制用户，并生成随机ID
+    loadCopyableUsers()
+    generateRandomId()
+    // 重置复制选项
+    copyPlatform.value = ''
+    selectedCopyUser.value = null
   }
 })
 
@@ -605,6 +771,118 @@ async function deleteUser() {
   } finally {
     deleting.value = false
   }
+}
+
+async function resetUser() {
+  if (!selectedUser.value) return
+  
+  resetting.value = true
+  try {
+    const response = await api.post(`chatroom/users/${selectedUser.value.user_id}/reset`)
+    
+    if (response.success) {
+      showToast('用户关系已重置', 'success')
+      showResetConfirm.value = false
+      
+      // 刷新消息和用户信息
+      await loadMessages()
+      // 重新加载用户列表以更新可能变化的信息（如印象）
+      await loadUsers()
+      // 重新获取当前用户信息
+      const updatedUser = users.value.find(u => u.user_id === selectedUser.value?.user_id)
+      if (updatedUser) {
+        selectedUser.value = updatedUser
+      }
+    } else {
+      showToast(response.error || '重置失败', 'error')
+    }
+  } catch (error: any) {
+    console.error('重置用户失败:', error)
+    showToast(error.message || '重置失败', 'error')
+  } finally {
+    resetting.value = false
+  }
+}
+
+async function loadCopyableUsers() {
+  try {
+    const response = await api.get<{ users: CopyableUser[] }>('chatroom/copyable_users')
+    if (response.success && response.data) {
+      copyableUsers.value = response.data.users || []
+      
+      // 提取平台列表
+      const platformSet = new Set(copyableUsers.value.map(u => u.platform))
+      platforms.value = Array.from(platformSet).sort()
+      
+      // 初始化筛选列表
+      filterCopyableUsers()
+    }
+  } catch (error) {
+    console.error('加载可复制用户失败:', error)
+  }
+}
+
+function filterCopyableUsers() {
+  if (!copyPlatform.value) {
+    filteredCopyableUsers.value = copyableUsers.value
+  } else {
+    filteredCopyableUsers.value = copyableUsers.value.filter(u => u.platform === copyPlatform.value)
+  }
+  // 如果当前选中的用户不在筛选结果中，清空选择
+  if (selectedCopyUser.value && !filteredCopyableUsers.value.find(u => u.person_id === selectedCopyUser.value?.person_id)) {
+    selectedCopyUser.value = null
+  }
+}
+
+// 下拉框相关方法
+function togglePlatformDropdown(event: Event) {
+  event.stopPropagation() // 防止触发 window click
+  isPlatformDropdownOpen.value = !isPlatformDropdownOpen.value
+  isUserDropdownOpen.value = false // 关闭另一个
+}
+
+function selectPlatform(platform: string) {
+  copyPlatform.value = platform
+  filterCopyableUsers()
+  isPlatformDropdownOpen.value = false
+}
+
+function toggleUserDropdown(event: Event) {
+  event.stopPropagation() // 防止触发 window click
+  isUserDropdownOpen.value = !isUserDropdownOpen.value
+  isPlatformDropdownOpen.value = false // 关闭另一个
+}
+
+function selectCopyUser(user: CopyableUser | null) {
+  selectedCopyUser.value = user
+  onCopyUserSelect()
+  isUserDropdownOpen.value = false
+}
+
+function handleClickOutside(event: MouseEvent) {
+  // 如果点击的不是下拉框内部，则关闭所有下拉框
+  const target = event.target as HTMLElement
+  if (!target.closest('.custom-select-container')) {
+    isPlatformDropdownOpen.value = false
+    isUserDropdownOpen.value = false
+  }
+}
+
+function onCopyUserSelect() {
+  if (selectedCopyUser.value) {
+    const user = selectedCopyUser.value
+    newUser.value.nickname = user.nickname
+    newUser.value.impression = user.impression || ''
+    newUser.value.short_impression = user.short_impression || ''
+    newUser.value.attitude = user.attitude
+    // 头像暂时不复制，因为PersonInfo里可能没有avatar字段，或者格式不一样
+  }
+}
+
+function generateRandomId() {
+  // 生成 100000 到 999999 之间的随机数
+  const randomId = Math.floor(Math.random() * 900000 + 100000).toString()
+  newUser.value.user_id = randomId
 }
 
 async function sendMessage() {
@@ -1376,12 +1654,149 @@ textarea.m3-input {
   font-family: inherit;
 }
 
+.copy-user-section {
+  margin-bottom: 20px;
+}
+
+.section-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--md-sys-color-primary);
+  margin-bottom: 12px;
+}
+
+.input-row {
+  display: flex;
+  gap: 16px;
+}
+
+.input-group.half {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.divider {
+  height: 1px;
+  background-color: var(--md-sys-color-outline-variant);
+  margin: 20px 0;
+}
+
+.input-with-action {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.input-with-action .m3-input {
+  flex: 1;
+}
+
 .dialog-actions {
   display: flex;
   gap: 8px;
   justify-content: flex-end;
   padding: 16px 24px;
   border-top: 1px solid var(--md-sys-color-outline-variant);
+}
+
+/* Custom Select Styles */
+.custom-select-container {
+  position: relative;
+  width: 100%;
+}
+
+.custom-select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background-color: var(--md-sys-color-surface-container-highest);
+  border: 1px solid var(--md-sys-color-outline);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  color: var(--md-sys-color-on-surface);
+}
+
+.custom-select-trigger:hover {
+  border-color: var(--md-sys-color-primary);
+  background-color: var(--md-sys-color-surface-container-high);
+}
+
+.custom-select-container.is-open .custom-select-trigger {
+  border-color: var(--md-sys-color-primary);
+  box-shadow: 0 0 0 2px var(--md-sys-color-secondary-container);
+}
+
+.custom-select-container.is-disabled .custom-select-trigger {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: var(--md-sys-color-surface-container);
+}
+
+.select-arrow {
+  color: var(--md-sys-color-on-surface-variant);
+  transition: transform 0.2s ease;
+  font-size: 20px;
+}
+
+.custom-select-container.is-open .select-arrow {
+  transform: rotate(180deg);
+  color: var(--md-sys-color-primary);
+}
+
+.custom-select-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 100%;
+  background-color: var(--md-sys-color-surface-container-high);
+  border: 1px solid var(--md-sys-color-outline);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.custom-select-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.15s ease;
+  color: var(--md-sys-color-on-surface);
+  font-size: 14px;
+}
+
+.custom-select-option:hover {
+  background-color: var(--md-sys-color-surface-container-highest);
+}
+
+.custom-select-option.is-selected {
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  font-weight: 500;
+}
+
+.check-icon {
+  font-size: 18px;
+  color: var(--md-sys-color-primary);
+}
+
+.select-fade-enter-active,
+.select-fade-leave-active {
+  transition: all 0.2s ease;
+}
+
+.select-fade-enter-from,
+.select-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
 }
 
 .warning-text {

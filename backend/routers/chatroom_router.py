@@ -13,8 +13,12 @@ from typing import Any
 
 from fastapi import HTTPException
 from pydantic import BaseModel
+from sqlalchemy import select, update
 
 from src.common.logger import get_logger
+from src.common.database.core.models import PersonInfo, UserRelationships
+from src.common.database.core.session import get_db_session
+from src.common.database.api.crud import CRUDBase
 from src.person_info.person_info import get_person_info_manager
 from src.plugin_system.apis import message_api
 from src.plugin_system.base import BaseRouterComponent
@@ -465,6 +469,96 @@ class ChatroomRouterComponent(BaseRouterComponent):
                 raise
             except Exception as e:
                 logger.error(f"获取消息失败: {e}", exc_info=True)
+                raise HTTPException(status_code=500, detail=str(e))
+
+        @self.router.get("/copyable_users")
+        async def get_copyable_users(platform: str | None = None):
+            """获取可复制的用户列表"""
+            try:
+                async with get_db_session() as session:
+                    stmt = select(PersonInfo).where(PersonInfo.platform != "web_ui_chatroom")
+                    if platform:
+                        stmt = stmt.where(PersonInfo.platform == platform)
+                    
+                    # 按最后交互时间排序
+                    stmt = stmt.order_by(PersonInfo.last_know.desc())
+                    
+                    result = await session.execute(stmt)
+                    persons = result.scalars().all()
+                    
+                    users = []
+                    for p in persons:
+                        users.append({
+                            "person_id": p.person_id,
+                            "nickname": p.nickname or p.person_name or "Unknown",
+                            "platform": p.platform,
+                            "user_id": p.user_id,
+                            "impression": p.impression,
+                            "short_impression": p.short_impression,
+                            "attitude": p.attitude
+                        })
+                        
+                    return {
+                        "success": True,
+                        "users": users,
+                        "count": len(users)
+                    }
+            except Exception as e:
+                logger.error(f"获取可复制用户列表失败: {e}", exc_info=True)
+                raise HTTPException(status_code=500, detail=str(e))
+
+        @self.router.post("/users/{user_id}/reset")
+        async def reset_user_relationship(user_id: str):
+            """重置用户关系"""
+            try:
+                # 1. 获取虚拟用户配置
+                virtual_user = self.storage.get_user(user_id)
+                if not virtual_user:
+                    raise HTTPException(status_code=404, detail=f"虚拟用户 {user_id} 不存在")
+                
+                # 2. 获取 person_id
+                person_id = self.person_manager.get_person_id("web_ui_chatroom", user_id)
+                
+                # 3. 重置 PersonInfo
+                async with get_db_session() as session:
+                    # 更新 PersonInfo
+                    stmt_person = update(PersonInfo).where(
+                        PersonInfo.person_id == person_id
+                    ).values(
+                        impression=virtual_user.get("impression", ""),
+                        short_impression=virtual_user.get("short_impression", ""),
+                        attitude=virtual_user.get("attitude", 50),
+                        points="[]",  # 清空记忆点
+                        know_times=0,
+                        know_since=time.time(),
+                        last_know=time.time()
+                    )
+                    await session.execute(stmt_person)
+                    
+                    # 更新 UserRelationships
+                    # 查找 UserRelationships
+                    stmt_rel = update(UserRelationships).where(
+                        UserRelationships.user_id == user_id
+                    ).values(
+                        relationship_score=0.3,  # 默认初始值
+                        relationship_text="",
+                        impression_text="",
+                        relationship_stage="stranger",
+                        last_updated=time.time()
+                    )
+                    await session.execute(stmt_rel)
+                    
+                    await session.commit()
+                
+                return {
+                    "success": True,
+                    "message": "用户关系已重置"
+                }
+                
+            except HTTPException:
+                raise
+            except Exception as e:
+                logger.error(f"重置用户关系失败: {e}", exc_info=True)
                 raise HTTPException(status_code=500, detail=str(e))
 
     async def _ensure_person_exists(

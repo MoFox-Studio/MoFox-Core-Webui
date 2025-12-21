@@ -966,6 +966,8 @@ onMounted(() => {
 
 .entry-logger {
   font-weight: 600;
+  font-family: 'Roboto Mono', monospace;
+
 }
 
 .entry-line {
@@ -979,6 +981,7 @@ onMounted(() => {
   line-height: 1.6;
   word-break: break-word;
   white-space: pre-wrap;
+  font-family: 'Roboto Mono', monospace;
 }
 
 .entry-extra {
