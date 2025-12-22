@@ -238,9 +238,12 @@ import type {
   ComponentItem
 } from '@/api'
 import ConnectionError from '@/components/ConnectionError.vue'
+import { useThemeStore } from '@/stores/theme'
 
 // 注册 ECharts 组件
 use([CanvasRenderer, LineChart, GridComponent, TooltipComponent, LegendComponent])
+
+const themeStore = useThemeStore()
 
 const loading = ref(false)
 const chartLoading = ref(false)
@@ -513,16 +516,23 @@ function getComponentTypeIcon(type: string): string {
 // 消息统计图表配置
 const messageChartOption = computed(() => {
   const dataPoints = messageStats.value?.data_points || []
-  const isDark = true // 假设暗色模式，实际应从主题 store 获取
+  // 依赖 themeStore.theme 以便在主题切换时重新计算
+  const _currentTheme = themeStore.theme
+  
+  // 获取 CSS 变量值的辅助函数
+  const getColor = (name: string) => {
+    const val = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+    return val || (themeStore.isDark ? '#ffffff' : '#000000') // Fallback
+  }
 
   return {
     backgroundColor: 'transparent',
     tooltip: {
       trigger: 'axis',
-      backgroundColor: 'var(--md-sys-color-surface-container-high)',
-      borderColor: 'var(--md-sys-color-outline-variant)',
+      backgroundColor: getColor('--md-sys-color-surface-container-high'),
+      borderColor: getColor('--md-sys-color-outline-variant'),
       textStyle: {
-        color: 'var(--md-sys-color-on-surface)'
+        color: getColor('--md-sys-color-on-surface')
       },
       padding: [8, 12],
       borderRadius: 8
@@ -530,7 +540,7 @@ const messageChartOption = computed(() => {
     legend: {
       data: ['收到消息', '发送消息'],
       textStyle: {
-        color: 'var(--md-sys-color-on-surface-variant)'
+        color: getColor('--md-sys-color-on-surface-variant')
       },
       bottom: 0
     },
@@ -547,11 +557,11 @@ const messageChartOption = computed(() => {
       data: dataPoints.map(p => p.timestamp),
       axisLine: {
         lineStyle: {
-          color: 'var(--md-sys-color-outline-variant)'
+          color: getColor('--md-sys-color-outline-variant')
         }
       },
       axisLabel: {
-        color: 'var(--md-sys-color-on-surface-variant)',
+        color: getColor('--md-sys-color-on-surface-variant'),
         rotate: dataPoints.length > 12 ? 45 : 0
       }
     },
@@ -559,15 +569,15 @@ const messageChartOption = computed(() => {
       type: 'value',
       axisLine: {
         lineStyle: {
-          color: 'var(--md-sys-color-outline-variant)'
+          color: getColor('--md-sys-color-outline-variant')
         }
       },
       axisLabel: {
-        color: 'var(--md-sys-color-on-surface-variant)'
+        color: getColor('--md-sys-color-on-surface-variant')
       },
       splitLine: {
         lineStyle: {
-          color: 'var(--md-sys-color-outline-variant)',
+          color: getColor('--md-sys-color-outline-variant'),
           opacity: 0.3
         }
       }
