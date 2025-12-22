@@ -173,33 +173,82 @@
                 </div>
                 <div class="form-group">
                   <label>最大重试</label>
-                  <input 
-                    type="number" 
-                    class="form-input" 
-                    :value="provider.max_retry ?? 2"
-                    @input="updateProvider(index, 'max_retry', parseInt(($event.target as HTMLInputElement).value))"
-                    min="0" max="10"
-                  />
+                  <div class="number-input-wrapper">
+                    <button 
+                      class="number-btn" 
+                      @click="updateProvider(index, 'max_retry', (provider.max_retry ?? 2) - 1)"
+                      :disabled="(provider.max_retry ?? 2) <= 0"
+                    >
+                      <Icon icon="lucide:minus" />
+                    </button>
+                    <input 
+                      type="number" 
+                      class="form-input number-center" 
+                      :value="provider.max_retry ?? 2"
+                      @input="updateProvider(index, 'max_retry', parseInt(($event.target as HTMLInputElement).value))"
+                      min="0" max="10"
+                    />
+                    <button 
+                      class="number-btn" 
+                      @click="updateProvider(index, 'max_retry', (provider.max_retry ?? 2) + 1)"
+                      :disabled="(provider.max_retry ?? 2) >= 10"
+                    >
+                      <Icon icon="lucide:plus" />
+                    </button>
+                  </div>
                 </div>
                 <div class="form-group">
                   <label>超时(秒)</label>
-                  <input 
-                    type="number" 
-                    class="form-input" 
-                    :value="provider.timeout ?? 30"
-                    @input="updateProvider(index, 'timeout', parseInt(($event.target as HTMLInputElement).value))"
-                    min="5" max="300"
-                  />
+                  <div class="number-input-wrapper">
+                    <button 
+                      class="number-btn" 
+                      @click="updateProvider(index, 'timeout', (provider.timeout ?? 30) - 5)"
+                      :disabled="(provider.timeout ?? 30) <= 5"
+                    >
+                      <Icon icon="lucide:minus" />
+                    </button>
+                    <input 
+                      type="number" 
+                      class="form-input number-center" 
+                      :value="provider.timeout ?? 30"
+                      @input="updateProvider(index, 'timeout', parseInt(($event.target as HTMLInputElement).value))"
+                      min="5" max="300"
+                      step="5"
+                    />
+                    <button 
+                      class="number-btn" 
+                      @click="updateProvider(index, 'timeout', (provider.timeout ?? 30) + 5)"
+                      :disabled="(provider.timeout ?? 30) >= 300"
+                    >
+                      <Icon icon="lucide:plus" />
+                    </button>
+                  </div>
                 </div>
                 <div class="form-group">
                   <label>重试间隔(秒)</label>
-                  <input 
-                    type="number" 
-                    class="form-input" 
-                    :value="provider.retry_interval ?? 10"
-                    @input="updateProvider(index, 'retry_interval', parseInt(($event.target as HTMLInputElement).value))"
-                    min="1" max="60"
-                  />
+                  <div class="number-input-wrapper">
+                    <button 
+                      class="number-btn" 
+                      @click="updateProvider(index, 'retry_interval', (provider.retry_interval ?? 10) - 1)"
+                      :disabled="(provider.retry_interval ?? 10) <= 1"
+                    >
+                      <Icon icon="lucide:minus" />
+                    </button>
+                    <input 
+                      type="number" 
+                      class="form-input number-center" 
+                      :value="provider.retry_interval ?? 10"
+                      @input="updateProvider(index, 'retry_interval', parseInt(($event.target as HTMLInputElement).value))"
+                      min="1" max="60"
+                    />
+                    <button 
+                      class="number-btn" 
+                      @click="updateProvider(index, 'retry_interval', (provider.retry_interval ?? 10) + 1)"
+                      :disabled="(provider.retry_interval ?? 10) >= 60"
+                    >
+                      <Icon icon="lucide:plus" />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -3059,5 +3108,67 @@ select.input {
   bottom: 0;
   z-index: 99;
   cursor: default;
+}
+
+/* Number Input Styling */
+.number-input-wrapper {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  background: var(--bg-secondary);
+  padding: 2px;
+  transition: all 0.2s;
+}
+
+.number-input-wrapper:focus-within {
+  border-color: var(--primary);
+  background: var(--bg-primary);
+}
+
+.number-input-wrapper .form-input {
+  border: none;
+  background: transparent;
+  padding: 0;
+  text-align: center;
+  height: 32px;
+  width: 100%;
+  -moz-appearance: textfield;
+}
+
+.number-input-wrapper .form-input:focus {
+  box-shadow: none;
+  background: transparent;
+}
+
+.number-input-wrapper .form-input::-webkit-outer-spin-button,
+.number-input-wrapper .form-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.number-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.number-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.number-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
 }
 </style>
