@@ -10,11 +10,13 @@
         </router-view>
       </main>
     </div>
+    <FloatingDoc />
   </div>
 </template>
 
 <script setup lang="ts">
 import Sidebar from '@/components/Sidebar.vue'
+import FloatingDoc from '@/components/FloatingDoc.vue'
 </script>
 
 <style scoped>

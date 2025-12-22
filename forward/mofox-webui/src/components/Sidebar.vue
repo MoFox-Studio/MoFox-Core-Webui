@@ -20,7 +20,7 @@
         </Transition>
         
         <!-- 菜单项 -->
-        <template v-for="item in menuItems" :key="item.path">
+        <template v-for="item in menuItems" :key="item.name">
           <!-- 有子菜单的项目 -->
           <div v-if="item.children && item.key" class="nav-group">
             <div 
@@ -75,6 +75,26 @@
             </Transition>
           </div>
           
+          <!-- 自定义动作菜单项 -->
+          <div 
+            v-else-if="item.action"
+            class="nav-item"
+            @click="item.action"
+            :title="item.name"
+          >
+            <div 
+              class="nav-item-content"
+              :class="{ active: item.isActive ? item.isActive() : false }"
+            >
+              <div class="nav-icon-wrapper">
+                <span class="material-symbols-rounded nav-icon">{{ item.icon }}</span>
+              </div>
+              <Transition name="slide-fade">
+                <span v-if="!isCollapsed" class="nav-text">{{ item.name }}</span>
+              </Transition>
+            </div>
+          </div>
+
           <!-- 普通菜单项 -->
           <router-link 
             v-else
@@ -163,6 +183,7 @@ import { ref, reactive, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useThemeStore } from '@/stores/theme'
 import { useUserStore } from '@/stores/user'
+import { useUIStore } from '@/stores/ui'
 import { restartBot, shutdownBot } from '@/api'
 import { showConfirm, showSuccess, showError } from '@/utils/dialog'
 
@@ -172,12 +193,15 @@ interface MenuItem {
   icon: string
   key?: string
   children?: MenuItem[]
+  action?: () => void
+  isActive?: () => boolean
 }
 
 const route = useRoute()
 const router = useRouter()
 const themeStore = useThemeStore()
 const userStore = useUserStore()
+const uiStore = useUIStore()
 
 const isCollapsed = ref(true)
 
@@ -259,6 +283,13 @@ const menuItems: MenuItem[] = [
   { name: '系统更新', path: '/dashboard/git-update', icon: 'system_update' },
   { name: '风格与壁纸', path: '/dashboard/theme', icon: 'palette' },
   { name: '表情管理', path: '/dashboard/emoji-manager', icon: 'insert_emoticon' },
+  { 
+    name: '官方文档', 
+    path: '', 
+    icon: 'menu_book',
+    action: () => uiStore.toggleDoc(),
+    isActive: () => uiStore.isDocOpen
+  },
 ]
 
 const toggleSidebar = () => {
