@@ -4,8 +4,8 @@
     @click="$emit('view-detail')"
   >
     <!-- 选择框 -->
-    <div class="select-checkbox" @click.stop="$emit('select')">
-      <input type="checkbox" :checked="selected" readonly />
+    <div class="select-checkbox" :class="{ checked: selected }" @click.stop="$emit('select')">
+      <span class="material-symbols-rounded check-icon">check</span>
     </div>
 
     <!-- 表情图片 -->
@@ -114,9 +114,14 @@ const handleDelete = () => {
   transform: translateY(-4px);
 }
 
-.emoji-card.selected {
-  outline: 3px solid var(--md-sys-color-primary);
-  outline-offset: -3px;
+.emoji-card.selected::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 3px solid var(--md-sys-color-primary);
+  border-radius: 12px;
+  pointer-events: none;
+  z-index: 10;
 }
 
 .emoji-card.banned {
@@ -130,18 +135,32 @@ const handleDelete = () => {
   z-index: 2;
   width: 24px;
   height: 24px;
-  background: var(--md-sys-color-surface);
+  background: rgba(0, 0, 0, 0.4);
+  border: 2px solid var(--md-sys-color-outline-variant);
   border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  transition: all 0.2s;
+  backdrop-filter: blur(4px);
 }
 
-.select-checkbox input[type="checkbox"] {
-  cursor: pointer;
-  width: 18px;
-  height: 18px;
+.select-checkbox.checked {
+  background: var(--md-sys-color-primary);
+  border-color: var(--md-sys-color-primary);
+}
+
+.check-icon {
+  font-size: 18px;
+  color: var(--md-sys-color-on-primary);
+  opacity: 0;
+  transform: scale(0.5);
+  transition: all 0.2s;
+}
+
+.select-checkbox.checked .check-icon {
+  opacity: 1;
+  transform: scale(1);
 }
 
 .emoji-image-container {

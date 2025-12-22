@@ -15,15 +15,23 @@
         </div>
 
         <!-- 情感筛选 -->
-        <select v-model="emotionFilter" class="emotion-filter" @change="handleFilterChange">
-          <option value="">全部情感</option>
-          <option value="happy">开心</option>
-          <option value="sad">难过</option>
-          <option value="angry">愤怒</option>
-          <option value="surprised">惊讶</option>
-          <option value="love">喜爱</option>
-          <option value="funny">搞笑</option>
-        </select>
+        <div class="custom-select" :class="{ open: isDropdownOpen }" ref="dropdownRef">
+          <div class="select-trigger" @click="toggleDropdown">
+            <span>{{ currentEmotionLabel }}</span>
+            <span class="material-symbols-rounded arrow">expand_more</span>
+          </div>
+          <div class="select-options" v-show="isDropdownOpen">
+            <div
+              v-for="option in emotionOptions"
+              :key="option.value"
+              class="option-item"
+              :class="{ selected: emotionFilter === option.value }"
+              @click="selectEmotion(option.value)"
+            >
+              {{ option.label }}
+            </div>
+          </div>
+        </div>
 
         <!-- 刷新按钮 -->
         <button class="icon-button" title="刷新" @click="handleRefresh">
@@ -164,7 +172,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useEmojiStore } from '@/stores/emojiStore'
 import { storeToRefs } from 'pinia'
 import EmojiCard from './EmojiCard.vue'
@@ -194,6 +202,41 @@ const stats = ref<any>({
 const showDetailDialog = ref(false)
 const showUploadDialog = ref(false)
 const selectedEmojiHash = ref('')
+
+// 下拉菜单逻辑
+const isDropdownOpen = ref(false)
+const dropdownRef = ref<HTMLElement | null>(null)
+
+const emotionOptions = [
+  { value: '', label: '全部情感' },
+  { value: 'happy', label: '开心' },
+  { value: 'sad', label: '难过' },
+  { value: 'angry', label: '愤怒' },
+  { value: 'surprised', label: '惊讶' },
+  { value: 'love', label: '喜爱' },
+  { value: 'funny', label: '搞笑' }
+]
+
+const currentEmotionLabel = computed(() => {
+  const option = emotionOptions.find(o => o.value === emotionFilter.value)
+  return option ? option.label : '全部情感'
+})
+
+const toggleDropdown = () => {
+  isDropdownOpen.value = !isDropdownOpen.value
+}
+
+const selectEmotion = (value: string) => {
+  emotionFilter.value = value
+  handleFilterChange()
+  isDropdownOpen.value = false
+}
+
+const handleClickOutside = (event: MouseEvent) => {
+  if (dropdownRef.value && !dropdownRef.value.contains(event.target as Node)) {
+    isDropdownOpen.value = false
+  }
+}
 
 // 计算可见的页码
 const visiblePages = computed(() => {
@@ -286,11 +329,16 @@ const handleUploaded = async () => {
 
 // 初始化
 onMounted(async () => {
+  document.addEventListener('click', handleClickOutside)
   await emojiStore.fetchEmojiList()
   const newStats = await emojiStore.getStats()
   if (newStats) {
     stats.value = newStats
   }
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
 })
 </script>
 
@@ -350,14 +398,80 @@ onMounted(async () => {
   color: var(--md-sys-color-on-surface);
 }
 
-.emotion-filter {
+/* Custom Select */
+.custom-select {
+  position: relative;
+  min-width: 140px;
+  font-size: 14px;
+}
+
+.select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 8px 16px;
   background: var(--md-sys-color-surface-container);
   border: 1px solid var(--md-sys-color-outline);
   border-radius: 8px;
   color: var(--md-sys-color-on-surface);
-  font-size: 14px;
   cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+}
+
+.select-trigger:hover {
+  background: var(--md-sys-color-surface-container-high);
+}
+
+.custom-select.open .select-trigger {
+  border-color: var(--md-sys-color-primary);
+  background: var(--md-sys-color-surface-container-high);
+}
+
+.arrow {
+  font-size: 20px;
+  transition: transform 0.2s;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.custom-select.open .arrow {
+  transform: rotate(180deg);
+  color: var(--md-sys-color-primary);
+}
+
+.select-options {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--md-sys-color-surface-container);
+  border-radius: 8px;
+  box-shadow: var(--md-sys-elevation-2);
+  overflow: hidden;
+  z-index: 100;
+  padding: 4px 0;
+  animation: fadeIn 0.2s ease;
+}
+
+.option-item {
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: background 0.2s;
+  color: var(--md-sys-color-on-surface);
+}
+
+.option-item:hover {
+  background: var(--md-sys-color-surface-container-highest);
+}
+
+.option-item.selected {
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .icon-button {
@@ -371,6 +485,7 @@ onMounted(async () => {
   border-radius: 50%;
   cursor: pointer;
   transition: all 0.2s;
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .icon-button:hover {
