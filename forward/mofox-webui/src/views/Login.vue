@@ -33,7 +33,7 @@
       </div>
       
       <!-- 登录表单 -->
-      <form class="login-form" @submit.prevent="handleLogin">
+      <form class="login-form" @submit.prevent="handleLogin" novalidate>
         <div class="form-group">
           <label class="m3-label">
             <span class="material-symbols-rounded label-icon">key</span>
@@ -106,6 +106,11 @@ const loginForm = reactive({
 })
 
 const handleLogin = async () => {
+  if (!loginForm.password) {
+    errorMessage.value = '请输入访问密钥'
+    return
+  }
+
   loading.value = true
   errorMessage.value = ''
   
