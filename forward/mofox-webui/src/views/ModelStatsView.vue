@@ -31,7 +31,6 @@
               <span class="material-symbols-rounded model-icon">psychology</span>
               <h3 class="model-name" :title="model">{{ model }}</h3>
             </div>
-            <span class="m3-badge secondary">{{ stats.total_calls }} 次调用</span>
           </div>
           
           <div class="card-body">
@@ -40,7 +39,7 @@
                 <span class="label">提示词 (Prompt)</span>
                 <span class="value">{{ stats.prompt_tokens }}</span>
               </div>
-              <div class="stat-item">
+              <div class="stat-item" style="text-align: right;">
                 <span class="label">生成 (Completion)</span>
                 <span class="value">{{ stats.completion_tokens }}</span>
               </div>
@@ -52,6 +51,10 @@
               <div class="stat-item">
                 <span class="label">总计 Token</span>
                 <span class="value highlight">{{ stats.total_tokens }}</span>
+              </div>
+              <div class="stat-item" style="text-align: right;">
+                <span class="label">调用次数</span>
+                <span class="value">{{ stats.total_calls }}</span>
               </div>
             </div>
           </div>
