@@ -388,7 +388,7 @@ const handleLogin = async () => {
   content: '';
   position: absolute;
   left: 5px;
-  top: 1px;
+  top: -1px;
   width: 4px;
   height: 10px;
   border: solid var(--md-sys-color-on-primary);
