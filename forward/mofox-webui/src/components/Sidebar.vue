@@ -283,6 +283,7 @@ const menuItems: MenuItem[] = [
   { name: '系统更新', path: '/dashboard/git-update', icon: 'system_update' },
   { name: '风格与壁纸', path: '/dashboard/theme', icon: 'palette' },
   { name: '表情管理', path: '/dashboard/emoji-manager', icon: 'insert_emoticon' },
+  { name: 'GitHub 仓库', path: '/dashboard/github', icon: 'code' },
   { 
     name: '官方文档', 
     path: '', 
