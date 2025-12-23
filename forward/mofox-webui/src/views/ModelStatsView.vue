@@ -156,7 +156,7 @@ onMounted(() => {
 
 .model-card {
   background: var(--md-sys-color-surface-container);
-  border-radius: 16px;
+  border-radius: 24px;
   overflow: hidden;
   transition: transform 0.2s, box-shadow 0.2s;
 }
@@ -167,27 +167,25 @@ onMounted(() => {
 }
 
 .card-header {
-  padding: 16px 20px;
-  background: var(--md-sys-color-surface-container-high);
+  padding: 20px 24px 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid var(--md-sys-color-outline-variant);
 }
 
 .model-info {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
   overflow: hidden;
 }
 
 .model-icon {
-  color: var(--md-sys-color-primary);
-  background: var(--md-sys-color-surface);
-  padding: 8px;
-  border-radius: 12px;
-  font-size: 20px;
+  color: var(--md-sys-color-on-secondary-container);
+  background: var(--md-sys-color-secondary-container);
+  padding: 12px;
+  border-radius: 50%;
+  font-size: 24px;
 }
 
 .model-name {
@@ -201,7 +199,7 @@ onMounted(() => {
 }
 
 .card-body {
-  padding: 20px;
+  padding: 0 24px 24px;
 }
 
 .stat-row {
@@ -223,7 +221,7 @@ onMounted(() => {
 
 .value {
   font-size: 18px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Noto Sans SC', sans-serif;
   color: var(--md-sys-color-on-surface);
   font-weight: 500;
 }
