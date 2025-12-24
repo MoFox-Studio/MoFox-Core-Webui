@@ -151,14 +151,14 @@
             加载中...
           </div>
           <div v-else-if="filteredPluginList.length" class="plugin-list">
-            <div class="plugin-item" v-for="plugin in filteredPluginList" :key="plugin.id">
+            <div class="plugin-item" v-for="plugin in filteredPluginList" :key="plugin.name">
               <div class="plugin-item-header">
                 <span class="plugin-name">{{ plugin.name }}</span>
                 <span class="plugin-version">v{{ plugin.version }}</span>
               </div>
               <div class="plugin-item-info">
                 <span>{{ plugin.author }}</span>
-                <span>{{ plugin.description }}</span>
+                <span>{{ plugin.display_name }}</span>
               </div>
               <div v-if="plugin.error" class="plugin-error">
                 <span class="material-symbols-rounded">error</span>
@@ -188,9 +188,9 @@
             加载中...
           </div>
           <div v-else-if="componentList.length" class="component-list">
-            <div class="component-item" v-for="comp in componentList" :key="comp.id">
+            <div class="component-item" v-for="comp in componentList" :key="comp.name">
               <div class="component-item-header">
-                <span class="material-symbols-rounded component-icon">{{ getComponentTypeIcon(comp.type) }}</span>
+                <span class="material-symbols-rounded component-icon">{{ getComponentTypeIcon(currentComponentType) }}</span>
                 <span class="component-name">{{ comp.name }}</span>
                 <span class="component-status" :class="comp.enabled ? 'enabled' : 'disabled'">
                   {{ comp.enabled ? '已启用' : '已禁用' }}
@@ -199,7 +199,7 @@
               <div class="component-item-desc">{{ comp.description }}</div>
               <div class="component-item-plugin">
                 <span class="material-symbols-rounded">extension</span>
-                {{ comp.plugin_id }}
+                {{ comp.plugin_name }}
               </div>
             </div>
           </div>
@@ -264,7 +264,6 @@ const messageStatsOptions = [
 ]
 
 // 弹窗状态
-const showPluginDetail = ref(false)
 const showPluginList = ref(false)
 const showComponentDetail = ref(false)
 
@@ -398,8 +397,8 @@ const statsData = computed(() => [
   },
   { 
     label: '插件系统',
-    value: overview.value?.plugins.loaded_count ?? '-',
-    subValue: `失败 ${overview.value?.plugins.failed_count ?? 0}`,
+    value: overview.value?.plugins.loaded ?? '-',
+    subValue: `失败 ${overview.value?.plugins.failed ?? 0}`,
     icon: 'extension',
     color: '#8ab4f8',
     bgColor: 'rgba(138, 180, 248, 0.15)',
@@ -407,8 +406,8 @@ const statsData = computed(() => [
   },
   { 
     label: '组件系统',
-    value: overview.value?.components.total_count ?? '-',
-    subValue: `启用 ${overview.value?.components.enabled_count ?? 0}`,
+    value: overview.value?.components.total ?? '-',
+    subValue: `启用 ${overview.value?.components.enabled ?? 0}`,
     icon: 'widgets',
     color: '#f28b82',
     bgColor: 'rgba(242, 139, 130, 0.15)',
@@ -526,8 +525,6 @@ function getComponentTypeIcon(type: string): string {
 const messageChartOption = computed(() => {
   const dataPoints = messageStats.value?.data_points || []
   // 依赖 themeStore.theme 以便在主题切换时重新计算
-  const _currentTheme = themeStore.theme
-  
   // 获取 CSS 变量值的辅助函数
   const getColor = (name: string) => {
     const val = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
