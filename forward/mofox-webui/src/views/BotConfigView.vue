@@ -198,7 +198,6 @@ const backups = ref<any[]>([])
 const toast = ref({ visible: false, message: '', type: 'success' })
 
 const themeStore = useThemeStore()
-const isDarkMode = computed(() => themeStore.theme === 'dark')
 
 // 配置 Schema
 const configSchema = ref<any>(botConfigGroups)
@@ -307,7 +306,7 @@ function formatSource() {
 }
 
 // Monaco 挂载
-function onEditorMount(editor: any) {
+function onEditorMount(_editor: any) {
   // 可以在这里配置快捷键等
 }
 
