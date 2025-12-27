@@ -572,10 +572,10 @@ class WebUIConfigRouter(BaseRouterComponent):
                         error="非法路径"
                     )
                 
-                # 验证 TOML 格式
+                # 验证 TOML 格式（使用 tomlkit 保留注释和格式）
                 try:
-                    toml.loads(request.content)
-                except toml.TomlDecodeError as e:
+                    tomlkit.parse(request.content)
+                except Exception as e:
                     return SaveConfigResponse(
                         success=False,
                         error=f"TOML 格式错误: {str(e)}"
