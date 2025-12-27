@@ -371,10 +371,13 @@ import WebSearchEnginesEditor from './special/WebSearchEnginesEditor.vue'
 import ChatListEditor from './special/ChatListEditor.vue'
 import { botConfigGroups, type ConfigGroupDef, type ConfigFieldDef } from '@/config/configDescriptions'
 
+// 兼容两种配置类型：ConfigGroupDef (手写的配置描述) 和 ConfigSection (后端返回的配置结构)
+type ConfigItem = ConfigGroupDef | ConfigSection
+
 const props = defineProps<{
   parsedData: Record<string, unknown>
   editedValues: Record<string, unknown>
-  configSchema: ConfigSection[]
+  configSchema: ConfigItem[]
 }>()
 
 const emit = defineEmits<{
@@ -603,8 +606,14 @@ const customSections = computed(() => {
     })
   })
   
+  // 获取字段的完整 key（兼容 ConfigFieldDef 和 ConfigSchemaField）
+  function getFieldKey(field: any): string | undefined {
+    return field.full_key || field.key
+  }
+  
   // 检查一个键是否已被定义（包括作为对象类型的子属性）
-  function isKeyDefined(fullKey: string): boolean {
+  function isKeyDefined(fullKey: string | undefined): boolean {
+    if (!fullKey) return false
     if (definedKeys.has(fullKey)) return true
     // 检查是否是某个对象类型配置的子属性
     for (const objKey of objectTypeKeys) {
@@ -618,10 +627,16 @@ const customSections = computed(() => {
   // 过滤出未定义的配置节
   return props.configSchema.filter(section => {
     // 检查是否有任何字段不在定义中
-    return section.fields.some(field => !isKeyDefined(field.full_key))
+    return section.fields.some(field => {
+      const fieldKey = getFieldKey(field)
+      return fieldKey && !isKeyDefined(fieldKey)
+    })
   }).map(section => ({
     ...section,
-    fields: section.fields.filter(field => !isKeyDefined(field.full_key))
+    fields: section.fields.filter(field => {
+      const fieldKey = getFieldKey(field)
+      return fieldKey && !isKeyDefined(fieldKey)
+    })
   }))
 })
 
