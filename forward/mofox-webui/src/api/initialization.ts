@@ -7,10 +7,6 @@ import { api } from './index'
  */
 export interface InitStatusResponse {
   is_initialized: boolean
-  bot_config_exists: boolean
-  model_config_exists: boolean
-  has_api_key: boolean
-  has_git_path: boolean
 }
 
 /**

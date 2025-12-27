@@ -179,9 +179,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useThemeStore } from '@/stores/theme'
 import { useUserStore } from '@/stores/user'
 import { useUIStore } from '@/stores/ui'
 import { restartBot, shutdownBot } from '@/api'
@@ -199,7 +198,6 @@ interface MenuItem {
 
 const route = useRoute()
 const router = useRouter()
-const themeStore = useThemeStore()
 const userStore = useUserStore()
 const uiStore = useUIStore()
 
@@ -208,6 +206,8 @@ const isCollapsed = ref(true)
 // 可折叠组的展开状态
 const expandedGroups = reactive<Record<string, boolean>>({
   config: true,
+  'ai-management': true,
+  'ui-settings': true,
   'log-management': true
 })
 
@@ -215,8 +215,7 @@ const handleRestart = async () => {
   const confirmed = await showConfirm({
     title: '重启 Bot',
     message: '确定要重启 MoFox Bot 吗？这将中断当前的所有连接。',
-    confirmText: '重启',
-    confirmColor: 'warning'
+    confirmText: '重启'
   })
   
   if (confirmed) {
@@ -233,8 +232,7 @@ const handleShutdown = async () => {
   const confirmed = await showConfirm({
     title: '关闭 Bot',
     message: '确定要关闭 MoFox Bot 吗？WebUI 也将失去连接。',
-    confirmText: '关闭',
-    confirmColor: 'error'
+    confirmText: '关闭'
   })
   
   if (confirmed) {
@@ -254,6 +252,7 @@ const handleLogout = () => {
 
 const menuItems: MenuItem[] = [
   { name: '仪表盘', path: '/dashboard', icon: 'dashboard' },
+  { name: 'UI 聊天室', path: '/dashboard/chatroom', icon: 'forum' },
   { 
     name: '配置管理', 
     path: '/dashboard/config', 
@@ -264,8 +263,28 @@ const menuItems: MenuItem[] = [
       { name: '模型配置', path: '/dashboard/model-config', icon: 'psychology' },
       { name: '模型统计', path: '/dashboard/model-stats', icon: 'bar_chart' },
       { name: '插件配置', path: '/dashboard/plugin-config', icon: 'extension' },
-      { name: '表达方式', path: '/dashboard/expression', icon: 'record_voice_over' },
+    ]
+  },
+  { 
+    name: '智能管理', 
+    path: '/dashboard/ai-management', 
+    icon: 'psychology_alt',
+    key: 'ai-management',
+    children: [
       { name: '关系管理', path: '/dashboard/relationship', icon: 'group' },
+      { name: '表达方式', path: '/dashboard/expression', icon: 'record_voice_over' },
+      { name: '插件管理', path: '/dashboard/plugin-manage', icon: 'deployed_code' },
+    { name: '插件市场', path: '/dashboard/marketplace', icon: 'storefront' },
+    ]
+  },
+  { 
+    name: 'UI 设置', 
+    path: '/dashboard/ui-settings', 
+    icon: 'tune',
+    key: 'ui-settings',
+    children: [
+      { name: '风格与壁纸', path: '/dashboard/theme', icon: 'palette' },
+      { name: '表情管理', path: '/dashboard/emoji-manager', icon: 'insert_emoticon' },
     ]
   },
   { 
@@ -278,12 +297,7 @@ const menuItems: MenuItem[] = [
       { name: '实时日志', path: '/dashboard/live-log', icon: 'sensors' },
     ]
   },
-  { name: '插件管理', path: '/dashboard/plugin-manage', icon: 'deployed_code' },
-  { name: '插件市场', path: '/dashboard/marketplace', icon: 'storefront' },
-  { name: 'UI 聊天室', path: '/dashboard/chatroom', icon: 'forum' },
   { name: '系统更新', path: '/dashboard/git-update', icon: 'system_update' },
-  { name: '风格与壁纸', path: '/dashboard/theme', icon: 'palette' },
-  { name: '表情管理', path: '/dashboard/emoji-manager', icon: 'insert_emoticon' },
   { name: 'GitHub 仓库', path: '/dashboard/github', icon: 'code' },
   { 
     name: '官方文档', 
@@ -335,7 +349,7 @@ const isGroupActive = (item: MenuItem) => {
   position: sticky;
   top: 16px;
   z-index: 100;
-  width: 280px;
+  width: 260px;
   transition: all 0.4s cubic-bezier(0.2, 0, 0, 1);
   overflow: hidden;
   box-shadow: var(--md-sys-elevation-2);
@@ -344,15 +358,15 @@ const isGroupActive = (item: MenuItem) => {
 }
 
 .sidebar.collapsed {
-  width: 80px;
+  width: 68px;
 }
 
 /* 侧边栏头部 */
 .sidebar-header {
-  height: 80px;
+  height: 64px;
   display: flex;
   align-items: center;
-  padding: 0 24px;
+  padding: 0 20px;
   margin-bottom: 8px;
 }
 
@@ -365,12 +379,12 @@ const isGroupActive = (item: MenuItem) => {
 }
 
 .logo-icon {
-  width: 48px;
-  height: 48px;
-  min-width: 48px;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
   background: linear-gradient(135deg, var(--md-sys-color-primary), var(--md-sys-color-tertiary));
   color: var(--md-sys-color-on-primary);
-  border-radius: 16px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -379,14 +393,14 @@ const isGroupActive = (item: MenuItem) => {
 }
 
 .sidebar.collapsed .logo-icon {
-  width: 40px;
-  height: 40px;
-  min-width: 40px;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
   border-radius: 12px;
 }
 
 .logo-icon span {
-  font-size: 28px;
+  font-size: 24px;
 }
 
 .logo-text {
@@ -398,6 +412,7 @@ const isGroupActive = (item: MenuItem) => {
   letter-spacing: -0.5px;
   background: linear-gradient(90deg, var(--md-sys-color-primary), var(--md-sys-color-tertiary));
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
@@ -435,14 +450,14 @@ const isGroupActive = (item: MenuItem) => {
 .nav-item-content {
   display: flex;
   align-items: center;
-  gap: 16px;
-  height: 56px;
-  padding: 0 20px;
-  border-radius: 28px;
+  gap: 12px;
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 22px;
   cursor: pointer;
   position: relative;
   transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
-  overflow: hidden;
+  overflow: visible;
   color: var(--md-sys-color-on-surface-variant);
   font-weight: 500;
 }
@@ -511,12 +526,12 @@ const isGroupActive = (item: MenuItem) => {
 }
 
 .nav-child-item .nav-item-content {
-  height: 48px;
-  padding-left: 24px; /* 增加缩进 */
+  height: 40px;
+  padding-left: 20px; /* 增加缩进 */
 }
 
 .nav-child-item .nav-icon {
-  font-size: 20px;
+  font-size: 18px;
 }
 
 /* 侧边栏底部 */
@@ -532,9 +547,9 @@ const isGroupActive = (item: MenuItem) => {
   display: flex;
   align-items: center;
   gap: 12px;
-  height: 56px;
+  height: 44px;
   padding: 0 16px;
-  border-radius: 28px;
+  border-radius: 22px;
   background: transparent;
   border: none;
   color: var(--md-sys-color-on-surface-variant);
@@ -544,6 +559,7 @@ const isGroupActive = (item: MenuItem) => {
   transition: all 0.2s;
   white-space: nowrap;
   overflow: hidden;
+  position: relative;
 }
 
 .footer-button.active {
@@ -621,5 +637,36 @@ const isGroupActive = (item: MenuItem) => {
 
 .sidebar.collapsed .nav-child-item .nav-item-content {
   padding-left: 0;
+}
+
+/* 折叠状态下的悬停提示 */
+.sidebar.collapsed .nav-item:hover .nav-item-content::after,
+.sidebar.collapsed .footer-button:hover::after {
+  content: attr(title);
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--md-sys-color-inverse-surface);
+  color: var(--md-sys-color-inverse-on-surface);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  z-index: 1000;
+  box-shadow: var(--md-sys-elevation-2);
+  animation: tooltipFadeIn 0.2s ease;
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) translateX(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+  }
 }
 </style>

@@ -222,8 +222,26 @@ class ApiClient {
   /**
    * GET 请求
    */
-  async get<T = unknown>(endpoint: string, options: RequestInit = {}) {
-    return this.request<T>(endpoint, { ...options, method: 'GET' })
+  async get<T = unknown>(endpoint: string, options: RequestInit & { params?: Record<string, any> } = {}) {
+    // 处理 query 参数
+    let finalEndpoint = endpoint
+    if (options.params) {
+      const searchParams = new URLSearchParams()
+      Object.entries(options.params).forEach(([key, value]) => {
+        // 只添加非 undefined 的值
+        if (value !== undefined && value !== null) {
+          searchParams.append(key, String(value))
+        }
+      })
+      const queryString = searchParams.toString()
+      if (queryString) {
+        finalEndpoint = `${endpoint}?${queryString}`
+      }
+      // 移除 params，避免传递给 fetch
+      const { params, ...restOptions } = options
+      return this.request<T>(finalEndpoint, { ...restOptions, method: 'GET' })
+    }
+    return this.request<T>(finalEndpoint, { ...options, method: 'GET' })
   }
 
   /**
@@ -247,6 +265,17 @@ class ApiClient {
     return this.request<T>(endpoint, {
       ...options,
       method: 'PUT',
+      body: body ? JSON.stringify(body) : undefined
+    })
+  }
+
+  /**
+   * PATCH 请求
+   */
+  async patch<T = unknown>(endpoint: string, body?: unknown, options: RequestInit = {}) {
+    return this.request<T>(endpoint, {
+      ...options,
+      method: 'PATCH',
       body: body ? JSON.stringify(body) : undefined
     })
   }

@@ -42,14 +42,25 @@
               </div>
             </div>
 
-            <!-- 描述编辑 -->
+            <!-- 描述编辑（解析联合格式） -->
             <div class="detail-section">
-              <h3>描述</h3>
+              <h3>精炼描述</h3>
               <textarea
-                v-model="editableDescription"
+                v-model="editableRefinedDescription"
                 class="description-input"
-                rows="3"
-                placeholder="输入表情包描述..."
+                rows="2"
+                placeholder="输入精炼的自然语言描述..."
+              ></textarea>
+            </div>
+
+            <!-- 详细描述 -->
+            <div class="detail-section">
+              <h3>详细描述</h3>
+              <textarea
+                v-model="editableDetailedDescription"
+                class="description-input"
+                rows="4"
+                placeholder="输入详细描述（不超过250字）..."
               ></textarea>
             </div>
 
@@ -143,7 +154,7 @@
             <button class="danger-button" @click="handleDelete">
               删除
             </button>
-            <button class="primary-button" @click="handleSave">
+            <button class="primary-button" @click="handleSave" :disabled="!hasChanges">
               保存更改
             </button>
           </div>
@@ -154,7 +165,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { useEmojiStore } from '@/stores/emojiStore'
 import type { EmojiDetail } from '@/api/emoji'
 
@@ -171,10 +182,60 @@ const emit = defineEmits<{
 
 const emojiStore = useEmojiStore()
 const emojiDetail = ref<EmojiDetail | null>(null)
-const editableDescription = ref('')
+const editableRefinedDescription = ref('')
+const editableDetailedDescription = ref('')
 const editableEmotions = ref<string[]>([])
 const editableIsBanned = ref(false)
 const newEmotion = ref('')
+
+// 原始值，用于比较是否有变化
+const originalRefinedDescription = ref('')
+const originalDetailedDescription = ref('')
+const originalEmotions = ref<string[]>([])
+const originalIsBanned = ref(false)
+
+// 解析联合格式的描述
+const parseDescription = (description: string) => {
+  // 格式: "精炼描述 Keywords: [关键词] Desc: 详细描述"
+  const keywordsMatch = description.match(/Keywords:\s*\[(.*?)\]/)
+  const descMatch = description.match(/Desc:\s*(.*)/)
+  const refinedMatch = description.match(/^(.*?)\s*Keywords:/)
+
+  return {
+    refined: refinedMatch ? refinedMatch[1].trim() : '',
+    keywords: keywordsMatch ? keywordsMatch[1].split(',').map(k => k.trim()).filter(Boolean) : [],
+    detailed: descMatch ? descMatch[1].trim() : description
+  }
+}
+
+// 组装联合格式的描述
+const buildDescription = () => {
+  const keywords = editableEmotions.value.join(',')
+  return `${editableRefinedDescription.value.trim()} Keywords: [${keywords}] Desc: ${editableDetailedDescription.value.trim()}`
+}
+
+// 检查是否有变化
+const hasChanges = computed(() => {
+  // 比较精炼描述
+  if (editableRefinedDescription.value.trim() !== originalRefinedDescription.value.trim()) {
+    return true
+  }
+  // 比较详细描述
+  if (editableDetailedDescription.value.trim() !== originalDetailedDescription.value.trim()) {
+    return true
+  }
+  // 比较禁用状态
+  if (editableIsBanned.value !== originalIsBanned.value) {
+    return true
+  }
+  // 比较情感标签（数组）
+  if (editableEmotions.value.length !== originalEmotions.value.length) {
+    return true
+  }
+  const sortedEditable = [...editableEmotions.value].sort()
+  const sortedOriginal = [...originalEmotions.value].sort()
+  return !sortedEditable.every((emotion, index) => emotion === sortedOriginal[index])
+})
 
 // 监听打开，加载详情
 watch(() => [props.modelValue, props.emojiHash], async ([isOpen, hash]) => {
@@ -182,9 +243,25 @@ watch(() => [props.modelValue, props.emojiHash], async ([isOpen, hash]) => {
     try {
       emojiDetail.value = await emojiStore.getEmojiDetail(hash)
       if (emojiDetail.value) {
-        editableDescription.value = emojiDetail.value.description
-        editableEmotions.value = [...emojiDetail.value.emotions]
+        // 解析联合格式
+        const parsed = parseDescription(emojiDetail.value.description)
+        editableRefinedDescription.value = parsed.refined
+        editableDetailedDescription.value = parsed.detailed
+        
+        // 优先使用解析出的关键词，否则使用 emotions 字段
+        editableEmotions.value = parsed.keywords.length > 0 
+          ? parsed.keywords 
+          : [...emojiDetail.value.emotions]
+        
         editableIsBanned.value = emojiDetail.value.is_banned
+
+        // 保存原始值
+        originalRefinedDescription.value = parsed.refined
+        originalDetailedDescription.value = parsed.detailed
+        originalEmotions.value = parsed.keywords.length > 0 
+          ? [...parsed.keywords] 
+          : [...emojiDetail.value.emotions]
+        originalIsBanned.value = emojiDetail.value.is_banned
       }
     } catch (error) {
       console.error('加载表情包详情失败:', error)
@@ -213,8 +290,11 @@ const handleSave = async () => {
   if (!emojiDetail.value) return
 
   try {
+    // 组装联合格式的描述
+    const fullDescription = buildDescription()
+    
     await emojiStore.updateEmoji(emojiDetail.value.hash, {
-      description: editableDescription.value,
+      description: fullDescription,
       emotions: editableEmotions.value,
       is_banned: editableIsBanned.value
     })
@@ -580,6 +660,13 @@ const formatTime = (timestamp: number | null) => {
 .primary-button:hover {
   background: var(--md-sys-color-primary-container);
   color: var(--md-sys-color-on-primary-container);
+}
+
+.primary-button:disabled {
+  background: var(--md-sys-color-surface-container-highest);
+  color: var(--md-sys-color-on-surface-variant);
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 /* 对话框动画 */

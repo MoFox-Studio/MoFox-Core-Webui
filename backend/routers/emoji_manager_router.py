@@ -45,7 +45,6 @@ class EmojiItemResponse(BaseModel):
     id: int
     hash: str
     description: str
-    emotions: list[str]
     format: str
     is_registered: bool
     is_banned: bool
@@ -61,7 +60,6 @@ class EmojiDetailResponse(BaseModel):
     id: int
     hash: str
     description: str
-    emotions: list[str]
     format: str
     full_path: str
     is_registered: bool
@@ -88,7 +86,6 @@ class EmojiUpdateRequest(BaseModel):
     """表情包更新请求模型"""
 
     description: Optional[str] = None
-    emotions: Optional[list[str]] = None
     is_banned: Optional[bool] = None
 
 
@@ -124,7 +121,6 @@ class EmojiStatsResponse(BaseModel):
     banned_count: int
     total_usage: int
     top_used: list[dict[str, Any]]
-    emotions_distribution: dict[str, int]
 
 
 # ============================================================================
@@ -207,7 +203,6 @@ class EmojiManagerRouterComponent(BaseRouterComponent):
             page: int = Query(1, ge=1, description="页码"),
             page_size: int = Query(50, ge=1, le=200, description="每页数量"),
             search: str = Query("", description="搜索关键词"),
-            emotion_filter: str = Query("", description="情感筛选"),
             sort_by: str = Query("record_time", description="排序字段"),
             sort_order: str = Query("desc", description="排序方向"),
             is_registered: Optional[bool] = Query(None, description="注册状态筛选"),
@@ -215,6 +210,8 @@ class EmojiManagerRouterComponent(BaseRouterComponent):
         ):
             """获取表情包列表"""
             try:
+                # 打印接收到的参数
+                
                 async with get_db_session() as session:
                     # 构建查询
                     query = select(Emoji)
@@ -222,10 +219,6 @@ class EmojiManagerRouterComponent(BaseRouterComponent):
                     # 搜索过滤
                     if search:
                         query = query.where(Emoji.description.ilike(f"%{search}%"))
-
-                    # 情感过滤
-                    if emotion_filter:
-                        query = query.where(Emoji.emotion.like(f"%{emotion_filter}%"))
 
                     # 状态过滤
                     if is_registered is not None:
@@ -260,20 +253,11 @@ class EmojiManagerRouterComponent(BaseRouterComponent):
                         # 生成缩略图
                         thumbnail = await generate_thumbnail(emoji.full_path)
 
-                        # 解析情感标签
-                        emotions = []
-                        if emoji.emotion:
-                            try:
-                                emotions = json.loads(emoji.emotion) if isinstance(emoji.emotion, str) else emoji.emotion
-                            except:
-                                emotions = []
-
                         items.append(
                             EmojiItemResponse(
                                 id=emoji.id,
                                 hash=emoji.emoji_hash,
                                 description=emoji.description,
-                                emotions=emotions,
                                 format=emoji.format,
                                 is_registered=emoji.is_registered,
                                 is_banned=emoji.is_banned,
@@ -304,6 +288,7 @@ class EmojiManagerRouterComponent(BaseRouterComponent):
             """获取表情包详情"""
             try:
                 emoji = await get_emoji_by_hash(emoji_hash)
+                logger.info(emoji)
                 if not emoji:
                     raise HTTPException(status_code=404, detail="表情包不存在")
 
@@ -315,7 +300,7 @@ class EmojiManagerRouterComponent(BaseRouterComponent):
                     try:
                         with Image.open(emoji.full_path) as img:
                             img_format = img.format
-                    except:
+                    except Exception:
                         pass
 
                     # 读取文件内容
@@ -345,22 +330,13 @@ class EmojiManagerRouterComponent(BaseRouterComponent):
                     logger.error(f"读取图片失败: {e}")
                     try:
                         full_image = image_path_to_base64(emoji.full_path)
-                    except:
+                    except Exception:
                         full_image = ""
-
-                # 解析情感标签
-                emotions = []
-                if emoji.emotion:
-                    try:
-                        emotions = json.loads(emoji.emotion) if isinstance(emoji.emotion, str) else emoji.emotion
-                    except:
-                        emotions = []
 
                 detail = EmojiDetailResponse(
                     id=emoji.id,
                     hash=emoji.emoji_hash,
                     description=emoji.description,
-                    emotions=emotions,
                     format=emoji.format,
                     full_path=emoji.full_path,
                     is_registered=emoji.is_registered,
@@ -487,7 +463,10 @@ class EmojiManagerRouterComponent(BaseRouterComponent):
             """更新表情包信息"""
             try:
                 async with get_db_session() as session:
-                    emoji = await get_emoji_by_hash(emoji_hash)
+                    # 在当前 session 中查询 emoji
+                    result = await session.execute(select(Emoji).where(Emoji.emoji_hash == emoji_hash))
+                    emoji = result.scalar_one_or_none()
+                    
                     if not emoji:
                         raise HTTPException(status_code=404, detail="表情包不存在")
 
@@ -495,8 +474,6 @@ class EmojiManagerRouterComponent(BaseRouterComponent):
                     update_data = {}
                     if data.description is not None:
                         update_data["description"] = data.description
-                    if data.emotions is not None:
-                        update_data["emotion"] = json.dumps(data.emotions, ensure_ascii=False)
                     if data.is_banned is not None:
                         update_data["is_banned"] = data.is_banned
 
@@ -505,16 +482,8 @@ class EmojiManagerRouterComponent(BaseRouterComponent):
                         await session.execute(stmt)
                         await session.commit()
 
-                    # 获取更新后的数据
-                    await session.refresh(emoji)
-
-                    # 解析情感标签
-                    emotions = []
-                    if emoji.emotion:
-                        try:
-                            emotions = json.loads(emoji.emotion) if isinstance(emoji.emotion, str) else emoji.emotion
-                        except:
-                            emotions = []
+                        # 刷新对象以获取更新后的数据
+                        await session.refresh(emoji)
 
                     return {
                         "success": True,
@@ -522,7 +491,6 @@ class EmojiManagerRouterComponent(BaseRouterComponent):
                             "id": emoji.id,
                             "hash": emoji.emoji_hash,
                             "description": emoji.description,
-                            "emotions": emotions,
                             "is_banned": emoji.is_banned,
                         },
                     }
@@ -622,25 +590,12 @@ class EmojiManagerRouterComponent(BaseRouterComponent):
                         for row in top_used_result.all()
                     ]
 
-                    # 情感分布统计
-                    emotions_distribution = {}
-                    emojis_result = await session.execute(select(Emoji.emotion).where(Emoji.emotion.isnot(None)))
-                    for (emotion_str,) in emojis_result.all():
-                        try:
-                            emotions = json.loads(emotion_str) if isinstance(emotion_str, str) else emotion_str
-                            if isinstance(emotions, list):
-                                for emotion in emotions:
-                                    emotions_distribution[emotion] = emotions_distribution.get(emotion, 0) + 1
-                        except BaseException: 
-                            continue
-
                     stats = EmojiStatsResponse(
                         total_count=total_count,
                         registered_count=registered_count,
                         banned_count=banned_count,
                         total_usage=total_usage,
                         top_used=top_used,
-                        emotions_distribution=emotions_distribution,
                     )
 
                     return {"success": True, "data": stats.model_dump()}

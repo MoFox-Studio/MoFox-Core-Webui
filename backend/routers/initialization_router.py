@@ -30,9 +30,8 @@ CONFIG_ROOT = Path(CONFIG_DIR)
 BOT_CONFIG_PATH = CONFIG_ROOT / "bot_config.toml"
 MODEL_CONFIG_PATH = CONFIG_ROOT / "model_config.toml"
 
-# 初始化标记文件路径（放在主程序根目录的 data/webui 下）
-WEBUI_SETTINGS_DIR = Path("data/webui")
-INIT_FLAG_PATH = WEBUI_SETTINGS_DIR / ".initialized"
+# 初始化状态的存储键名
+INIT_STATUS_KEY = "is_initialized"
 
 
 # ==================== 请求/响应模型 ====================
@@ -40,10 +39,6 @@ INIT_FLAG_PATH = WEBUI_SETTINGS_DIR / ".initialized"
 class InitStatusResponse(BaseModel):
     """初始化状态响应"""
     is_initialized: bool
-    bot_config_exists: bool
-    model_config_exists: bool
-    has_api_key: bool
-    has_git_path: bool
 
 
 class BotConfigRequest(BaseModel):
@@ -127,16 +122,12 @@ def save_bot_config(config: BotConfigRequest) -> None:
     """保存机器人配置"""
     template_path = CONFIG_ROOT.parent / "template" / "bot_config_template.toml"
     
-    logger.info(f"开始保存机器人配置，配置文件路径: {BOT_CONFIG_PATH}")
-    logger.info(f"模板文件路径: {template_path}")
-    
     if BOT_CONFIG_PATH.exists():
         # 已存在配置文件，更新现有配置
         logger.info("配置文件已存在，更新现有配置")
         create_backup(BOT_CONFIG_PATH)
         with open(BOT_CONFIG_PATH, "r", encoding="utf-8") as f:
             doc = tomlkit.load(f)
-        logger.info(f"已读取现有配置，包含的顶级键: {list(doc.keys())}")
     else:
         # 配置文件不存在，从模板创建
         logger.info("配置文件不存在，从模板创建")
@@ -157,7 +148,6 @@ def save_bot_config(config: BotConfigRequest) -> None:
     doc["bot"]["qq_account"] = config.qq_account
     doc["bot"]["nickname"] = config.nickname
     doc["bot"]["alias_names"] = config.alias_names
-    logger.info(f"更新后 bot section: qq_account={doc["bot"]["qq_account"]}, nickname={doc["bot"]["nickname"]}")
     
     logger.debug(f"personality section 存在: {'personality' in doc}")
     if "personality" not in doc:
@@ -177,7 +167,6 @@ def save_bot_config(config: BotConfigRequest) -> None:
             logger.info("创建新的 security section")
             doc["security"] = tomlkit.table()
         doc["security"]["master_users"] = config.master_users
-        logger.info(f"已更新主人用户配置: {config.master_users}")
     
     # 保存
     logger.info(f"保存配置到文件: {BOT_CONFIG_PATH}")
@@ -202,7 +191,6 @@ def save_model_config(config: ModelConfigRequest) -> None:
     
     # 查找或创建 SiliconFlow provider
     providers = doc.get("api_providers", [])
-    logger.info(f"当前配置中有 {len(providers)} 个 API providers")
     siliconflow_provider = None
     
     for i, provider in enumerate(providers):
@@ -210,7 +198,6 @@ def save_model_config(config: ModelConfigRequest) -> None:
         logger.debug(f"检查 provider[{i}]: {provider_name}")
         if provider_name == config.provider_name:
             siliconflow_provider = provider
-            logger.info(f"找到已存在的 provider: {config.provider_name}")
             break
     
     if siliconflow_provider is None:
@@ -262,10 +249,8 @@ def save_git_config(config: GitConfigRequest) -> None:
 
 def mark_as_initialized() -> None:
     """标记初始化完成"""
-    # 确保目录存在
-    WEBUI_SETTINGS_DIR.mkdir(parents=True, exist_ok=True)
-    INIT_FLAG_PATH.touch()
-    logger.info("初始化流程已完成")
+    BackendStorage.set(INIT_STATUS_KEY, True)
+    logger.info("已通过 BackendStorage 标记初始化完成")
 
 
 # ==================== HTTP路由组件 ====================
@@ -303,54 +288,12 @@ class InitializationRouter(BaseRouterComponent):
             - has_git_path: 是否配置了Git路径
             """
             try:
-                # 检查初始化标记
-                is_initialized = INIT_FLAG_PATH.exists()
-                
-                # 检查配置文件
-                bot_config_exists = BOT_CONFIG_PATH.exists()
-                model_config_exists = MODEL_CONFIG_PATH.exists()
-                
-                # 检查API密钥
-                has_api_key = False
-                if model_config_exists:
-                    try:
-                        with open(MODEL_CONFIG_PATH, "r", encoding="utf-8") as f:
-                            model_config = tomlkit.load(f)
-                        
-                        # 将 AoT 对象转换为普通列表
-                        providers = list(model_config.get("api_providers", []))
-                        for provider in providers:
-                            # 将 provider 转换为字典以便访问
-                            provider_dict = dict(provider)
-                            if provider_dict.get("name", "") == "SiliconFlow":
-                                logger.info("找到了SiliconFlow")
-                                api_key = provider_dict.get("api_key", "")
-                                if isinstance(api_key, list):
-                                    api_key = api_key[0] if api_key else ""
-                                
-                                if api_key and not api_key.startswith("your-"):
-                                    has_api_key = True
-                                    break
-                        logger.info(f"has_api_key: {has_api_key}")
-                    except Exception as e:
-                        logger.warning(f"读取模型配置失败: {e}")
-                
-                # 检查Git路径（从 BackendStorage 读取）
-                has_git_path = False
-                try:
-                    git_path = BackendStorage.get_git_path()
-                    has_git_path = bool(git_path and git_path.strip())
-                    if has_git_path and git_path:
-                        logger.debug(f"已从 BackendStorage 读取 Git 路径: {git_path[:50] if len(git_path) > 50 else git_path}")
-                except Exception as e:
-                    logger.warning(f"读取 Git 配置失败: {e}")
+                # 从 BackendStorage 检查初始化标记
+                is_initialized = BackendStorage.get(INIT_STATUS_KEY, False)
+                logger.debug(f"从 BackendStorage 读取初始化状态: {is_initialized}")
                 
                 return InitStatusResponse(
                     is_initialized=is_initialized,
-                    bot_config_exists=bot_config_exists,
-                    model_config_exists=model_config_exists,
-                    has_api_key=has_api_key,
-                    has_git_path=has_git_path
                 )
             
             except Exception as e:
@@ -515,7 +458,6 @@ class InitializationRouter(BaseRouterComponent):
             简单的格式验证，不进行实际调用
             """
             try:               
-                logger.info(f"收到API密钥验证请求，密钥长度: {len(request.api_key) if request.api_key else 0}")                
                 api_key = request.api_key
                 # 基本格式验证
                 if not api_key or len(api_key) < 10:

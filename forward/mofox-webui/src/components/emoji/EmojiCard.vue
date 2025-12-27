@@ -47,14 +47,14 @@
 
     <!-- 表情信息 -->
     <div class="emoji-info">
-      <div class="emoji-description" :title="emoji.description">
-        {{ emoji.description }}
+      <div class="emoji-description" :title="fullDescription">
+        {{ refinedDescription }}
       </div>
       
       <!-- 情感标签 -->
-      <div v-if="emoji.emotions && emoji.emotions.length > 0" class="emotion-tags">
+      <div v-if="displayEmotions && displayEmotions.length > 0" class="emotion-tags">
         <span 
-          v-for="emotion in emoji.emotions.slice(0, 3)" 
+          v-for="emotion in displayEmotions.slice(0, 3)" 
           :key="emotion" 
           class="emotion-tag"
         >
@@ -78,6 +78,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { EmojiItem } from '@/api/emoji'
 
 const props = defineProps<{
@@ -91,11 +92,39 @@ const emit = defineEmits<{
   delete: []
 }>()
 
+// 解析联合格式的描述
+const parseDescription = (description: string) => {
+  // 格式: "精炼描述 Keywords: [关键词] Desc: 详细描述"
+  const keywordsMatch = description.match(/Keywords:\s*\[(.*?)\]/)
+  const refinedMatch = description.match(/^(.*?)\s*Keywords:/)
+
+  return {
+    refined: refinedMatch ? refinedMatch[1].trim() : description,
+    keywords: keywordsMatch ? keywordsMatch[1].split(',').map(k => k.trim()).filter(Boolean) : []
+  }
+}
+
+// 计算显示的精炼描述
+const refinedDescription = computed(() => {
+  const parsed = parseDescription(props.emoji.description)
+  return parsed.refined || props.emoji.description
+})
+
+// 计算显示的完整描述（用于 title）
+const fullDescription = computed(() => props.emoji.description)
+
+// 计算显示的情感标签（优先使用解析出的关键词）
+const displayEmotions = computed(() => {
+  const parsed = parseDescription(props.emoji.description)
+  return parsed.keywords.length > 0 ? parsed.keywords : props.emoji.emotions
+})
+
 const handleDelete = () => {
-  if (confirm(`确定要删除表情包"${props.emoji.description}"吗？`)) {
+  if (confirm(`确定要删除表情包"${refinedDescription.value}"吗？`)) {
     emit('delete')
   }
 }
+
 </script>
 
 <style scoped>

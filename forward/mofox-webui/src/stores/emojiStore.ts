@@ -15,7 +15,6 @@ export interface EmojiState {
   loading: boolean
   selectedItems: Set<string>
   searchQuery: string
-  emotionFilter: string
   sortBy: string
   sortOrder: 'asc' | 'desc'
   isRegisteredFilter: boolean | null
@@ -32,7 +31,6 @@ export const useEmojiStore = defineStore('emoji', {
     loading: false,
     selectedItems: new Set(),
     searchQuery: '',
-    emotionFilter: '',
     sortBy: 'record_time',
     sortOrder: 'desc',
     isRegisteredFilter: null,
@@ -65,7 +63,6 @@ export const useEmojiStore = defineStore('emoji', {
       page: state.page,
       page_size: state.pageSize,
       search: state.searchQuery || undefined,
-      emotion_filter: state.emotionFilter || undefined,
       sort_by: state.sortBy,
       sort_order: state.sortOrder,
       is_registered: state.isRegisteredFilter ?? undefined,
@@ -79,6 +76,8 @@ export const useEmojiStore = defineStore('emoji', {
      */
     async fetchEmojiList() {
       this.loading = true
+      console.log('[EmojiStore] 准备请求列表, searchQuery:', this.searchQuery)
+      console.log('[EmojiStore] 请求参数:', this.currentParams)
       try {
         const response = await emojiApi.getEmojiList(this.currentParams)
         
@@ -149,7 +148,7 @@ export const useEmojiStore = defineStore('emoji', {
     /**
      * 更新表情包
      */
-    async updateEmoji(hash: string, data: { description?: string; emotions?: string[]; is_banned?: boolean }) {
+    async updateEmoji(hash: string, data: { description?: string; is_banned?: boolean }) {
       try {
         const response = await emojiApi.updateEmoji(hash, data)
         if (response?.success) {
@@ -261,16 +260,10 @@ export const useEmojiStore = defineStore('emoji', {
      * 设置搜索关键词
      */
     setSearchQuery(query: string) {
+      console.log('[EmojiStore] setSearchQuery 被调用, 参数:', query)
       this.searchQuery = query
       this.page = 1
-    },
-
-    /**
-     * 设置情感筛选
-     */
-    setEmotionFilter(emotion: string) {
-      this.emotionFilter = emotion
-      this.page = 1
+      console.log('[EmojiStore] searchQuery 已设置为:', this.searchQuery)
     },
 
     /**
@@ -302,7 +295,6 @@ export const useEmojiStore = defineStore('emoji', {
      */
     resetFilters() {
       this.searchQuery = ''
-      this.emotionFilter = ''
       this.isRegisteredFilter = null
       this.isBannedFilter = null
       this.sortBy = 'record_time'

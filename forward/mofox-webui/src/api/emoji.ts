@@ -11,7 +11,6 @@ export interface EmojiItem {
   id: number
   hash: string
   description: string
-  emotions: string[]
   format: string
   is_registered: boolean
   is_banned: boolean
@@ -28,7 +27,6 @@ export interface EmojiDetail {
   id: number
   hash: string
   description: string
-  emotions: string[]
   format: string
   full_path: string
   is_registered: boolean
@@ -57,7 +55,6 @@ export interface EmojiListResponse {
  */
 export interface EmojiUpdateRequest {
   description?: string
-  emotions?: string[]
   is_banned?: boolean
 }
 
@@ -113,7 +110,6 @@ export interface EmojiStatsResponse {
     description: string
     usage_count: number
   }>
-  emotions_distribution: Record<string, number>
 }
 
 /**
@@ -123,7 +119,6 @@ export interface GetEmojiListParams {
   page?: number
   page_size?: number
   search?: string
-  emotion_filter?: string
   sort_by?: string
   sort_order?: 'asc' | 'desc'
   is_registered?: boolean
