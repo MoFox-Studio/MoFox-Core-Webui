@@ -2,16 +2,17 @@
 发现服务器模块
 提供一个固定端口的FastAPI服务器,用于前端发现主程序的IP和端口
 同时支持托管编译好的前端静态文件
+并代理主程序的API请求
 """
 
 import asyncio
 from pathlib import Path
 from typing import Optional
 
+import httpx
 import uvicorn
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -75,6 +76,14 @@ def create_discovery_app(main_host: str, main_port: int) -> FastAPI:
         allow_headers=["*"],
     )
     
+    # 创建 HTTP 客户端用于转发请求
+    http_client = httpx.AsyncClient(timeout=30.0)
+    
+    @app.on_event("shutdown")
+    async def shutdown_event():
+        """关闭时清理HTTP客户端"""
+        await http_client.aclose()
+    
     # 先定义API路由，确保它们不会被静态文件拦截
     @app.get("/api/health", summary="服务状态检查")
     def health_check():
@@ -86,11 +95,70 @@ def create_discovery_app(main_host: str, main_port: int) -> FastAPI:
         """
         获取主程序的IP和端口信息
         前端通过此接口获取主程序地址，然后自行拼接API地址
+        （保留用于调试和兼容性）
         """
         return ServerInfo(
             host=main_host,
             port=main_port
         )
+    
+    # 🌟 核心功能：代理所有对主程序的 API 请求
+    @app.api_route(
+        "/plugins/{path:path}",
+        methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"],
+        summary="代理主程序 API 请求"
+    )
+    async def proxy_to_main_server(request: Request, path: str):
+        """
+        将所有 /plugins/* 请求转发到主程序
+        前端直接请求 http://hostname:12138/plugins/webui_backend/xxx
+        """
+        # 构建目标 URL
+        target_url = f"http://{main_host}:{main_port}/plugins/{path}"
+        
+        # 获取查询参数
+        query_params = dict(request.query_params)
+        
+        # 获取请求头（排除 host）
+        headers = dict(request.headers)
+        headers.pop("host", None)
+        
+        # 获取请求体
+        body = await request.body()
+        
+        try:
+            # 转发请求到主程序
+            response = await http_client.request(
+                method=request.method,
+                url=target_url,
+                params=query_params,
+                headers=headers,
+                content=body,
+                follow_redirects=True
+            )
+            
+            # 返回响应
+            return Response(
+                content=response.content,
+                status_code=response.status_code,
+                headers=dict(response.headers),
+                media_type=response.headers.get("content-type")
+            )
+            
+        except httpx.RequestError as e:
+            logger.error(f"代理请求失败 [{request.method} {target_url}]: {e}")
+            return Response(
+                content=f'{{"error": "无法连接到主程序服务器: {str(e)}"}}',
+                status_code=502,
+                media_type="application/json"
+            )
+        except Exception as e:
+            logger.error(f"代理请求出错 [{request.method} {target_url}]: {e}")
+            return Response(
+                content=f'{{"error": "代理请求失败: {str(e)}"}}',
+                status_code=500,
+                media_type="application/json"
+            )
     
     # 最后挂载静态文件，避免拦截API路由
     # 检查是否存在编译好的前端静态文件
@@ -116,7 +184,7 @@ def create_discovery_app(main_host: str, main_port: int) -> FastAPI:
 async def start_discovery_server(
     main_host: str,
     main_port: int,
-    discovery_host: str = "127.0.0.1"
+    discovery_host: str = "0.0.0.0"
 ) -> None:
     """
     启动发现服务器
@@ -124,7 +192,7 @@ async def start_discovery_server(
     Args:
         main_host: 主程序的主机地址
         main_port: 主程序的端口
-        discovery_host: 发现服务器绑定的主机地址，默认127.0.0.1
+        discovery_host: 发现服务器绑定的主机地址，默认0.0.0.0（允许外部访问）
     """
     global _server_instance, _server_task
     
