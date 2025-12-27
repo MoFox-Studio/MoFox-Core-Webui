@@ -152,9 +152,15 @@ export async function getEmojiDetail(hash: string) {
 export async function uploadEmojis(files: File[]) {
   const formData = new FormData()
   files.forEach(file => formData.append('files', file))
-  const response = await api.post<{ success: boolean; data: UploadResponse }>('/emoji/upload', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  })
+  
+  // 不要手动设置 Content-Type，让浏览器自动设置（包含 boundary）
+  const response = await api.post<{ success: boolean; data: UploadResponse }>('/emoji/upload', formData)
+  
+  if (!response.success) {
+    const errorMsg = (response as any).error || '上传失败'
+    throw new Error(errorMsg)
+  }
+  
   return response.data
 }
 

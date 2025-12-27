@@ -57,7 +57,7 @@
                       <div class="progress-bar">
                         <div class="progress-fill" :style="{ width: file.progress + '%' }"></div>
                       </div>
-                      <div class="progress-text">{{ file.progress }}%</div>
+                      <div class="progress-text">{{ file.progress.toFixed(2) }}%</div>
                     </div>
                     <div v-if="file.success" class="file-success">
                       <span class="material-symbols-rounded">check_circle</span>
@@ -72,27 +72,6 @@
                     <span class="material-symbols-rounded">close</span>
                   </button>
                 </div>
-              </div>
-            </div>
-
-            <!-- 上传设置 -->
-            <div v-if="fileList.length > 0" class="upload-settings">
-              <h3>批量设置</h3>
-              <div class="setting-item">
-                <label>描述模板</label>
-                <input
-                  v-model="batchDescription"
-                  type="text"
-                  placeholder="所有文件使用相同描述（可选）"
-                />
-              </div>
-              <div class="setting-item">
-                <label>情感标签（逗号分隔）</label>
-                <input
-                  v-model="batchEmotions"
-                  type="text"
-                  placeholder="例如: 开心,笑脸,愉快"
-                />
               </div>
             </div>
 
@@ -160,8 +139,6 @@ const emojiStore = useEmojiStore()
 const fileInput = ref<HTMLInputElement | null>(null)
 const fileList = ref<FileItem[]>([])
 const isDragOver = ref(false)
-const batchDescription = ref('')
-const batchEmotions = ref('')
 const isUploading = ref(false)
 
 const uploadStats = computed(() => ({
@@ -174,8 +151,6 @@ const uploadStats = computed(() => ({
 watch(() => props.modelValue, (isOpen) => {
   if (!isOpen) {
     fileList.value = []
-    batchDescription.value = ''
-    batchEmotions.value = ''
     isUploading.value = false
   }
 })
@@ -252,23 +227,12 @@ const handleUpload = async () => {
 
   isUploading.value = true
 
-  // 准备表单数据
-  const formData = new FormData()
-  
-  // 添加文件
+  // 准备待上传的文件数组
+  const filesToUpload: File[] = []
   for (const fileItem of fileList.value) {
     if (!fileItem.success && !fileItem.error) {
-      formData.append('files', fileItem.file)
+      filesToUpload.push(fileItem.file)
     }
-  }
-
-  // 添加批量设置
-  if (batchDescription.value) {
-    formData.append('description', batchDescription.value)
-  }
-  if (batchEmotions.value) {
-    const emotions = batchEmotions.value.split(',').map(e => e.trim()).filter(Boolean)
-    formData.append('emotions', JSON.stringify(emotions))
   }
 
   try {
@@ -284,40 +248,34 @@ const handleUpload = async () => {
     const progressInterval = setInterval(() => {
       for (const fileItem of fileList.value) {
         if (fileItem.uploading && fileItem.progress < 90) {
-          fileItem.progress += Math.random() * 10
+          fileItem.progress = parseFloat((fileItem.progress + Math.random() * 10).toFixed(2))
         }
       }
     }, 200)
 
     // 执行上传
-    const result = await emojiStore.uploadEmojis(formData)
+    const result = await emojiStore.uploadEmojis(filesToUpload)
 
     clearInterval(progressInterval)
 
     // 处理上传结果
-    if (result.success.length > 0) {
-      // 标记成功的文件
-      for (const fileItem of fileList.value) {
-        if (fileItem.uploading) {
-          // 简化逻辑：假设按顺序上传
-          fileItem.uploading = false
-          fileItem.success = true
-          fileItem.progress = 100
-        }
+    // 标记成功的文件
+    for (const successItem of result.success || []) {
+      const fileItem = fileList.value.find(f => f.name === successItem.filename)
+      if (fileItem) {
+        fileItem.uploading = false
+        fileItem.success = true
+        fileItem.progress = 100
       }
     }
 
-    if (result.failed.length > 0) {
-      // 标记失败的文件
-      for (let i = 0; i < result.failed.length; i++) {
-        const failedItem = result.failed[i]
-        const fileItem = fileList.value.find(
-          f => f.name === failedItem.filename
-        )
-        if (fileItem) {
-          fileItem.uploading = false
-          fileItem.error = failedItem.error || '上传失败'
-        }
+    // 标记失败的文件
+    for (const failedItem of result.failed || []) {
+      const fileItem = fileList.value.find(f => f.name === failedItem.filename)
+      if (fileItem) {
+        fileItem.uploading = false
+        fileItem.error = failedItem.error || '上传失败'
+        fileItem.progress = 0
       }
     }
 

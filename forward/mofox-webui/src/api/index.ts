@@ -195,6 +195,14 @@ class ApiClient {
       if (response.ok) {
         return { success: true, data, status }
       } else {
+        // 详细记录错误信息
+        console.error(`[API] 请求失败 ${options.method || 'GET'} ${endpoint}:`, {
+          status,
+          statusText: response.statusText,
+          data,
+          headers: Object.fromEntries(response.headers.entries())
+        })
+        
         return { 
           success: false, 
           error: (data as Record<string, unknown>)?.error as string || `请求失败: ${status}`,
@@ -202,7 +210,7 @@ class ApiClient {
         }
       }
     } catch (error) {
-      console.error('API 请求错误:', error)
+      console.error('[API] 请求错误:', error)
       return { 
         success: false, 
         error: error instanceof Error ? error.message : '网络请求失败',
@@ -222,10 +230,13 @@ class ApiClient {
    * POST 请求
    */
   async post<T = unknown>(endpoint: string, body?: unknown, options: RequestInit = {}) {
+    // 如果是 FormData，直接传递，不要 JSON.stringify
+    const requestBody = body instanceof FormData ? body : (body ? JSON.stringify(body) : undefined)
+    
     return this.request<T>(endpoint, {
       ...options,
       method: 'POST',
-      body: body ? JSON.stringify(body) : undefined
+      body: requestBody
     })
   }
 

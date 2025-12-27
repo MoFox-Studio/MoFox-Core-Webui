@@ -21,6 +21,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import and_, delete, func, or_, select, update
 
 from src.chat.emoji_system.emoji_manager import get_emoji_manager
+from src.chat.emoji_system.emoji_constants import EMOJI_DIR
 from src.chat.utils.utils_image import get_image_manager, image_path_to_base64
 from src.common.database.api.crud import CRUDBase
 from src.common.database.compatibility import get_db_session
@@ -388,10 +389,7 @@ class EmojiManagerRouterComponent(BaseRouterComponent):
                     raise HTTPException(status_code=400, detail="未提供文件")
 
                 # 确保目录存在
-                if global_config is None:
-                    raise HTTPException(status_code=500, detail="配置未初始化")
-
-                emoji_dir = Path(global_config.emoji.emoji_dir)
+                emoji_dir = Path(EMOJI_DIR)
                 emoji_dir.mkdir(parents=True, exist_ok=True)
 
                 results = []
@@ -418,13 +416,18 @@ class EmojiManagerRouterComponent(BaseRouterComponent):
                             failed += 1
                             continue
 
+                        # 生成随机文件名，保留原始扩展名
+                        import uuid
+                        original_ext = Path(file.filename).suffix
+                        new_filename = f"{uuid.uuid4().hex}{original_ext}"
+                        file_path = emoji_dir / new_filename
+
                         # 保存文件
-                        file_path = emoji_dir / file.filename
                         with open(file_path, "wb") as f:
                             f.write(content)
 
                         # 注册到数据库
-                        success = await self.emoji_manager.register_emoji_by_filename(file.filename)
+                        success = await self.emoji_manager.register_emoji_by_filename(new_filename)
 
                         if success:
                             results.append(
@@ -432,6 +435,9 @@ class EmojiManagerRouterComponent(BaseRouterComponent):
                             )
                             uploaded += 1
                         else:
+                            # 注册失败删除文件
+                            if file_path.exists():
+                                file_path.unlink()
                             results.append({"filename": file.filename, "success": False, "error": "注册失败"})
                             failed += 1
 
@@ -440,7 +446,19 @@ class EmojiManagerRouterComponent(BaseRouterComponent):
                         results.append({"filename": file.filename, "success": False, "error": str(e)})
                         failed += 1
 
-                return {"success": True, "data": {"uploaded": uploaded, "failed": failed, "results": results}}
+                # 分离成功和失败的结果
+                success_results = [r for r in results if r["success"]]
+                failed_results = [r for r in results if not r["success"]]
+
+                return {
+                    "success": True,
+                    "data": {
+                        "uploaded": uploaded,
+                        "failed": failed,
+                        "success": success_results,
+                        "failed": failed_results
+                    }
+                }
 
             except HTTPException:
                 raise
