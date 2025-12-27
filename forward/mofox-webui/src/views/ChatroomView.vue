@@ -175,7 +175,19 @@
                   </div>
                 </div>
                 
-                <div class="message-text">{{ msg.content }}</div>
+                <!-- 文本内容 -->
+                <div v-if="msg.content" class="message-text">{{ msg.content }}</div>
+                
+                <!-- 表情包显示 -->
+                <div v-if="msg.emojis && msg.emojis.length > 0" class="message-emojis">
+                  <img 
+                    v-for="(emoji, idx) in msg.emojis" 
+                    :key="idx"
+                    :src="`data:image/png;base64,${emoji}`"
+                    class="emoji-image"
+                    alt="emoji"
+                  />
+                </div>
               </div>
             </template>
           </div>
@@ -624,6 +636,7 @@ interface Message {
   timestamp: number
   message_type: string
   reply_to?: string  // 引用的消息ID
+  emojis?: string[]  // 表情包图片列表（base64）
 }
 
 // ========== 状态 ==========
@@ -1617,6 +1630,28 @@ function showToast(message: string, type: 'success' | 'error' = 'success') {
   background-color: var(--md-sys-color-primary-container);
   color: var(--md-sys-color-on-primary-container);
   border-top-right-radius: 4px;
+}
+
+/* 表情包样式 */
+.message-emojis {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.emoji-image {
+  max-width: 120px;
+  max-height: 120px;
+  border-radius: 8px;
+  object-fit: contain;
+  background-color: var(--md-sys-color-surface-container);
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.emoji-image:hover {
+  transform: scale(1.05);
 }
 
 .empty-messages {

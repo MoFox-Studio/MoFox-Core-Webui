@@ -7,10 +7,13 @@ UI Chatroom 路由组件
 - 虚拟用户管理
 """
 
+import base64
+import hashlib
+import json
+import os
 import time
 import uuid
 import orjson
-from typing import Any
 
 from fastapi import HTTPException
 from pydantic import BaseModel
@@ -19,14 +22,17 @@ from sqlalchemy import select, update
 from src.common.logger import get_logger
 from src.common.database.core.models import PersonInfo, UserRelationships
 from src.common.database.core.session import get_db_session
-from src.common.database.api.crud import CRUDBase
 from src.person_info.person_info import get_person_info_manager
 from src.plugin_system.apis import message_api
 from src.plugin_system.base import BaseRouterComponent
 from src.config.config import global_config
+from src.chat.emoji_system.emoji_manager import get_emoji_manager
 
 from ..adapters.ui_chatroom_adapter import get_ui_chatroom_adapter
-from ..utils.chatroom_storage import get_chatroom_storage
+from ..utils.chatroom_storage import (
+    get_chatroom_storage,
+    get_chatroom_message_storage,
+)
 
 logger = get_logger("ChatroomRouter")
 
@@ -105,6 +111,7 @@ class ChatroomRouterComponent(BaseRouterComponent):
     def __init__(self, plugin_config: dict | None = None):
         # 在调用super之前初始化需要的属性
         self.storage = get_chatroom_storage()
+        self.message_storage = get_chatroom_message_storage()
         self.person_manager = get_person_info_manager()
         super().__init__(plugin_config)
 
@@ -127,9 +134,9 @@ class ChatroomRouterComponent(BaseRouterComponent):
             try:
                 chat_id = self.storage.get_chat_id()
                 
-                # 使用 message_api 获取消息
+                # 使用内置 SQLite 数据库获取消息
                 if before_timestamp:
-                    messages = await message_api.get_messages_before_time_in_chat(
+                    messages = self.message_storage.get_messages_before_time(
                         chat_id=chat_id,
                         timestamp=before_timestamp,
                         limit=limit
@@ -138,7 +145,7 @@ class ChatroomRouterComponent(BaseRouterComponent):
                     # 获取最近的消息
                     end_time = time.time()
                     start_time = end_time - 86400 * 7  # 最近7天
-                    messages = await message_api.get_messages_by_time_in_chat(
+                    messages = self.message_storage.get_messages_by_time_range(
                         chat_id=chat_id,
                         start_time=start_time,
                         end_time=end_time,
@@ -146,7 +153,7 @@ class ChatroomRouterComponent(BaseRouterComponent):
                         limit_mode="latest"
                     )
 
-                # 过滤出UI平台的消息
+                # 过滤出UI平台的消息（已经是UI平台的消息了）
                 ui_messages = [
                     msg for msg in messages
                     if msg.get("user_platform") == "web_ui_chatroom"
@@ -165,6 +172,16 @@ class ChatroomRouterComponent(BaseRouterComponent):
                         nickname = virtual_user["nickname"]
                     elif user_id == "mofox_bot":
                         nickname = global_config.bot.nickname
+                    
+                    # 处理表情包：从emoji_hashes获取base64图片
+                    emoji_images = []
+                    emoji_hashes_str = msg.get("emoji_hashes")
+                    if emoji_hashes_str:
+                        try:
+                            emoji_hashes = json.loads(emoji_hashes_str)
+                            emoji_images = await self._get_emoji_images_by_hashes(emoji_hashes)
+                        except Exception as e:
+                            logger.error(f"解析emoji哈希失败: {e}")
 
                     result.append({
                         "message_id": msg.get("message_id"),
@@ -172,7 +189,9 @@ class ChatroomRouterComponent(BaseRouterComponent):
                         "nickname": nickname,
                         "content": msg.get("content", ""),
                         "timestamp": msg.get("timestamp", time.time()),
-                        "message_type": "text",  # TODO: 支持更多类型
+                        "message_type": msg.get("message_type", "text"),
+                        "emojis": emoji_images,  # 添加表情包图片列表
+                        "reply_to": msg.get("reply_to"),
                     })
 
                 return {
@@ -204,7 +223,7 @@ class ChatroomRouterComponent(BaseRouterComponent):
                     raise HTTPException(status_code=404, detail=f"虚拟用户 {request.user_id} 不存在")
 
                 # 确保该虚拟用户在person_info中存在
-                person_id = await self._ensure_person_exists(
+                await self._ensure_person_exists(
                     user_id=request.user_id,
                     nickname=virtual_user["nickname"],
                     impression=virtual_user.get("impression", "")
@@ -212,15 +231,31 @@ class ChatroomRouterComponent(BaseRouterComponent):
 
                 # 构建消息
                 message_id = str(uuid.uuid4())
+                timestamp = time.time()
+                chat_id = self.storage.get_chat_id()
+                
                 raw_message = {
                     "message_id": message_id,
                     "user_id": request.user_id,
                     "nickname": virtual_user["nickname"],
                     "content": request.content,
-                    "timestamp": time.time(),
+                    "timestamp": timestamp,
                     "message_type": request.message_type,
                     "reply_to": request.reply_to,
                 }
+
+                # 保存到SQLite
+                self.message_storage.save_message(
+                    message_id=message_id,
+                    user_id=request.user_id,
+                    nickname=virtual_user["nickname"],
+                    content=request.content,
+                    timestamp=timestamp,
+                    chat_id=chat_id,
+                    message_type=request.message_type,
+                    reply_to=request.reply_to,
+                    user_platform="web_ui_chatroom"
+                )
 
                 # 发送到适配器（异步，不等待响应）
                 await adapter.send_message(raw_message)
@@ -381,7 +416,7 @@ class ChatroomRouterComponent(BaseRouterComponent):
                     await self.person_manager.update_one_field(person_id, "short_impression", update_data["short_impression"])
                 if "attitude" in update_data:
                     await self.person_manager.update_one_field(person_id, "attitude", update_data["attitude"])
-                if "memory_points" in update_data:
+                if "memory_points" in update_data and request.memory_points is not None:
                     # 转换记忆点格式: [content, weight, timestamp]
                     points_data = [
                         [point.content, point.weight, time.time()] 
@@ -454,6 +489,39 @@ class ChatroomRouterComponent(BaseRouterComponent):
 
                 # 获取待处理的响应消息
                 responses = await adapter.get_pending_responses(timeout=0.5)
+                
+                # 将AI响应消息保存到SQLite
+                chat_id = self.storage.get_chat_id()
+                for response in responses:
+                    # 提取表情包的base64数据并计算哈希值
+                    emoji_hashes = []
+                    emojis_base64 = response.get("emojis", [])
+                    if emojis_base64:
+                        for emoji_b64 in emojis_base64:
+                            try:
+                                emoji_bytes = base64.b64decode(emoji_b64)
+                                emoji_hash = hashlib.md5(emoji_bytes).hexdigest()
+                                emoji_hashes.append(emoji_hash)
+                                logger.debug(f"提取表情包哈希: {emoji_hash}")
+                            except Exception as e:
+                                logger.error(f"计算表情包哈希失败: {e}")
+                    
+                    # 将emoji哈希列表转换为JSON字符串保存
+                    emoji_hashes_json = json.dumps(emoji_hashes) if emoji_hashes else None
+                    
+                    # 保存消息到SQLite（包含emoji哈希）
+                    self.message_storage.save_message(
+                        message_id=response.get("message_id"),
+                        user_id=response.get("user_id", "mofox_bot"),
+                        nickname=response.get("nickname", "麦麦"),
+                        content=response.get("content", ""),
+                        timestamp=response.get("timestamp", time.time()),
+                        chat_id=chat_id,
+                        message_type=response.get("message_type", "text"),
+                        reply_to=response.get("reply_to"),
+                        user_platform="web_ui_chatroom",
+                        emoji_hashes=emoji_hashes_json
+                    )
 
                 return {
                     "success": True,
@@ -636,3 +704,42 @@ class ChatroomRouterComponent(BaseRouterComponent):
             await self.person_manager.update_one_field(person_id, "points", orjson.dumps(points_data).decode('utf-8'))
 
         return person_id
+
+    async def _get_emoji_images_by_hashes(self, emoji_hashes: list[str]) -> list[str]:
+        """
+        根据表情包哈希值列表从数据库获取对应的base64图片
+        
+        Args:
+            emoji_hashes: 表情包哈希值列表
+            
+        Returns:
+            base64编码的图片列表
+        """
+        emoji_images = []
+        
+        for emoji_hash in emoji_hashes:
+            try:
+                # 从数据库获取表情包对象
+                emoji_list = await self.emoji_manager.get_emoji_from_db(emoji_hash)
+                
+                if emoji_list and len(emoji_list) > 0:
+                    emoji_obj = emoji_list[0]
+                    # 读取文件并转换为base64
+                    if os.path.exists(emoji_obj.full_path):
+                        from src.chat.utils.utils_image import image_path_to_base64
+                        emoji_base64 = image_path_to_base64(emoji_obj.full_path)
+                        if emoji_base64:
+                            emoji_images.append(emoji_base64)
+                            logger.debug(f"获取表情包成功: {emoji_hash}")
+                        else:
+                            logger.warning(f"转换表情包为base64失败: {emoji_hash}")
+                    else:
+                        logger.warning(f"表情包文件不存在: {emoji_obj.full_path}")
+                else:
+                    logger.warning(f"数据库中未找到表情包: {emoji_hash}")
+                    
+            except Exception as e:
+                logger.error(f"获取表情包失败 {emoji_hash}: {e}")
+                continue
+        
+        return emoji_images

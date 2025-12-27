@@ -195,9 +195,10 @@ class UIChatroomAdapter(BaseAdapter):
             if isinstance(message_segment, dict):
                 message_segment = [message_segment]
             
-            # 提取文本内容和图片
+            # 提取文本内容、图片和表情包
             text_content = ""
             image_urls = []
+            emoji_base64_list = []  # 存储表情包的 base64 数据
             
             for segment in message_segment:
                 seg_type = segment.get("type")
@@ -211,12 +212,27 @@ class UIChatroomAdapter(BaseAdapter):
                     # data 是 str (URL)
                     if isinstance(seg_data, str):
                         image_urls.append(seg_data)
+                elif seg_type == "emoji":
+                    # emoji 的 data 是 base64 编码的图片
+                    if isinstance(seg_data, str):
+                        emoji_base64_list.append(seg_data)
+                        logger.debug(f"提取到表情包，长度: {len(seg_data)}")
 
             # 获取原始消息的 message_id 作为 reply_to
             reply_to = None
             raw = metadata.get("raw", {})
             if raw:
                 reply_to = raw.get("message_id")
+
+            # 确定消息类型
+            if emoji_base64_list:
+                msg_type = "emoji"
+            elif image_urls:
+                msg_type = "image"
+            elif text_content:
+                msg_type = "text"
+            else:
+                msg_type = "text"
 
             # 构建响应消息
             response_message = {
@@ -225,8 +241,9 @@ class UIChatroomAdapter(BaseAdapter):
                 "nickname": global_config.bot.nickname,
                 "content": text_content,
                 "images": image_urls,
+                "emojis": emoji_base64_list,  # 添加表情包列表
                 "timestamp": time.time(),
-                "message_type": "text" if text_content else "image",
+                "message_type": msg_type,
                 "reply_to": reply_to,  # 引用原消息
             }
 
@@ -238,6 +255,7 @@ class UIChatroomAdapter(BaseAdapter):
                 "content": text_content,
                 "timestamp": response_message["timestamp"],
                 "message_type": response_message["message_type"],
+                "emojis": emoji_base64_list,  # 缓存表情包数据
             })
 
             # 将响应消息放入队列
