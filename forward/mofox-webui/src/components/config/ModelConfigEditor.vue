@@ -96,21 +96,25 @@
                 <div class="form-group">
                   <label>客户端类型</label>
                   <div class="custom-select" :class="{ open: activeDropdown === `provider-client-${index}` }">
-                    <div class="select-trigger" @click.stop="toggleDropdown(`provider-client-${index}`)">
+                    <div class="select-trigger" @click.stop="toggleDropdown(`provider-client-${index}`, $event)">
                       <span>{{ getClientTypeLabel(provider.client_type) }}</span>
                       <Icon icon="lucide:chevron-down" class="chevron" :class="{ rotated: activeDropdown === `provider-client-${index}` }" />
                     </div>
-                    <Transition name="dropdown-fade">
-                      <div v-if="activeDropdown === `provider-client-${index}`" class="select-options">
-                        <div class="select-option" @click="updateProvider(index, 'client_type', 'openai'); activeDropdown = null">
-                          <span>OpenAI 兼容</span>
+                    <Teleport to="body">
+                      <Transition name="dropdown-fade">
+                        <div v-if="activeDropdown === `provider-client-${index}`" class="select-options" :style="dropdownStyle">
+                          <div class="select-option" @click="updateProvider(index, 'client_type', 'openai'); activeDropdown = null">
+                            <span>OpenAI 兼容</span>
+                          </div>
+                          <div class="select-option" @click="updateProvider(index, 'client_type', 'aiohttp_gemini'); activeDropdown = null">
+                            <span>Gemini（Google）</span>
+                          </div>
                         </div>
-                        <div class="select-option" @click="updateProvider(index, 'client_type', 'aiohttp_gemini'); activeDropdown = null">
-                          <span>Gemini（Google）</span>
-                        </div>
-                      </div>
-                    </Transition>
-                    <div v-if="activeDropdown === `provider-client-${index}`" class="dropdown-overlay" @click.stop="activeDropdown = null"></div>
+                      </Transition>
+                    </Teleport>
+                    <Teleport to="body">
+                      <div v-if="activeDropdown === `provider-client-${index}`" class="dropdown-overlay" @click.stop="activeDropdown = null"></div>
+                    </Teleport>
                   </div>
                 </div>
                 <div class="form-group full-width">
@@ -327,26 +331,30 @@
                 <div class="form-group">
                   <label>API 提供商</label>
                   <div class="custom-select" :class="{ open: activeDropdown === `model-provider-${index}` }">
-                    <div class="select-trigger" @click.stop="toggleDropdown(`model-provider-${index}`)">
+                    <div class="select-trigger" @click.stop="toggleDropdown(`model-provider-${index}`, $event)">
                       <span>{{ model.api_provider || '请选择' }}</span>
                       <Icon icon="lucide:chevron-down" class="chevron" :class="{ rotated: activeDropdown === `model-provider-${index}` }" />
                     </div>
-                    <Transition name="dropdown-fade">
-                      <div v-if="activeDropdown === `model-provider-${index}`" class="select-options">
-                        <div class="select-option" @click="updateModel(index, 'api_provider', ''); activeDropdown = null">
-                          <span>请选择</span>
+                    <Teleport to="body">
+                      <Transition name="dropdown-fade">
+                        <div v-if="activeDropdown === `model-provider-${index}`" class="select-options" :style="dropdownStyle">
+                          <div class="select-option" @click="updateModel(index, 'api_provider', ''); activeDropdown = null">
+                            <span>请选择</span>
+                          </div>
+                          <div 
+                            v-for="p in apiProviders" 
+                            :key="p.name" 
+                            class="select-option"
+                            @click="updateModel(index, 'api_provider', p.name); activeDropdown = null"
+                          >
+                            <span>{{ p.name }}</span>
+                          </div>
                         </div>
-                        <div 
-                          v-for="p in apiProviders" 
-                          :key="p.name" 
-                          class="select-option"
-                          @click="updateModel(index, 'api_provider', p.name); activeDropdown = null"
-                        >
-                          <span>{{ p.name }}</span>
-                        </div>
-                      </div>
-                    </Transition>
-                    <div v-if="activeDropdown === `model-provider-${index}`" class="dropdown-overlay" @click.stop="activeDropdown = null"></div>
+                      </Transition>
+                    </Teleport>
+                    <Teleport to="body">
+                      <div v-if="activeDropdown === `model-provider-${index}`" class="dropdown-overlay" @click.stop="activeDropdown = null"></div>
+                    </Teleport>
                   </div>
                 </div>
                 <div class="form-group half">
@@ -457,24 +465,28 @@
                         <div class="form-group">
                           <label>扰动强度</label>
                           <div class="custom-select" :class="{ open: activeDropdown === `model-perturbation-${index}` }">
-                            <div class="select-trigger" @click.stop="toggleDropdown(`model-perturbation-${index}`)">
+                            <div class="select-trigger" @click.stop="toggleDropdown(`model-perturbation-${index}`, $event)">
                               <span>{{ {'light': '轻度', 'medium': '中度', 'heavy': '重度'}[model.perturbation_strength as string] || '轻度' }}</span>
                               <Icon icon="lucide:chevron-down" class="chevron" :class="{ rotated: activeDropdown === `model-perturbation-${index}` }" />
                             </div>
-                            <Transition name="dropdown-fade">
-                              <div v-if="activeDropdown === `model-perturbation-${index}`" class="select-options">
-                                <div class="select-option" @click="updateModel(index, 'perturbation_strength', 'light'); activeDropdown = null">
-                                  <span>轻度</span>
+                            <Teleport to="body">
+                              <Transition name="dropdown-fade">
+                                <div v-if="activeDropdown === `model-perturbation-${index}`" class="select-options" :style="dropdownStyle">
+                                  <div class="select-option" @click="updateModel(index, 'perturbation_strength', 'light'); activeDropdown = null">
+                                    <span>轻度</span>
+                                  </div>
+                                  <div class="select-option" @click="updateModel(index, 'perturbation_strength', 'medium'); activeDropdown = null">
+                                    <span>中度</span>
+                                  </div>
+                                  <div class="select-option" @click="updateModel(index, 'perturbation_strength', 'heavy'); activeDropdown = null">
+                                    <span>重度</span>
+                                  </div>
                                 </div>
-                                <div class="select-option" @click="updateModel(index, 'perturbation_strength', 'medium'); activeDropdown = null">
-                                  <span>中度</span>
-                                </div>
-                                <div class="select-option" @click="updateModel(index, 'perturbation_strength', 'heavy'); activeDropdown = null">
-                                  <span>重度</span>
-                                </div>
-                              </div>
-                            </Transition>
-                            <div v-if="activeDropdown === `model-perturbation-${index}`" class="dropdown-overlay" @click.stop="activeDropdown = null"></div>
+                              </Transition>
+                            </Teleport>
+                            <Teleport to="body">
+                              <div v-if="activeDropdown === `model-perturbation-${index}`" class="dropdown-overlay" @click.stop="activeDropdown = null"></div>
+                            </Teleport>
                           </div>
                         </div>
                         <div class="toggle-item compact">
@@ -529,7 +541,7 @@
               <div class="control-group model-select">
                 <label>模型 (可多选)</label>
                 <div class="custom-select" :class="{ open: openTaskModelDropdown === taskKey }">
-                  <div class="select-trigger" @click="toggleTaskModelDropdown(taskKey)">
+                  <div class="select-trigger" @click="toggleTaskModelDropdown(taskKey, $event)">
                     <span v-if="getTaskModel(taskKey).length === 0" class="placeholder">未配置</span>
                     <div v-else class="selected-tags">
                       <span 
@@ -542,23 +554,27 @@
                     </div>
                     <Icon icon="lucide:chevron-down" class="chevron" :class="{ rotated: openTaskModelDropdown === taskKey }" />
                   </div>
-                  <Transition name="dropdown-fade">
-                    <div v-if="openTaskModelDropdown === taskKey" class="select-options">
-                      <div 
-                        v-for="m in models" 
-                        :key="m.name" 
-                        class="select-option"
-                        @click.stop="toggleTaskModelSelection(taskKey, m.name!)"
-                      >
-                        <div class="checkbox" :class="{ checked: getTaskModel(taskKey).includes(m.name!) }">
-                          <Icon icon="lucide:check" v-if="getTaskModel(taskKey).includes(m.name!)" />
+                  <Teleport to="body">
+                    <Transition name="dropdown-fade">
+                      <div v-if="openTaskModelDropdown === taskKey" class="select-options" :style="dropdownStyle">
+                        <div 
+                          v-for="m in models" 
+                          :key="m.name" 
+                          class="select-option"
+                          @click.stop="toggleTaskModelSelection(taskKey, m.name!)"
+                        >
+                          <div class="checkbox" :class="{ checked: getTaskModel(taskKey).includes(m.name!) }">
+                            <Icon icon="lucide:check" v-if="getTaskModel(taskKey).includes(m.name!)" />
+                          </div>
+                          <span>{{ m.name }}</span>
                         </div>
-                        <span>{{ m.name }}</span>
                       </div>
-                    </div>
-                  </Transition>
+                    </Transition>
+                  </Teleport>
                 </div>
-                <div v-if="openTaskModelDropdown === taskKey" class="dropdown-overlay" @click="openTaskModelDropdown = null"></div>
+                <Teleport to="body">
+                  <div v-if="openTaskModelDropdown === taskKey" class="dropdown-overlay" @click="openTaskModelDropdown = null"></div>
+                </Teleport>
               </div>
               <div class="control-group small">
                 <label>温度</label>
@@ -600,297 +616,309 @@
     </div>
 
     <!-- 添加提供商弹窗 -->
-    <div v-if="showAddProviderModal" class="modal-overlay" @click.self="showAddProviderModal = false">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>
-            <Icon icon="lucide:plus-circle" />
-            添加 API 提供商
-          </h3>
-          <button class="close-btn" @click="showAddProviderModal = false">
-            <Icon icon="lucide:x" />
-          </button>
-        </div>
-        <div class="modal-body">
-          <!-- 预设模板 -->
-          <div class="preset-providers">
-            <h4>选择预设模板</h4>
-            <div class="preset-grid">
-              <button 
-                v-for="preset in providerPresets" 
-                :key="preset.name"
-                class="preset-btn"
-                :class="{ active: newProvider.name === preset.name }"
-                @click="selectPreset(preset)"
-              >
-                <Icon :icon="preset.icon" />
-                <span>{{ preset.name }}</span>
-                <small>{{ preset.description }}</small>
-              </button>
-            </div>
+    <Teleport to="body">
+      <div v-if="showAddProviderModal" class="modal-overlay" @click.self="showAddProviderModal = false">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>
+              <Icon icon="lucide:plus-circle" />
+              添加 API 提供商
+            </h3>
+            <button class="close-btn" @click="showAddProviderModal = false">
+              <Icon icon="lucide:x" />
+            </button>
           </div>
-          
-          <div class="divider">
-            <span>配置详情</span>
-          </div>
-          
-          <div class="manual-config">
-            <div class="config-field">
-              <label>提供商名称</label>
-              <input v-model="newProvider.name" type="text" class="input" placeholder="例如: DeepSeek" />
-            </div>
-            <div class="config-field">
-              <label>API 地址</label>
-              <input v-model="newProvider.base_url" type="text" class="input" placeholder="https://api.example.com/v1" />
-            </div>
-            <div class="config-field">
-              <label>API 密钥</label>
-              <input v-model="newProvider.api_key" type="password" class="input" placeholder="你的 API 密钥" />
-            </div>
-            <div class="config-field">
-              <label>客户端类型</label>
-              <div class="custom-select" :class="{ open: activeDropdown === 'new-provider-client' }">
-                <div class="select-trigger" @click.stop="toggleDropdown('new-provider-client')">
-                  <span>{{ getClientTypeLabel(newProvider.client_type) }}</span>
-                  <Icon icon="lucide:chevron-down" class="chevron" :class="{ rotated: activeDropdown === 'new-provider-client' }" />
-                </div>
-                <Transition name="dropdown-fade">
-                  <div v-if="activeDropdown === 'new-provider-client'" class="select-options">
-                    <div class="select-option" @click="newProvider.client_type = 'openai'; activeDropdown = null">
-                      <span>OpenAI 兼容</span>
-                    </div>
-                    <div class="select-option" @click="newProvider.client_type = 'aiohttp_gemini'; activeDropdown = null">
-                      <span>Gemini（Google）</span>
-                    </div>
-                  </div>
-                </Transition>
-                <div v-if="activeDropdown === 'new-provider-client'" class="dropdown-overlay" @click.stop="activeDropdown = null"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" @click="showAddProviderModal = false">取消</button>
-          <button class="btn btn-primary" @click="confirmAddProvider" :disabled="!newProvider.name || !newProvider.base_url">
-            <Icon icon="lucide:check" />
-            添加
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 添加模型弹窗 -->
-    <div v-if="showAddModelModal" class="modal-overlay" @click.self="showAddModelModal = false">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>
-            <Icon icon="lucide:bot" />
-            添加模型
-          </h3>
-          <button class="close-btn" @click="showAddModelModal = false">
-            <Icon icon="lucide:x" />
-          </button>
-        </div>
-        <div class="modal-body">
-          <div class="config-field">
-            <label>
-              模型标识符
-              <span class="field-hint">API 服务商提供的模型标识符</span>
-            </label>
-            <div style="display: flex; gap: 8px;">
-              <input 
-                v-model="newModel.model_identifier" 
-                type="text" 
-                class="input" 
-                placeholder="例如: deepseek-chat, gpt-4"
-                style="flex: 1;"
-              />
-            </div>
-          </div>
-          <div class="config-field">
-            <label>
-              模型名称
-              <span class="field-hint">模型的自定义名称，在任务配置中使用</span>
-            </label>
-            <input v-model="newModel.name" type="text" class="input" placeholder="例如: deepseek-v3" />
-          </div>
-          <div class="config-field">
-            <label>API 提供商</label>
-            <div class="custom-select" :class="{ open: activeDropdown === 'new-model-provider' }">
-              <div class="select-trigger" @click.stop="toggleDropdown('new-model-provider')">
-                <span>{{ newModel.api_provider || '请选择提供商' }}</span>
-                <Icon icon="lucide:chevron-down" class="chevron" :class="{ rotated: activeDropdown === 'new-model-provider' }" />
-              </div>
-              <Transition name="dropdown-fade">
-                <div v-if="activeDropdown === 'new-model-provider'" class="select-options">
-                  <div class="select-option" @click="newModel.api_provider = ''; fetchAvailableModels(); activeDropdown = null">
-                    <span>请选择提供商</span>
-                  </div>
-                  <div 
-                    v-for="provider in apiProviders" 
-                    :key="provider.name" 
-                    class="select-option"
-                    @click="newModel.api_provider = provider.name || ''; fetchAvailableModels(); activeDropdown = null"
-                  >
-                    <span>{{ provider.name }}</span>
-                  </div>
-                </div>
-              </Transition>
-              <div v-if="activeDropdown === 'new-model-provider'" class="dropdown-overlay" @click.stop="activeDropdown = null"></div>
-            </div>
-          </div>
-          
-          <!-- 模型列表区域 -->
-          <div v-if="newModel.api_provider && (fetchingModels || availableModels.length > 0 || fetchModelsError)" 
-               class="models-section">
-            <div v-if="fetchingModels" class="loading-models">
-              <Icon icon="lucide:loader-2" class="spinning" />
-              <span>正在获取可用模型...</span>
-            </div>
-            <div v-else-if="fetchModelsError" class="fetch-error">
-              <Icon icon="lucide:alert-circle" />
-              <span>{{ fetchModelsError }}</span>
-              <button class="btn-retry" @click="fetchAvailableModels">
-                <Icon icon="lucide:refresh-cw" />
-                重试
-              </button>
-            </div>
-            <div v-else-if="availableModels.length > 0" class="available-models">
-              <div class="models-header">
-                <span>可用模型 ({{ availableModels.length }})</span>
-                <button class="btn-refresh" @click="fetchAvailableModels" title="刷新列表">
-                  <Icon icon="lucide:refresh-cw" />
-                </button>
-              </div>
-              <div class="models-list">
-                <button
-                  v-for="model in availableModels"
-                  :key="model.id"
-                  class="model-option"
-                  :class="{ active: newModel.model_identifier === model.id }"
-                  @click="newModel.model_identifier = model.id; newModel.name = model.name"
+          <div class="modal-body">
+            <!-- 预设模板 -->
+            <div class="preset-providers">
+              <h4>选择预设模板</h4>
+              <div class="preset-grid">
+                <button 
+                  v-for="preset in providerPresets" 
+                  :key="preset.name"
+                  class="preset-btn"
+                  :class="{ active: newProvider.name === preset.name }"
+                  @click="selectPreset(preset)"
                 >
-                  <Icon icon="lucide:bot" />
-                  <div class="model-info">
-                    <span class="model-id">{{ model.id }}</span>
-                    <span v-if="model.name !== model.id" class="model-name">{{ model.name }}</span>
-                  </div>
-                  <Icon v-if="newModel.model_identifier === model.id" icon="lucide:check" class="check-icon" />
+                  <Icon :icon="preset.icon" />
+                  <span>{{ preset.name }}</span>
+                  <small>{{ preset.description }}</small>
                 </button>
               </div>
-            </div>
-          </div>
-          <div class="config-field-row">
-            <div class="config-field">
-              <label>输入价格 (元/M token)</label>
-              <input v-model.number="newModel.price_in" type="number" class="input" step="0.1" min="0" />
-            </div>
-            <div class="config-field">
-              <label>输出价格 (元/M token)</label>
-              <input v-model.number="newModel.price_out" type="number" class="input" step="0.1" min="0" />
-            </div>
-          </div>
-
-          <!-- 高级参数 -->
-          <div class="advanced-params-section">
-            <div class="advanced-header" @click="showAddModelAdvanced = !showAddModelAdvanced">
-              <div class="advanced-header-left">
-                <Icon :icon="showAddModelAdvanced ? 'lucide:chevron-down' : 'lucide:chevron-right'" />
-                <span>高级参数 (可选)</span>
-              </div>
-              <span class="advanced-hint">{{ showAddModelAdvanced ? '收起' : '展开' }}</span>
             </div>
             
-            <div v-show="showAddModelAdvanced" class="advanced-params-content">
+            <div class="divider">
+              <span>配置详情</span>
+            </div>
+            
+            <div class="manual-config">
               <div class="config-field">
-                <label>
-                  最大输出 Token
-                  <span class="field-hint">留空使用默认值</span>
-                </label>
-                <input v-model.number="newModel.max_tokens" type="number" class="input" min="1" placeholder="例如: 4096" />
+                <label>提供商名称</label>
+                <input v-model="newProvider.name" type="text" class="input" placeholder="例如: DeepSeek" />
               </div>
               <div class="config-field">
-                <label>
-                  温度 (temperature)
-                  <span class="field-hint">0-2，留空使用默认值</span>
-                </label>
-                <div class="slider-with-input">
-                  <input 
-                    type="range" 
-                    class="temp-slider"
-                    :value="newModel.temperature ?? 0.7" 
-                    @input="newModel.temperature = parseFloat(($event.target as HTMLInputElement).value)"
-                    min="0" 
-                    max="2" 
-                    step="0.1"
-                  />
-                  <input 
-                    v-model.number="newModel.temperature" 
-                    type="number" 
-                    class="input temp-input" 
-                    step="0.1" 
-                    min="0" 
-                    max="2" 
-                    placeholder="0.7" 
-                  />
-                </div>
+                <label>API 地址</label>
+                <input v-model="newProvider.base_url" type="text" class="input" placeholder="https://api.example.com/v1" />
               </div>
-
-              <div class="feature-toggles">
-                <div class="feature-toggle" @click="newModel.anti_truncation = !newModel.anti_truncation">
-                  <div class="feature-toggle-info">
-                    <div class="feature-toggle-icon" :class="{ active: newModel.anti_truncation }">
-                      <Icon icon="lucide:shield-check" />
-                    </div>
-                    <div class="feature-toggle-text">
-                      <span class="feature-name">反截断</span>
-                      <span class="feature-hint">防止模型输出被截断</span>
-                    </div>
+              <div class="config-field">
+                <label>API 密钥</label>
+                <input v-model="newProvider.api_key" type="password" class="input" placeholder="你的 API 密钥" />
+              </div>
+              <div class="config-field">
+                <label>客户端类型</label>
+                <div class="custom-select" :class="{ open: activeDropdown === 'new-provider-client' }">
+                  <div class="select-trigger" @click.stop="toggleDropdown('new-provider-client', $event)">
+                    <span>{{ getClientTypeLabel(newProvider.client_type) }}</span>
+                    <Icon icon="lucide:chevron-down" class="chevron" :class="{ rotated: activeDropdown === 'new-provider-client' }" />
                   </div>
-                  <label class="switch small" @click.stop>
-                    <input 
-                      type="checkbox" 
-                      v-model="newModel.anti_truncation"
-                    />
-                    <span class="slider"></span>
-                  </label>
-                </div>
-                <div class="feature-toggle" @click="newModel.enable_prompt_perturbation = !newModel.enable_prompt_perturbation">
-                  <div class="feature-toggle-info">
-                    <div class="feature-toggle-icon" :class="{ active: newModel.enable_prompt_perturbation }">
-                      <Icon icon="lucide:shuffle" />
-                    </div>
-                    <div class="feature-toggle-text">
-                      <span class="feature-name">内容混淆</span>
-                      <span class="feature-hint">对提示词进行微扰动，增加输出多样性</span>
-                    </div>
-                  </div>
-                  <label class="switch small" @click.stop>
-                    <input 
-                      type="checkbox" 
-                      v-model="newModel.enable_prompt_perturbation"
-                    />
-                    <span class="slider"></span>
-                  </label>
+                  <Teleport to="body">
+                    <Transition name="dropdown-fade">
+                      <div v-if="activeDropdown === 'new-provider-client'" class="select-options" :style="dropdownStyle">
+                        <div class="select-option" @click="newProvider.client_type = 'openai'; activeDropdown = null">
+                          <span>OpenAI 兼容</span>
+                        </div>
+                        <div class="select-option" @click="newProvider.client_type = 'aiohttp_gemini'; activeDropdown = null">
+                          <span>Gemini（Google）</span>
+                        </div>
+                      </div>
+                    </Transition>
+                  </Teleport>
+                  <Teleport to="body">
+                    <div v-if="activeDropdown === 'new-provider-client'" class="dropdown-overlay" @click.stop="activeDropdown = null"></div>
+                  </Teleport>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" @click="showAddModelModal = false">取消</button>
-          <button class="btn btn-primary" @click="confirmAddModel" :disabled="!newModel.model_identifier || !newModel.name">
-            <Icon icon="lucide:check" />
-            添加
-          </button>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" @click="showAddProviderModal = false">取消</button>
+            <button class="btn btn-primary" @click="confirmAddProvider" :disabled="!newProvider.name || !newProvider.base_url">
+              <Icon icon="lucide:check" />
+              添加
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </Teleport>
+
+    <!-- 添加模型弹窗 -->
+    <Teleport to="body">
+      <div v-if="showAddModelModal" class="modal-overlay" @click.self="showAddModelModal = false">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>
+              <Icon icon="lucide:bot" />
+              添加模型
+            </h3>
+            <button class="close-btn" @click="showAddModelModal = false">
+              <Icon icon="lucide:x" />
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="config-field">
+              <label>
+                模型标识符
+                <span class="field-hint">API 服务商提供的模型标识符</span>
+              </label>
+              <div style="display: flex; gap: 8px;">
+                <input 
+                  v-model="newModel.model_identifier" 
+                  type="text" 
+                  class="input" 
+                  placeholder="例如: deepseek-chat, gpt-4"
+                  style="flex: 1;"
+                />
+              </div>
+            </div>
+            <div class="config-field">
+              <label>
+                模型名称
+                <span class="field-hint">模型的自定义名称，在任务配置中使用</span>
+              </label>
+              <input v-model="newModel.name" type="text" class="input" placeholder="例如: deepseek-v3" />
+            </div>
+            <div class="config-field">
+              <label>API 提供商</label>
+              <div class="custom-select" :class="{ open: activeDropdown === 'new-model-provider' }">
+                <div class="select-trigger" @click.stop="toggleDropdown('new-model-provider', $event)">
+                  <span>{{ newModel.api_provider || '请选择提供商' }}</span>
+                  <Icon icon="lucide:chevron-down" class="chevron" :class="{ rotated: activeDropdown === 'new-model-provider' }" />
+                </div>
+                <Teleport to="body">
+                  <Transition name="dropdown-fade">
+                    <div v-if="activeDropdown === 'new-model-provider'" class="select-options" :style="dropdownStyle">
+                      <div class="select-option" @click="newModel.api_provider = ''; fetchAvailableModels(); activeDropdown = null">
+                        <span>请选择提供商</span>
+                      </div>
+                      <div 
+                        v-for="provider in apiProviders" 
+                        :key="provider.name" 
+                        class="select-option"
+                        @click="newModel.api_provider = provider.name || ''; fetchAvailableModels(); activeDropdown = null"
+                      >
+                        <span>{{ provider.name }}</span>
+                      </div>
+                    </div>
+                  </Transition>
+                </Teleport>
+                <Teleport to="body">
+                  <div v-if="activeDropdown === 'new-model-provider'" class="dropdown-overlay" @click.stop="activeDropdown = null"></div>
+                </Teleport>
+              </div>
+            </div>
+            
+            <!-- 模型列表区域 -->
+            <div v-if="newModel.api_provider && (fetchingModels || availableModels.length > 0 || fetchModelsError)" 
+                 class="models-section">
+              <div v-if="fetchingModels" class="loading-models">
+                <Icon icon="lucide:loader-2" class="spinning" />
+                <span>正在获取可用模型...</span>
+              </div>
+              <div v-else-if="fetchModelsError" class="fetch-error">
+                <Icon icon="lucide:alert-circle" />
+                <span>{{ fetchModelsError }}</span>
+                <button class="btn-retry" @click="fetchAvailableModels">
+                  <Icon icon="lucide:refresh-cw" />
+                  重试
+                </button>
+              </div>
+              <div v-else-if="availableModels.length > 0" class="available-models">
+                <div class="models-header">
+                  <span>可用模型 ({{ availableModels.length }})</span>
+                  <button class="btn-refresh" @click="fetchAvailableModels" title="刷新列表">
+                    <Icon icon="lucide:refresh-cw" />
+                  </button>
+                </div>
+                <div class="models-list">
+                  <button
+                    v-for="model in availableModels"
+                    :key="model.id"
+                    class="model-option"
+                    :class="{ active: newModel.model_identifier === model.id }"
+                    @click="newModel.model_identifier = model.id; newModel.name = model.name"
+                  >
+                    <Icon icon="lucide:bot" />
+                    <div class="model-info">
+                      <span class="model-id">{{ model.id }}</span>
+                      <span v-if="model.name !== model.id" class="model-name">{{ model.name }}</span>
+                    </div>
+                    <Icon v-if="newModel.model_identifier === model.id" icon="lucide:check" class="check-icon" />
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="config-field-row">
+              <div class="config-field">
+                <label>输入价格 (元/M token)</label>
+                <input v-model.number="newModel.price_in" type="number" class="input" step="0.1" min="0" />
+              </div>
+              <div class="config-field">
+                <label>输出价格 (元/M token)</label>
+                <input v-model.number="newModel.price_out" type="number" class="input" step="0.1" min="0" />
+              </div>
+            </div>
+
+            <!-- 高级参数 -->
+            <div class="advanced-params-section">
+              <div class="advanced-header" @click="showAddModelAdvanced = !showAddModelAdvanced">
+                <div class="advanced-header-left">
+                  <Icon :icon="showAddModelAdvanced ? 'lucide:chevron-down' : 'lucide:chevron-right'" />
+                  <span>高级参数 (可选)</span>
+                </div>
+                <span class="advanced-hint">{{ showAddModelAdvanced ? '收起' : '展开' }}</span>
+              </div>
+              
+              <div v-show="showAddModelAdvanced" class="advanced-params-content">
+                <div class="config-field">
+                  <label>
+                    最大输出 Token
+                    <span class="field-hint">留空使用默认值</span>
+                  </label>
+                  <input v-model.number="newModel.max_tokens" type="number" class="input" min="1" placeholder="例如: 4096" />
+                </div>
+                <div class="config-field">
+                  <label>
+                    温度 (temperature)
+                    <span class="field-hint">0-2，留空使用默认值</span>
+                  </label>
+                  <div class="slider-with-input">
+                    <input 
+                      type="range" 
+                      class="temp-slider"
+                      :value="newModel.temperature ?? 0.7" 
+                      @input="newModel.temperature = parseFloat(($event.target as HTMLInputElement).value)"
+                      min="0" 
+                      max="2" 
+                      step="0.1"
+                    />
+                    <input 
+                      v-model.number="newModel.temperature" 
+                      type="number" 
+                      class="input temp-input" 
+                      step="0.1" 
+                      min="0" 
+                      max="2" 
+                      placeholder="0.7" 
+                    />
+                  </div>
+                </div>
+
+                <div class="feature-toggles">
+                  <div class="feature-toggle" @click="newModel.anti_truncation = !newModel.anti_truncation">
+                    <div class="feature-toggle-info">
+                      <div class="feature-toggle-icon" :class="{ active: newModel.anti_truncation }">
+                        <Icon icon="lucide:shield-check" />
+                      </div>
+                      <div class="feature-toggle-text">
+                        <span class="feature-name">反截断</span>
+                        <span class="feature-hint">防止模型输出被截断</span>
+                      </div>
+                    </div>
+                    <label class="switch small" @click.stop>
+                      <input 
+                        type="checkbox" 
+                        v-model="newModel.anti_truncation"
+                      />
+                      <span class="slider"></span>
+                    </label>
+                  </div>
+                  <div class="feature-toggle" @click="newModel.enable_prompt_perturbation = !newModel.enable_prompt_perturbation">
+                    <div class="feature-toggle-info">
+                      <div class="feature-toggle-icon" :class="{ active: newModel.enable_prompt_perturbation }">
+                        <Icon icon="lucide:shuffle" />
+                      </div>
+                      <div class="feature-toggle-text">
+                        <span class="feature-name">内容混淆</span>
+                        <span class="feature-hint">对提示词进行微扰动，增加输出多样性</span>
+                      </div>
+                    </div>
+                    <label class="switch small" @click.stop>
+                      <input 
+                        type="checkbox" 
+                        v-model="newModel.enable_prompt_perturbation"
+                      />
+                      <span class="slider"></span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" @click="showAddModelModal = false">取消</button>
+            <button class="btn btn-primary" @click="confirmAddModel" :disabled="!newModel.model_identifier || !newModel.name">
+              <Icon icon="lucide:check" />
+              添加
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import StringArrayEditor from './StringArrayEditor.vue'
 import { providerPresets, modelTaskConfigs } from '@/config/configDescriptions'
@@ -990,11 +1018,27 @@ const showAddProviderModal = ref(false)
 const showAddModelModal = ref(false)
 const showAddModelAdvanced = ref(false)
 const activeDropdown = ref<string | null>(null)
+const dropdownStyle = ref<Record<string, string>>({})
 
-function toggleDropdown(id: string) {
+function updateDropdownPosition(trigger: HTMLElement) {
+  const rect = trigger.getBoundingClientRect()
+  dropdownStyle.value = {
+    top: `${rect.bottom}px`,
+    left: `${rect.left}px`,
+    width: `${rect.width}px`,
+    position: 'fixed',
+    zIndex: '9999',
+    marginTop: '4px'
+  }
+}
+
+function toggleDropdown(id: string, event?: Event) {
   if (activeDropdown.value === id) {
     activeDropdown.value = null
   } else {
+    if (event) {
+      updateDropdownPosition(event.currentTarget as HTMLElement)
+    }
     activeDropdown.value = id
   }
 }
@@ -1272,10 +1316,13 @@ function updateTaskModel(taskKey: string, modelNames: string[]) {
 // 任务模型下拉框状态
 const openTaskModelDropdown = ref<string | null>(null)
 
-function toggleTaskModelDropdown(taskKey: string) {
+function toggleTaskModelDropdown(taskKey: string, event?: Event) {
   if (openTaskModelDropdown.value === taskKey) {
     openTaskModelDropdown.value = null
   } else {
+    if (event) {
+      updateDropdownPosition(event.currentTarget as HTMLElement)
+    }
     openTaskModelDropdown.value = taskKey
   }
 }
@@ -1526,6 +1573,22 @@ async function fetchAvailableModels() {
     console.log('🏁 获取模型列表完成')
   }
 }
+
+// 监听滚动和调整大小以关闭下拉框
+function closeDropdowns() {
+  activeDropdown.value = null
+  openTaskModelDropdown.value = null
+}
+
+onMounted(() => {
+  window.addEventListener('resize', closeDropdowns)
+  window.addEventListener('scroll', closeDropdowns, true)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', closeDropdowns)
+  window.removeEventListener('scroll', closeDropdowns, true)
+})
 
 // 初始化
 watch(() => props.parsedData, () => {
@@ -3122,7 +3185,7 @@ select.input {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 99;
+  z-index: 2000;
   cursor: default;
 }
 

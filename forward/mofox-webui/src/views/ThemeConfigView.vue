@@ -625,17 +625,23 @@ onMounted(async () => {
   window.addEventListener('touchmove', onMouseMove)
   window.addEventListener('touchend', stopDrag)
   
+  // 每次进入页面时，如果有壁纸就提取颜色
   if (themeStore.wallpaper) {
-      const img = new Image()
-      img.crossOrigin = "Anonymous"
-      img.src = themeStore.wallpaper
-      await new Promise((resolve, reject) => {
-        img.onload = resolve
-        img.onerror = reject
-      }).catch(() => {})
-      
-      if (img.complete && img.naturalWidth > 0) {
-          extractColorsFromImage(img)
+      try {
+        const img = new Image()
+        img.crossOrigin = "Anonymous"
+        img.src = themeStore.wallpaper
+        
+        // 等待图片加载完成
+        await new Promise((resolve, reject) => {
+          img.onload = resolve
+          img.onerror = reject
+        })
+        
+        // 提取颜色
+        extractColorsFromImage(img)
+      } catch (error) {
+        console.error('提取壁纸颜色失败:', error)
       }
   }
 })
