@@ -32,23 +32,11 @@ MAX_BACKUPS = 5
 class UIVersionManager:
     """UI 版本管理器 - 使用 Git Pull 更新前端和后端"""
 
-    def __init__(self, webui_dist_path: Optional[Path] = None):
-        """
-        初始化 UI 版本管理器
-        
-        Args:
-            webui_dist_path: WebUI 静态文件目录，默认使用 mofox-webui/dist
-        """
-        # 获取项目根目录 (MoFox-Core-Webui)
-        backend_dir = Path(__file__).parent.parent.parent
-        self.project_root = backend_dir.parent
-        
-        # 获取 WebUI 静态文件目录
-        if webui_dist_path:
-            self.dist_path = webui_dist_path
-        else:
-            # 默认路径: MoFox-Core-Webui/mofox-webui/dist
-            self.dist_path = self.project_root / "mofox-webui" / "dist"
+    def __init__(self):
+        """初始化 UI 版本管理器"""
+        # 项目根目录（插件目录，backend 内容直接在此）
+        # utils/update/ui_version_manager.py -> 往上3层到根目录
+        self.project_root = Path(__file__).parent.parent.parent
         
         # 备份目录
         self.backup_dir = self.project_root / "backups"
@@ -57,7 +45,7 @@ class UIVersionManager:
         # Git 可执行文件路径
         self._git_path: Optional[str] = None
         
-        logger.info(f"UI 版本管理器初始化: project_root={self.project_root}, dist_path={self.dist_path}")
+        logger.info(f"UI 版本管理器初始化: project_root={self.project_root}")
 
     def _get_git_path(self) -> Optional[str]:
         """获取 Git 可执行文件路径"""
@@ -116,6 +104,21 @@ class UIVersionManager:
         """检查项目是否是 Git 仓库"""
         git_dir = self.project_root / ".git"
         return git_dir.exists()
+
+    def _get_current_branch(self) -> Optional[str]:
+        """获取当前分支名称"""
+        if not self._is_git_repo():
+            return None
+        success, branch = self._run_git_command(["rev-parse", "--abbrev-ref", "HEAD"])
+        return branch.strip() if success else None
+
+    def is_update_enabled(self) -> bool:
+        """
+        检查是否启用更新功能
+        只有在 webui-dist 分支上才启用更新
+        """
+        current_branch = self._get_current_branch()
+        return current_branch == GITHUB_BRANCH
 
     def _init_git_repo(self, use_mirror: bool = False) -> tuple[bool, str]:
         """
@@ -302,7 +305,8 @@ class UIVersionManager:
                 "latest_version": str,
                 "changelog": list,
                 "commits_behind": int,
-                "error": str
+                "error": str,
+                "update_enabled": bool
             }
         """
         try:
@@ -310,6 +314,19 @@ class UIVersionManager:
             local_version = self.get_current_version()
             current_version = local_version.get("version", "unknown") if local_version else "未安装"
             current_commit = local_version.get("commit_short", "") if local_version else ""
+            current_branch = self._get_current_branch()
+            
+            # 检查是否启用更新（只有 webui-dist 分支才启用）
+            update_enabled = self.is_update_enabled()
+            if not update_enabled:
+                return {
+                    "success": True,
+                    "has_update": False,
+                    "current_version": current_version,
+                    "current_branch": current_branch,
+                    "update_enabled": False,
+                    "message": f"当前分支为 {current_branch}，非 {GITHUB_BRANCH} 分支，更新功能已禁用"
+                }
             
             # 检查是否是 Git 仓库
             if not self._is_git_repo():
@@ -321,6 +338,7 @@ class UIVersionManager:
                     "changelog": [],
                     "commits_behind": 0,
                     "need_init": True,  # 需要初始化仓库
+                    "update_enabled": True,
                 }
             
             # Fetch 远程更新
@@ -369,6 +387,7 @@ class UIVersionManager:
                 "latest_commit": latest_commit,
                 "changelog": changelog,
                 "commits_behind": commits_count,
+                "update_enabled": True,
             }
         except Exception as e:
             logger.error(f"检查更新失败: {e}")
@@ -380,7 +399,7 @@ class UIVersionManager:
 
     def create_backup(self, backup_name: Optional[str] = None) -> Optional[str]:
         """
-        备份当前项目（前端和后端）
+        备份整个插件目录
         
         Args:
             backup_name: 备份名称，默认使用时间戳
@@ -400,24 +419,18 @@ class UIVersionManager:
             
             backup_path = self.backup_dir / backup_name
             
-            # 创建 ZIP 备份
+            # 创建 ZIP 备份（整个插件目录）
             logger.info(f"正在创建备份: {backup_path}")
             with zipfile.ZipFile(backup_path, "w", zipfile.ZIP_DEFLATED) as zf:
-                # 备份后端代码
-                backend_dir = self.project_root / "backend"
-                if backend_dir.exists():
-                    for file in backend_dir.rglob("*"):
-                        if file.is_file() and "__pycache__" not in str(file):
-                            arcname = file.relative_to(self.project_root)
-                            zf.write(file, arcname)
-                
-                # 备份前端静态文件
-                if self.dist_path.exists():
-                    for file in self.dist_path.rglob("*"):
-                        if file.is_file():
-                            arcname = Path("mofox-webui/dist") / file.relative_to(self.dist_path)
-                            zf.write(file, arcname)
-                
+                for file in self.project_root.rglob("*"):
+                    # 排除备份目录、__pycache__、.git
+                    if file.is_file():
+                        rel_path = file.relative_to(self.project_root)
+                        rel_str = str(rel_path)
+                        if "backups" in rel_str or "__pycache__" in rel_str or ".git" in rel_str:
+                            continue
+                        zf.write(file, rel_path)
+            
             # 清理旧备份（保留最近 MAX_BACKUPS 个）
             self._cleanup_old_backups()
             
@@ -455,6 +468,14 @@ class UIVersionManager:
             dict: {"success": bool, "message": str, "version": str, "backup_name": str, "error": str}
         """
         try:
+            # 0. 检查是否启用更新
+            if not self.is_update_enabled():
+                current_branch = self._get_current_branch()
+                return {
+                    "success": False, 
+                    "error": f"当前分支为 {current_branch}，非 {GITHUB_BRANCH} 分支，更新功能已禁用"
+                }
+            
             # 1. 创建备份
             backup_name = self.create_backup()
             logger.info(f"已创建备份: {backup_name}")
@@ -564,31 +585,19 @@ class UIVersionManager:
         
         try:
             # 1. 先备份当前版本
-            current_backup = self.create_backup(f"before_rollback_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip")
+            self.create_backup(f"before_rollback_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip")
             
-            # 2. 解压备份
+            # 2. 解压备份覆盖整个目录
             logger.info(f"正在恢复备份: {backup_name}")
             with zipfile.ZipFile(backup_path, "r") as zf:
-                # 获取备份中的文件列表
-                namelist = zf.namelist()
-                
-                # 恢复后端代码
-                for name in namelist:
-                    if name.startswith("backend/"):
-                        target = self.project_root / name
-                        target.parent.mkdir(parents=True, exist_ok=True)
-                        with open(target, "wb") as f:
-                            f.write(zf.read(name))
-                
-                # 恢复前端静态文件
-                for name in namelist:
-                    if name.startswith("mofox-webui/dist/"):
-                        relative_path = name[len("mofox-webui/dist/"):]
-                        if relative_path:
-                            target = self.dist_path / relative_path
-                            target.parent.mkdir(parents=True, exist_ok=True)
-                            with open(target, "wb") as f:
-                                f.write(zf.read(name))
+                for name in zf.namelist():
+                    # 跳过备份目录本身
+                    if name.startswith("backups/"):
+                        continue
+                    target = self.project_root / name
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    with open(target, "wb") as f:
+                        f.write(zf.read(name))
             
             # 获取恢复后的版本
             restored_version = self.get_current_version()

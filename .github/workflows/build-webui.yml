@@ -64,31 +64,30 @@ jobs:
           npm ci
           npm run build
 
-      - name: Prepare distribution
-        if: steps.check_commits.outputs.has_new_commits == 'true'
-        run: |
-          # 创建分发目录
-          mkdir -p dist_package
-          
-          # 复制后端代码
-          cp -r backend dist_package/
-          
-          # 复制编译后的前端到 mofox-webui/dist
-          mkdir -p dist_package/mofox-webui
-          cp -r forward/mofox-webui/dist dist_package/mofox-webui/
-          
-          # 复制必要的配置文件
-          cp -f LICENSE dist_package/ 2>/dev/null || true
-          cp -f README.md dist_package/ 2>/dev/null || true
-          cp -f requirements.txt dist_package/ 2>/dev/null || true
-          
-          # 生成 changelog
-          git log --oneline --no-merges -10 --format="- %s" > /tmp/changelog.txt
-
       - name: Deploy to webui-dist branch
         if: steps.check_commits.outputs.has_new_commits == 'true'
         run: |
-          cd dist_package
+          # 生成 changelog
+          git log --oneline --no-merges -10 --format="- %s" > /tmp/changelog.txt
+          VERSION=$(date -u '+%Y.%m%d.%H%M')
+          
+          # 创建临时目录用于构建分发包
+          mkdir -p /tmp/dist_root
+          
+          # 复制后端代码到根目录（排除 __pycache__），不要 backend 这层文件夹
+          rsync -av --exclude='__pycache__' --exclude='*.pyc' backend/ /tmp/dist_root/
+          
+          # 复制编译后的前端到 static/（discovery_server.py 期望的位置）
+          mkdir -p /tmp/dist_root/static
+          cp -r forward/mofox-webui/dist/* /tmp/dist_root/static/
+          
+          # 复制必要的配置文件
+          cp -f LICENSE /tmp/dist_root/ 2>/dev/null || true
+          cp -f README.md /tmp/dist_root/ 2>/dev/null || true
+          cp -f requirements.txt /tmp/dist_root/ 2>/dev/null || true
+          
+          # 进入分发目录
+          cd /tmp/dist_root
           
           # 配置 Git
           git config --global user.name "github-actions[bot]"
@@ -100,7 +99,7 @@ jobs:
           git add -A
           
           # 提交并推送
-          git commit -m "Build: v$(date -u '+%Y.%m%d.%H%M')
+          git commit -m "Build: v${VERSION}
 
           Source: ${{ github.sha }}
           Branch: ${{ github.ref_name }}
