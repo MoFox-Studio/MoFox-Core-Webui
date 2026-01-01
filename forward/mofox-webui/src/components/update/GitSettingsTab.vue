@@ -435,7 +435,7 @@ defineExpose({
 }
 
 .path-value {
-  font-family: monospace;
+  font-family: 'Noto Sans SC', sans-serif;
   font-size: 14px;
   padding: 4px 8px;
   background: var(--md-sys-color-surface-container);

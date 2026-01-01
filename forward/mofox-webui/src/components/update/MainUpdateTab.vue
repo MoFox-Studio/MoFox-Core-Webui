@@ -572,7 +572,7 @@ defineExpose({
 }
 
 .up-to-date-info code {
-  font-family: monospace;
+  font-family: 'Noto Sans SC', sans-serif;
   font-size: 12px;
   color: var(--md-sys-color-on-surface-variant);
 }

@@ -34,7 +34,7 @@
       <div class="version-info" v-if="currentVersion">
         <div class="info-row">
           <span class="info-label">版本号:</span>
-          <code class="info-value">v{{ currentVersion.version }}</code>
+          <span class="info-value version">v{{ currentVersion.version }}</span>
         </div>
         <div class="info-row" v-if="currentVersion.build_time">
           <span class="info-label">构建时间:</span>
@@ -42,7 +42,7 @@
         </div>
         <div class="info-row" v-if="currentVersion.branch">
           <span class="info-label">分支:</span>
-          <span class="info-value">{{ currentVersion.branch }}</span>
+          <span class="info-value branch">{{ currentVersion.branch }}</span>
         </div>
         <div class="info-row" v-if="currentVersion.commit">
           <span class="info-label">Commit:</span>
@@ -440,8 +440,25 @@ defineExpose({
   color: var(--md-sys-color-on-surface);
 }
 
+.info-value.version {
+  font-family: 'Noto Sans SC', sans-serif;
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.info-value.branch {
+  font-family: 'Noto Sans SC', sans-serif;
+  background: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
 .info-value.commit {
-  font-family: monospace;
+  font-family: 'Noto Sans SC', sans-serif;
   background: var(--md-sys-color-surface-container);
   padding: 2px 8px;
   border-radius: 4px;
