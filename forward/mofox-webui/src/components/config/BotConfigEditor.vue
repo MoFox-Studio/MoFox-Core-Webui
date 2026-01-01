@@ -31,14 +31,30 @@
 
     <!-- 搜索框 -->
     <div class="config-toolbar" v-if="currentTabGroups.length > 1">
-      <div class="search-box">
+      <div class="search-box" :class="{ focused: isSearchFocused }">
         <Icon icon="lucide:search" />
-        <input 
-          v-model="searchQuery" 
-          type="text" 
-          placeholder="搜索配置项..." 
+        <input
+          ref="searchInputRef"
+          v-model="searchQuery"
+          type="text"
+          placeholder="搜索配置项... (Ctrl+K)"
           class="search-input"
+          @focus="isSearchFocused = true"
+          @blur="isSearchFocused = false"
+          @keydown.escape="clearSearch"
         />
+        <button
+          v-if="searchQuery"
+          class="clear-search-btn"
+          @click="clearSearch"
+          title="清除搜索"
+        >
+          <Icon icon="lucide:x" />
+        </button>
+        <span class="search-shortcut" v-if="!searchQuery && !isSearchFocused">Ctrl+K</span>
+      </div>
+      <div v-if="searchQuery" class="search-results-hint">
+        找到 {{ filteredFieldsCount }} 个匹配项
       </div>
     </div>
 
@@ -358,7 +374,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 import type { ConfigSection } from '@/api'
 import FieldEditor from './FieldEditor.vue'
@@ -496,6 +512,43 @@ const searchQuery = ref('')
 const showAdvanced = ref(false)
 const showPasswords = ref<Record<string, boolean>>({})
 const collapsedGroups = ref<Record<string, boolean>>({})
+const isSearchFocused = ref(false)
+const searchInputRef = ref<HTMLInputElement | null>(null)
+
+// 清除搜索
+function clearSearch() {
+  searchQuery.value = ''
+  searchInputRef.value?.blur()
+}
+
+// 键盘快捷键处理
+function handleKeydown(event: KeyboardEvent) {
+  // Ctrl+K 或 Cmd+K 聚焦搜索框
+  if ((event.ctrlKey || event.metaKey) && event.key === 'k') {
+    event.preventDefault()
+    nextTick(() => {
+      searchInputRef.value?.focus()
+    })
+  }
+}
+
+// 计算匹配的字段数量
+const filteredFieldsCount = computed(() => {
+  if (!searchQuery.value) return 0
+  let count = 0
+  filteredCurrentTabGroups.value.forEach(group => {
+    count += getVisibleFields(group).length
+  })
+  return count
+})
+
+onMounted(() => {
+  document.addEventListener('keydown', handleKeydown)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleKeydown)
+})
 
 // 合并 parsedData 和 editedValues 的计算属性
 const mergedConfigData = computed(() => {
@@ -895,6 +948,47 @@ function parseArrayValue(value: string): string[] {
 
 .search-input::placeholder {
   color: var(--text-tertiary);
+}
+
+.search-box.focused {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-bg);
+}
+
+.clear-search-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: var(--bg-hover);
+  border: none;
+  border-radius: 50%;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.clear-search-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.search-shortcut {
+  font-size: 11px;
+  padding: 2px 6px;
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+  color: var(--text-tertiary);
+  font-family: monospace;
+}
+
+.search-results-hint {
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 4px 8px;
+  background: var(--primary-bg);
+  border-radius: var(--radius-sm);
 }
 
 /* 配置内容区域 */
