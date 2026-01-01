@@ -298,7 +298,7 @@ const menuItems: MenuItem[] = [
       { name: '实时日志', path: '/dashboard/live-log', icon: 'sensors' },
     ]
   },
-  { name: '系统更新', path: '/dashboard/git-update', icon: 'system_update' },
+  { name: '更新管理', path: '/dashboard/git-update', icon: 'system_update' },
   { name: 'GitHub 仓库', path: '/dashboard/github', icon: 'code' },
   { 
     name: '官方文档', 

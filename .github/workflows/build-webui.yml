@@ -1,0 +1,110 @@
+name: Build WebUI
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # 每天 UTC 0:00 运行
+  workflow_dispatch:  # 支持手动触发
+  push:
+    paths:
+      - '.github/workflows/build-webui.yml'
+      - 'forward/mofox-webui/**'
+      - 'backend/**'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 50
+
+      - name: Check for new commits
+        id: check_commits
+        run: |
+          git fetch origin webui-dist:webui-dist 2>/dev/null || true
+          
+          if git rev-parse webui-dist >/dev/null 2>&1; then
+            LAST_BUILD_COMMIT=$(git log webui-dist -1 --format="%s" | grep -oP 'Source: \K[a-f0-9]+' || echo "")
+            if [ -n "$LAST_BUILD_COMMIT" ]; then
+              COMMITS_SINCE=$(git rev-list ${LAST_BUILD_COMMIT}..HEAD --count 2>/dev/null || echo "999")
+              [ "$COMMITS_SINCE" -gt "0" ] && echo "has_new_commits=true" >> $GITHUB_OUTPUT || echo "has_new_commits=false" >> $GITHUB_OUTPUT
+            else
+              echo "has_new_commits=true" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "has_new_commits=true" >> $GITHUB_OUTPUT
+          fi
+          
+          # 手动触发时始终构建
+          [ "${{ github.event_name }}" = "workflow_dispatch" ] && echo "has_new_commits=true" >> $GITHUB_OUTPUT
+
+      - name: Setup Node.js
+        if: steps.check_commits.outputs.has_new_commits == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: forward/mofox-webui/package-lock.json
+
+      - name: Build frontend
+        if: steps.check_commits.outputs.has_new_commits == 'true'
+        run: |
+          cd forward/mofox-webui
+          npm ci
+          npm run build
+
+      - name: Prepare distribution
+        if: steps.check_commits.outputs.has_new_commits == 'true'
+        run: |
+          # 创建分发目录
+          mkdir -p dist_package
+          
+          # 复制后端代码
+          cp -r backend dist_package/
+          
+          # 复制编译后的前端到 mofox-webui/dist
+          mkdir -p dist_package/mofox-webui
+          cp -r forward/mofox-webui/dist dist_package/mofox-webui/
+          
+          # 复制必要的配置文件
+          cp -f LICENSE dist_package/ 2>/dev/null || true
+          cp -f README.md dist_package/ 2>/dev/null || true
+          cp -f requirements.txt dist_package/ 2>/dev/null || true
+          
+          # 生成 changelog
+          git log --oneline --no-merges -10 --format="- %s" > /tmp/changelog.txt
+
+      - name: Deploy to webui-dist branch
+        if: steps.check_commits.outputs.has_new_commits == 'true'
+        run: |
+          cd dist_package
+          
+          # 配置 Git
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # 初始化新仓库并创建分支
+          git init
+          git checkout -b webui-dist
+          git add -A
+          
+          # 提交并推送
+          git commit -m "Build: v$(date -u '+%Y.%m%d.%H%M')
+
+          Source: ${{ github.sha }}
+          Branch: ${{ github.ref_name }}
+
+          Recent changes:
+          $(cat /tmp/changelog.txt)"
+          
+          git remote add origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          git push -f origin webui-dist
+
+      - name: Skip build notification
+        if: steps.check_commits.outputs.has_new_commits != 'true'
+        run: |
+          echo "No new commits since last build, skipping..."

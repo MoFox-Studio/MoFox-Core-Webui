@@ -18,10 +18,7 @@ from src.common.security import VerifiedDep
 from src.config.config import PROJECT_ROOT
 from src.plugin_system import BaseRouterComponent
 
-# 导入后端存储 API
-backend_utils_path = Path(__file__).parent.parent / "utils"
-sys.path.insert(0, str(backend_utils_path))
-from backend_storage import BackendStorage
+from ..utils.backend_storage import BackendStorage
 
 logger = get_logger("WebUI.GitUpdateRouter")
 
