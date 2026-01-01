@@ -5,7 +5,6 @@ UI 版本管理器
 """
 
 import subprocess
-import zipfile
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, List
@@ -23,7 +22,7 @@ GITHUB_BRANCH = "webui-dist"
 GITHUB_REPO_URL = f"https://github.com/{GITHUB_OWNER}/{GITHUB_REPO}.git"
 AUTO_CHECK = True
 CHECK_INTERVAL = 60  # 分钟
-MAX_BACKUPS = 5
+MAX_HISTORY_COMMITS = 20  # 列出的历史提交数量
 
 
 class UIVersionManager:
@@ -34,10 +33,6 @@ class UIVersionManager:
         # 项目根目录（插件目录，backend 内容直接在此）
         # utils/update/ui_version_manager.py -> 往上3层到根目录
         self.project_root = Path(__file__).parent.parent.parent
-        
-        # 备份目录
-        self.backup_dir = self.project_root / "backups"
-        self.backup_dir.mkdir(parents=True, exist_ok=True)
         
         # Git 可执行文件路径
         self._git_path: Optional[str] = None
@@ -82,6 +77,8 @@ class UIVersionManager:
                 cwd=str(work_dir),
                 capture_output=True,
                 text=True,
+                encoding='utf-8',
+                errors='replace',
                 timeout=120
             )
             
@@ -386,65 +383,58 @@ class UIVersionManager:
                 "error": str(e)
             }
 
-    def create_backup(self, backup_name: Optional[str] = None) -> Optional[str]:
+    def create_backup(self, backup_message: Optional[str] = None) -> Optional[str]:
         """
-        备份整个插件目录
+        记录当前 Git 提交作为备份点
         
         Args:
-            backup_name: 备份名称，默认使用时间戳
+            backup_message: 备份说明信息
             
         Returns:
-            备份文件名或 None
+            当前提交的 commit hash 或 None
         """
         try:
-            # 获取当前版本
-            current_version = self.get_current_version()
-            version_str = current_version.get("version", "unknown") if current_version else "unknown"
+            if not self._is_git_repo():
+                logger.warning("当前目录不是 Git 仓库，无法创建备份")
+                return None
             
-            # 生成备份名称
-            if not backup_name:
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                backup_name = f"backup_v{version_str}_{timestamp}.zip"
+            # 获取当前提交 hash
+            success, commit_hash = self._run_git_command(["rev-parse", "HEAD"])
+            if not success:
+                logger.error("获取当前提交失败")
+                return None
             
-            backup_path = self.backup_dir / backup_name
+            commit_hash = commit_hash.strip()
             
-            # 创建 ZIP 备份（整个插件目录）
-            logger.info(f"正在创建备份: {backup_path}")
-            with zipfile.ZipFile(backup_path, "w", zipfile.ZIP_DEFLATED) as zf:
-                for file in self.project_root.rglob("*"):
-                    # 排除备份目录、__pycache__、.git
-                    if file.is_file():
-                        rel_path = file.relative_to(self.project_root)
-                        rel_str = str(rel_path)
-                        if "backups" in rel_str or "__pycache__" in rel_str or ".git" in rel_str:
-                            continue
-                        zf.write(file, rel_path)
+            # 获取简短 hash
+            success, commit_short = self._run_git_command(["rev-parse", "--short", "HEAD"])
+            commit_short = commit_short.strip() if success else commit_hash[:7]
             
-            # 清理旧备份（保留最近 MAX_BACKUPS 个）
-            self._cleanup_old_backups()
+            message = backup_message or "更新前自动备份"
+            logger.info(f"已记录备份点: {commit_short} ({message})")
             
-            logger.info(f"备份完成: {backup_name}")
-            return backup_name
+            return commit_hash
             
         except Exception as e:
             logger.error(f"创建备份失败: {e}")
             return None
 
-    def _cleanup_old_backups(self):
-        """清理旧备份，只保留最近的 MAX_BACKUPS 个"""
+    def get_backup_commit(self) -> Optional[str]:
+        """
+        获取更新前的备份提交（用于回滚）
+        通过 reflog 查找上一个 HEAD 位置
+        
+        Returns:
+            上一个提交的 hash 或 None
+        """
         try:
-            backups = sorted(
-                self.backup_dir.glob("backup_*.zip"),
-                key=lambda p: p.stat().st_mtime,
-                reverse=True
-            )
-            
-            for old_backup in backups[MAX_BACKUPS:]:
-                logger.info(f"删除旧备份: {old_backup.name}")
-                old_backup.unlink()
-                
-        except Exception as e:
-            logger.warning(f"清理旧备份失败: {e}")
+            # 使用 reflog 获取上一个 HEAD 位置
+            success, output = self._run_git_command(["rev-parse", "HEAD@{1}"])
+            if success:
+                return output.strip()
+            return None
+        except Exception:
+            return None
 
     async def download_and_apply(self) -> dict:
         """
@@ -462,15 +452,15 @@ class UIVersionManager:
                     "error": f"当前分支为 {current_branch}，非 {GITHUB_BRANCH} 分支，更新功能已禁用"
                 }
             
-            # 1. 创建备份
-            backup_name = self.create_backup()
-            logger.info(f"已创建备份: {backup_name}")
+            # 1. 记录当前提交作为备份点
+            backup_commit = self.create_backup("更新前自动备份")
+            logger.info(f"已记录备份点: {backup_commit[:7] if backup_commit else 'None'}")
             
             # 2. 检查/初始化 Git 仓库
             if not self._is_git_repo():
                 success, msg = self._init_git_repo()
                 if not success:
-                    return {"success": False, "error": msg, "backup_name": backup_name}
+                    return {"success": False, "error": msg, "backup_commit": backup_commit}
             
             # 3. 设置远程 URL
             self._run_git_command(["remote", "set-url", "origin", GITHUB_REPO_URL])
@@ -478,12 +468,12 @@ class UIVersionManager:
             # 4. Fetch 远程更新
             success, output = self._run_git_command(["fetch", "origin", GITHUB_BRANCH])
             if not success:
-                return {"success": False, "error": f"获取远程更新失败: {output}", "backup_name": backup_name}
+                return {"success": False, "error": f"获取远程更新失败: {output}", "backup_commit": backup_commit}
             
             # 5. 确保在正确的分支
             success, msg = self._ensure_correct_branch()
             if not success:
-                return {"success": False, "error": msg, "backup_name": backup_name}
+                return {"success": False, "error": msg, "backup_commit": backup_commit}
             
             # 6. 重置本地修改并拉取更新
             # 先暂存本地修改
@@ -492,7 +482,7 @@ class UIVersionManager:
             # 强制重置到远程分支
             success, output = self._run_git_command(["reset", "--hard", f"origin/{GITHUB_BRANCH}"])
             if not success:
-                return {"success": False, "error": f"重置失败: {output}", "backup_name": backup_name}
+                return {"success": False, "error": f"重置失败: {output}", "backup_commit": backup_commit}
             
             # 7. 获取更新后的版本
             new_version = self.get_current_version()
@@ -503,7 +493,7 @@ class UIVersionManager:
                 "success": True,
                 "message": f"更新成功，已更新到 v{version}",
                 "version": version,
-                "backup_name": backup_name
+                "backup_commit": backup_commit
             }
             
         except Exception as e:
@@ -512,84 +502,137 @@ class UIVersionManager:
 
     def list_backups(self) -> List[dict]:
         """
-        列出所有备份
+        列出 Git 历史提交作为可回滚的备份点
         
         Returns:
-            备份列表 [{"name": str, "version": str, "timestamp": str, "size": int}]
+            提交历史列表 [{"commit": str, "commit_short": str, "version": str, "message": str, "timestamp": str, "is_current": bool}]
         """
         backups = []
         
         try:
-            for backup_file in sorted(
-                self.backup_dir.glob("backup_*.zip"),
-                key=lambda p: p.stat().st_mtime,
-                reverse=True
-            ):
-                # 解析备份信息
-                name = backup_file.name
-                size = backup_file.stat().st_size
-                mtime = datetime.fromtimestamp(backup_file.stat().st_mtime)
+            if not self._is_git_repo():
+                logger.warning("当前目录不是 Git 仓库")
+                return backups
+            
+            # 获取当前 HEAD
+            success, current_head = self._run_git_command(["rev-parse", "HEAD"])
+            current_head = current_head.strip() if success else ""
+            
+            # 获取提交历史
+            # 格式: commit_hash|short_hash|时间|提交消息
+            success, log_output = self._run_git_command([
+                "log", f"-{MAX_HISTORY_COMMITS}",
+                "--format=%H|%h|%ci|%s"
+            ])
+            
+            if not success or not log_output:
+                return backups
+            
+            for line in log_output.strip().split("\n"):
+                if not line:
+                    continue
                 
-                # 尝试从文件名提取版本
+                parts = line.split("|", 3)
+                if len(parts) < 4:
+                    continue
+                
+                commit_hash, commit_short, timestamp, message = parts
+                
+                # 从提交消息中提取版本号
                 version = None
-                if "_v" in name:
+                if "Build: v" in message:
                     try:
-                        version = name.split("_v")[1].split("_")[0]
+                        version = message.split("Build: v")[1].split()[0]
                     except Exception:
                         pass
                 
+                # 如果没有版本号，尝试从时间生成
+                if not version:
+                    try:
+                        dt = datetime.fromisoformat(timestamp.split()[0] + "T" + timestamp.split()[1])
+                        version = dt.strftime("%Y.%m%d.%H%M")
+                    except Exception:
+                        version = commit_short
+                
                 backups.append({
-                    "name": name,
+                    "commit": commit_hash,
+                    "commit_short": commit_short,
                     "version": version,
-                    "timestamp": mtime.isoformat(),
-                    "size": size
+                    "message": message,
+                    "timestamp": timestamp,
+                    "is_current": commit_hash == current_head
                 })
+                
         except Exception as e:
             logger.error(f"列出备份失败: {e}")
         
         return backups
 
-    def rollback(self, backup_name: str) -> dict:
+    def rollback(self, commit_hash: str) -> dict:
         """
-        回滚到指定备份
+        回滚到指定的 Git 提交
         
         Args:
-            backup_name: 备份文件名
+            commit_hash: 目标提交的 hash（完整或简短均可）
             
         Returns:
-            dict: {"success": bool, "message": str, "error": str}
+            dict: {"success": bool, "message": str, "version": str, "error": str}
         """
-        backup_path = self.backup_dir / backup_name
-        
-        if not backup_path.exists():
-            return {"success": False, "error": f"备份不存在: {backup_name}"}
-        
         try:
-            # 1. 先备份当前版本
-            self.create_backup(f"before_rollback_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip")
+            if not self._is_git_repo():
+                return {"success": False, "error": "当前目录不是 Git 仓库"}
             
-            # 2. 解压备份覆盖整个目录
-            logger.info(f"正在恢复备份: {backup_name}")
-            with zipfile.ZipFile(backup_path, "r") as zf:
-                for name in zf.namelist():
-                    # 跳过备份目录本身
-                    if name.startswith("backups/"):
-                        continue
-                    target = self.project_root / name
-                    target.parent.mkdir(parents=True, exist_ok=True)
-                    with open(target, "wb") as f:
-                        f.write(zf.read(name))
+            # 验证提交是否存在
+            success, full_hash = self._run_git_command(["rev-parse", "--verify", commit_hash])
+            if not success:
+                return {"success": False, "error": f"提交不存在: {commit_hash}"}
             
-            # 获取恢复后的版本
+            full_hash = full_hash.strip()
+            
+            # 获取当前提交用于日志
+            current_version = self.get_current_version()
+            current_commit = current_version.get("commit_short", "unknown") if current_version else "unknown"
+            
+            logger.info(f"正在回滚: {current_commit} -> {commit_hash[:7]}")
+            
+            # 使用 git reset --hard 回滚到指定提交
+            success, output = self._run_git_command(["reset", "--hard", full_hash])
+            if not success:
+                return {"success": False, "error": f"回滚失败: {output}"}
+            
+            # 获取回滚后的版本信息
             restored_version = self.get_current_version()
             version_str = restored_version.get("version", "unknown") if restored_version else "unknown"
+            commit_short = restored_version.get("commit_short", commit_hash[:7]) if restored_version else commit_hash[:7]
             
-            logger.info(f"回滚完成: {backup_name} -> v{version_str}")
+            logger.info(f"回滚完成: -> {commit_short} (v{version_str})")
             return {
                 "success": True,
-                "message": f"已恢复到备份版本 v{version_str}",
-                "version": version_str
+                "message": f"已回滚到 {commit_short} (v{version_str})",
+                "version": version_str,
+                "commit": full_hash,
+                "commit_short": commit_short
             }
+            
+        except Exception as e:
+            logger.error(f"回滚失败: {e}")
+            return {"success": False, "error": str(e)}
+
+    def rollback_last_update(self) -> dict:
+        """
+        回滚到上一次更新前的状态
+        使用 git reflog 找到更新前的提交
+        
+        Returns:
+            dict: {"success": bool, "message": str, "version": str, "error": str}
+        """
+        try:
+            # 通过 reflog 获取上一个 HEAD 位置
+            backup_commit = self.get_backup_commit()
+            if not backup_commit:
+                return {"success": False, "error": "未找到可回滚的备份点"}
+            
+            return self.rollback(backup_commit)
             
         except Exception as e:
             logger.error(f"回滚失败: {e}")

@@ -117,11 +117,11 @@
       </div>
     </div>
 
-    <!-- 备份管理 (仅在更新未禁用时显示) -->
+    <!-- 历史版本管理 (仅在更新未禁用时显示) -->
     <div v-if="!updateDisabled" class="m3-card backup-card">
       <div class="card-header">
-        <span class="material-symbols-rounded">inventory_2</span>
-        <h3>备份管理</h3>
+        <span class="material-symbols-rounded">history</span>
+        <h3>历史版本</h3>
         <button class="m3-icon-button" @click="loadBackups" :disabled="loadingBackups">
           <span class="material-symbols-rounded" :class="{ spinning: loadingBackups }">refresh</span>
         </button>
@@ -130,29 +130,32 @@
       <div class="backup-list" v-if="backups.length">
         <div 
           v-for="backup in backups" 
-          :key="backup.name"
+          :key="backup.commit"
           class="backup-item"
+          :class="{ 'is-current': backup.is_current }"
         >
           <div class="backup-info">
-            <span class="backup-name">{{ backup.name }}</span>
-            <span class="backup-meta">
-              {{ formatTime(backup.timestamp) }}
-              <span v-if="backup.size"> · {{ formatSize(backup.size) }}</span>
-            </span>
+            <div class="backup-header">
+              <code class="backup-commit">{{ backup.commit_short }}</code>
+              <span v-if="backup.version" class="backup-version">v{{ backup.version }}</span>
+              <span v-if="backup.is_current" class="current-badge">当前</span>
+            </div>
+            <span class="backup-message">{{ backup.message }}</span>
+            <span class="backup-meta">{{ formatTime(backup.timestamp) }}</span>
           </div>
           <button 
             class="m3-button text" 
-            @click="handleRollback(backup.name)"
-            :disabled="rolling"
+            @click="handleRollback(backup.commit)"
+            :disabled="rolling || backup.is_current"
           >
             <span class="material-symbols-rounded">restore</span>
-            <span>恢复</span>
+            <span>回滚</span>
           </button>
         </div>
       </div>
       <div v-else class="no-backups">
-        <span class="material-symbols-rounded">folder_off</span>
-        <span>暂无备份</span>
+        <span class="material-symbols-rounded">history_toggle_off</span>
+        <span>暂无历史版本</span>
       </div>
     </div>
   </div>
@@ -231,13 +234,6 @@ function formatTime(time: string | null): string {
   }
 }
 
-// 格式化文件大小
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return bytes + ' B'
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
-  return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
-}
-
 // 加载 UI 状态（包含版本信息和更新检查）
 async function loadStatus() {
   checking.value = true
@@ -308,12 +304,13 @@ async function loadBackups() {
   }
 }
 
-// 回滚
-async function handleRollback(backupName: string) {
+// 回滚到指定提交
+async function handleRollback(commitHash: string) {
+  const commitShort = commitHash.substring(0, 7)
   const confirmed = await showConfirm({
     title: '确认回滚',
-    message: `确定要恢复到备份 "${backupName}" 吗？`,
-    confirmText: '恢复'
+    message: `确定要回滚到版本 "${commitShort}" 吗？此操作将重置到该版本。`,
+    confirmText: '回滚'
   })
   
   if (!confirmed) return
@@ -321,7 +318,7 @@ async function handleRollback(backupName: string) {
   rolling.value = true
   
   try {
-    const result = await rollbackUI(backupName)
+    const result = await rollbackUI(commitHash)
     if (result.success && result.data?.success) {
       showSuccess(result.data.message || '回滚成功')
       emit('update-complete', true)
@@ -536,11 +533,13 @@ defineExpose({
   border-radius: 8px;
 }
 
-/* 备份列表 */
+/* 历史版本列表 */
 .backup-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 .backup-item {
@@ -550,17 +549,65 @@ defineExpose({
   padding: 12px;
   background: var(--md-sys-color-surface-container);
   border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.backup-item:hover {
+  background: var(--md-sys-color-surface-container-high);
+}
+
+.backup-item.is-current {
+  background: var(--md-sys-color-primary-container);
 }
 
 .backup-info {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  flex: 1;
+  min-width: 0;
 }
 
-.backup-name {
-  font-size: 14px;
+.backup-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.backup-commit {
+  font-family: 'JetBrains Mono', 'Consolas', monospace;
+  font-size: 13px;
+  background: var(--md-sys-color-surface-container-highest);
+  padding: 2px 6px;
+  border-radius: 4px;
   color: var(--md-sys-color-on-surface);
+}
+
+.backup-version {
+  font-size: 12px;
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.current-badge {
+  font-size: 11px;
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 500;
+}
+
+.backup-message {
+  font-size: 13px;
+  color: var(--md-sys-color-on-surface);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .backup-meta {

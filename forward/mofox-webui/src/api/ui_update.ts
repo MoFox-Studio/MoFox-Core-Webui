@@ -36,15 +36,19 @@ export interface UIUpdateResult {
   success: boolean
   message: string
   version?: string
-  backup_name?: string
+  backup_commit?: string  // 更新前的提交 hash（用于回滚）
+  commit?: string  // 当前提交 hash
+  commit_short?: string  // 当前提交简短 hash
   error?: string
 }
 
 export interface UIBackupInfo {
-  name: string
-  version?: string
-  timestamp: string
-  size?: number
+  commit: string  // 完整 commit hash
+  commit_short: string  // 简短 commit hash
+  version?: string  // 版本号
+  message: string  // 提交消息
+  timestamp: string  // 提交时间
+  is_current: boolean  // 是否是当前版本
 }
 
 // ==================== API 函数 ====================
@@ -71,10 +75,17 @@ export function getUIBackups() {
 }
 
 /**
- * 回滚 UI 版本
+ * 回滚 UI 版本到指定提交
  */
-export function rollbackUI(backupName: string) {
+export function rollbackUI(commitHash: string) {
   return api.post<UIUpdateResult>('ui_update/rollback', {
-    backup_name: backupName
+    commit_hash: commitHash
   })
+}
+
+/**
+ * 回滚到上一次更新前的状态
+ */
+export function rollbackUILast() {
+  return api.post<UIUpdateResult>('ui_update/rollback-last')
 }
