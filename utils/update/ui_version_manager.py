@@ -17,11 +17,10 @@ logger = get_logger("WebUI.UIVersionManager")
 
 # ==================== 默认配置（硬编码） ====================
 
-GITHUB_OWNER = "MoFoxBot"
+GITHUB_OWNER = "MoFox-Studio"
 GITHUB_REPO = "MoFox-Core-Webui"
 GITHUB_BRANCH = "webui-dist"
 GITHUB_REPO_URL = f"https://github.com/{GITHUB_OWNER}/{GITHUB_REPO}.git"
-MIRROR_URL = "https://ghproxy.com/"  # 可选镜像
 AUTO_CHECK = True
 CHECK_INTERVAL = 60  # 分钟
 MAX_BACKUPS = 5
@@ -118,13 +117,8 @@ class UIVersionManager:
         current_branch = self._get_current_branch()
         return current_branch == GITHUB_BRANCH
 
-    def _init_git_repo(self, use_mirror: bool = False) -> tuple[bool, str]:
-        """
-        初始化 Git 仓库（如果不存在）
-        
-        Args:
-            use_mirror: 是否使用镜像源
-        """
+    def _init_git_repo(self) -> tuple[bool, str]:
+        """初始化 Git 仓库（如果不存在）"""
         if self._is_git_repo():
             return True, "仓库已存在"
         
@@ -136,8 +130,7 @@ class UIVersionManager:
             return False, f"初始化失败: {output}"
         
         # 添加远程仓库
-        repo_url = f"{MIRROR_URL}{GITHUB_REPO_URL}" if use_mirror else GITHUB_REPO_URL
-        success, output = self._run_git_command(["remote", "add", "origin", repo_url])
+        success, output = self._run_git_command(["remote", "add", "origin", GITHUB_REPO_URL])
         if not success and "already exists" not in output:
             return False, f"添加远程仓库失败: {output}"
         
@@ -236,11 +229,7 @@ class UIVersionManager:
             # 先 fetch 远程分支
             success, _ = self._run_git_command(["fetch", "origin", GITHUB_BRANCH])
             if not success:
-                # 尝试使用镜像
-                self._run_git_command(["remote", "set-url", "origin", f"{MIRROR_URL}{GITHUB_REPO_URL}"])
-                success, _ = self._run_git_command(["fetch", "origin", GITHUB_BRANCH])
-                if not success:
-                    return None
+                return None
             
             # 获取远程分支的最新提交信息
             success, commit = self._run_git_command(["rev-parse", f"origin/{GITHUB_BRANCH}"])
@@ -339,17 +328,12 @@ class UIVersionManager:
             # Fetch 远程更新
             success, output = self._run_git_command(["fetch", "origin", GITHUB_BRANCH])
             if not success:
-                # 尝试使用镜像
-                logger.info("尝试使用镜像源 fetch...")
-                self._run_git_command(["remote", "set-url", "origin", f"{MIRROR_URL}{GITHUB_REPO_URL}"])
-                success, output = self._run_git_command(["fetch", "origin", GITHUB_BRANCH])
-                if not success:
-                    return {
-                        "success": False,
-                        "has_update": False,
-                        "current_version": current_version,
-                        "error": f"获取远程更新失败: {output}"
-                    }
+                return {
+                    "success": False,
+                    "has_update": False,
+                    "current_version": current_version,
+                    "error": f"获取远程更新失败: {output}"
+                }
             
             # 检查是否有新提交
             success, commits_behind = self._run_git_command([
@@ -462,12 +446,9 @@ class UIVersionManager:
         except Exception as e:
             logger.warning(f"清理旧备份失败: {e}")
 
-    async def download_and_apply(self, use_mirror: bool = False) -> dict:
+    async def download_and_apply(self) -> dict:
         """
         使用 Git Pull 下载并应用更新
-        
-        Args:
-            use_mirror: 是否使用镜像源
             
         Returns:
             dict: {"success": bool, "message": str, "version": str, "backup_name": str, "error": str}
@@ -487,21 +468,16 @@ class UIVersionManager:
             
             # 2. 检查/初始化 Git 仓库
             if not self._is_git_repo():
-                success, msg = self._init_git_repo(use_mirror)
+                success, msg = self._init_git_repo()
                 if not success:
                     return {"success": False, "error": msg, "backup_name": backup_name}
             
-            # 3. 设置远程 URL（根据是否使用镜像）
-            repo_url = f"{MIRROR_URL}{GITHUB_REPO_URL}" if use_mirror else GITHUB_REPO_URL
-            self._run_git_command(["remote", "set-url", "origin", repo_url])
+            # 3. 设置远程 URL
+            self._run_git_command(["remote", "set-url", "origin", GITHUB_REPO_URL])
             
             # 4. Fetch 远程更新
             success, output = self._run_git_command(["fetch", "origin", GITHUB_BRANCH])
             if not success:
-                # 尝试使用镜像
-                if not use_mirror:
-                    logger.info("尝试使用镜像源...")
-                    return await self.download_and_apply(use_mirror=True)
                 return {"success": False, "error": f"获取远程更新失败: {output}", "backup_name": backup_name}
             
             # 5. 确保在正确的分支
@@ -619,14 +595,11 @@ class UIVersionManager:
             logger.error(f"回滚失败: {e}")
             return {"success": False, "error": str(e)}
     
-    async def git_pull_update(self, use_mirror: bool = False) -> dict:
+    async def git_pull_update(self) -> dict:
         """
         直接使用 Git Pull 更新（简化接口）
-        
-        Args:
-            use_mirror: 是否使用镜像源
             
         Returns:
             dict: {"success": bool, "message": str, "version": str, "error": str}
         """
-        return await self.download_and_apply(use_mirror)
+        return await self.download_and_apply()
