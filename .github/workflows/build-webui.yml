@@ -27,9 +27,10 @@ jobs:
         run: |
           git fetch origin webui-dist:webui-dist 2>/dev/null || true
           
+          LAST_BUILD_COMMIT=""
           if git rev-parse webui-dist >/dev/null 2>&1; then
             # 从提交消息中提取 Source commit（使用 sed 替代 grep -P）
-            LAST_BUILD_COMMIT=$(git log webui-dist -1 --format="%s" | sed -n 's/.*Source: \([a-f0-9]\{7,40\}\).*/\1/p' || echo "")
+            LAST_BUILD_COMMIT=$(git log webui-dist -1 --format="%b" | sed -n 's/^Source: \([a-f0-9]\{7,40\}\).*/\1/p' || echo "")
             if [ -n "$LAST_BUILD_COMMIT" ]; then
               COMMITS_SINCE=$(git rev-list ${LAST_BUILD_COMMIT}..HEAD --count 2>/dev/null || echo "999")
               if [ "$COMMITS_SINCE" -gt "0" ]; then
@@ -43,6 +44,9 @@ jobs:
           else
             echo "has_new_commits=true" >> $GITHUB_OUTPUT
           fi
+          
+          # 输出上次构建的 commit 供后续步骤使用
+          echo "last_build_commit=${LAST_BUILD_COMMIT}" >> $GITHUB_OUTPUT
           
           # 手动触发或 push 时始终构建
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "${{ github.event_name }}" = "push" ]; then
@@ -67,8 +71,14 @@ jobs:
       - name: Deploy to webui-dist branch
         if: steps.check_commits.outputs.has_new_commits == 'true'
         run: |
-          # 生成 changelog
-          git log --oneline --no-merges -10 --format="- %s" > /tmp/changelog.txt
+          # 生成 changelog（只显示自上次静态分支提交以来的提交）
+          LAST_BUILD_COMMIT="${{ steps.check_commits.outputs.last_build_commit }}"
+          if [ -n "$LAST_BUILD_COMMIT" ] && git rev-parse "$LAST_BUILD_COMMIT" >/dev/null 2>&1; then
+            git log ${LAST_BUILD_COMMIT}..HEAD --oneline --no-merges --format="- %s" > /tmp/changelog.txt
+          else
+            # 如果没有上次构建记录，显示最近10条
+            git log --oneline --no-merges -10 --format="- %s" > /tmp/changelog.txt
+          fi
           VERSION=$(date -u '+%Y.%m%d.%H%M')
           
           # 创建临时目录用于构建分发包

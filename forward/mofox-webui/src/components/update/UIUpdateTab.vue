@@ -83,7 +83,7 @@
           <div class="changelog" v-if="statusInfo.changelog?.length">
             <h4>更新内容:</h4>
             <ul>
-              <li v-for="(log, index) in statusInfo.changelog.slice(0, 5)" :key="index">
+              <li v-for="(log, index) in statusInfo.changelog.slice(0, 10)" :key="index">
                 {{ log }}
               </li>
             </ul>
@@ -498,13 +498,15 @@ defineExpose({
 
 .changelog ul {
   margin: 0;
-  padding-left: 20px;
+  padding-left: 8px;
+  list-style: none;
 }
 
 .changelog li {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--md-sys-color-on-surface);
   margin-bottom: 4px;
+  line-height: 1.5;
 }
 
 .update-actions {

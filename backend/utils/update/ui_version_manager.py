@@ -364,14 +364,24 @@ class UIVersionManager:
             latest_version = remote_version.get("version", "unknown") if remote_version else "unknown"
             latest_commit = remote_version.get("commit_short", "") if remote_version else ""
             
-            # 获取待更新的提交日志
+            # 获取待更新的提交日志（解析 Recent changes 部分）
             changelog = []
             if has_update:
+                # 获取最新提交的完整消息体
                 success, log_output = self._run_git_command([
-                    "log", "--oneline", f"HEAD..origin/{GITHUB_BRANCH}", "-10"
+                    "log", "--format=%B", f"HEAD..origin/{GITHUB_BRANCH}", "-1"
                 ])
                 if success and log_output:
-                    changelog = log_output.split("\n")
+                    # 查找 "Recent changes:" 部分并提取变更列表
+                    lines = log_output.split("\n")
+                    in_changes_section = False
+                    for line in lines:
+                        line = line.strip()
+                        if "Recent changes:" in line or "recent changes:" in line.lower():
+                            in_changes_section = True
+                            continue
+                        if in_changes_section and line.startswith("-"):
+                            changelog.append(line)
             
             return {
                 "success": True,
