@@ -1035,7 +1035,7 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-family: 'Noto Sans SC', sans-serif;
   color: var(--md-sys-color-on-surface-variant);
 }
 

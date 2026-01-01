@@ -3309,11 +3309,18 @@ export const providerPresets = [
     description: 'Anthropic Claude API'
   },
   {
+    name: 'AWS Bedrock',
+    icon: 'simple-icons:amazonaws',
+    base_url: '',
+    client_type: 'bedrock',
+    description: 'AWS Bedrock（支持 Claude、Titan 等模型）'
+  },
+  {
     name: '自定义',
     icon: 'lucide:settings',
     base_url: '',
     client_type: 'openai',
-    description: '自定义 OpenAI 兼容 API'
+    description: '自定义 OpenAI/Google Gemini 兼容 API'
   }
 ]
 

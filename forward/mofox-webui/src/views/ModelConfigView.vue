@@ -528,6 +528,10 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  margin: 16px;
+  background: var(--md-sys-color-surface-container-low);
+  border-radius: 16px;
+  border: 1px solid var(--md-sys-color-outline-variant);
 }
 
 .source-toolbar {
@@ -535,7 +539,7 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  background: var(--md-sys-color-surface);
+  background: transparent;
   border-bottom: 1px solid var(--md-sys-color-outline-variant);
 }
 

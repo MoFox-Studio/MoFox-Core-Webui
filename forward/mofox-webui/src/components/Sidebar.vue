@@ -275,7 +275,8 @@ const menuItems: MenuItem[] = [
       { name: '关系管理', path: '/dashboard/relationship', icon: 'group' },
       { name: '表达方式', path: '/dashboard/expression', icon: 'record_voice_over' },
       { name: '插件管理', path: '/dashboard/plugin-manage', icon: 'deployed_code' },
-    { name: '插件市场', path: '/dashboard/marketplace', icon: 'storefront' },
+      { name: '插件市场', path: '/dashboard/marketplace', icon: 'storefront' },
+      { name: '表情管理', path: '/dashboard/emoji-manager', icon: 'insert_emoticon' },
     ]
   },
   { 
@@ -285,7 +286,6 @@ const menuItems: MenuItem[] = [
     key: 'ui-settings',
     children: [
       { name: '风格与壁纸', path: '/dashboard/theme', icon: 'palette' },
-      { name: '表情管理', path: '/dashboard/emoji-manager', icon: 'insert_emoticon' },
     ]
   },
   { 

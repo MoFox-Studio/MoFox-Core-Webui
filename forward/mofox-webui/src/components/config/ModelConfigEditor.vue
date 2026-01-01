@@ -109,6 +109,9 @@
                           <div class="select-option" @click="updateProvider(index, 'client_type', 'aiohttp_gemini'); activeDropdown = null">
                             <span>Gemini（Google）</span>
                           </div>
+                          <div class="select-option" @click="updateProvider(index, 'client_type', 'bedrock'); activeDropdown = null">
+                            <span>AWS Bedrock</span>
+                          </div>
                         </div>
                       </Transition>
                     </Teleport>
@@ -117,7 +120,7 @@
                     </Teleport>
                   </div>
                 </div>
-                <div class="form-group full-width">
+                <div class="form-group full-width" v-if="provider.client_type !== 'bedrock'">
                   <label>API 地址</label>
                   <input 
                     type="text" 
@@ -129,52 +132,75 @@
                 </div>
                 <div class="form-group full-width">
                   <div class="label-row" style="display: flex; justify-content: space-between; align-items: center;">
-                    <label>API 密钥</label>
-                    <button 
-                      v-if="!Array.isArray(provider.api_key)" 
-                      class="btn-text-xs" 
-                      @click="updateProvider(index, 'api_key', [String(provider.api_key || '')])"
-                      style="font-size: 12px; color: var(--primary); background: none; border: none; cursor: pointer; padding: 0;"
-                      title="切换到列表模式以管理多个密钥"
-                    >
-                      <Icon icon="lucide:list" style="vertical-align: middle; margin-right: 2px;" />
-                      列表模式
-                    </button>
-                    <button 
-                      v-else 
-                      class="btn-text-xs" 
-                      @click="updateProvider(index, 'api_key', Array.isArray(provider.api_key) && provider.api_key.length > 0 ? provider.api_key[0] : '')"
-                      style="font-size: 12px; color: var(--text-tertiary); background: none; border: none; cursor: pointer; padding: 0;"
-                      title="切换回单行模式"
-                    >
-                      <Icon icon="lucide:minus" style="vertical-align: middle; margin-right: 2px;" />
-                      单行模式
-                    </button>
-                  </div>
-                  
-                  <div v-if="!Array.isArray(provider.api_key)" class="input-with-action">
-                    <input 
-                      :type="showApiKey[index] ? 'text' : 'password'" 
-                      class="form-input" 
-                      :value="formatApiKey(provider.api_key)"
-                      @input="updateProvider(index, 'api_key', parseApiKey(($event.target as HTMLInputElement).value))"
-                      placeholder="sk-xxx (输入逗号将自动切换为列表模式)"
-                    />
-                    <button class="input-action" @click="toggleApiKeyVisibility(index)">
-                      <Icon :icon="showApiKey[index] ? 'lucide:eye-off' : 'lucide:eye'" />
-                    </button>
+                    <label>{{ provider.client_type === 'bedrock' ? 'AWS Access Key ID' : 'API 密钥' }}</label>
                   </div>
                   
                   <StringArrayEditor
-                    v-else
-                    :value="provider.api_key"
+                    :value="Array.isArray(provider.api_key) ? provider.api_key : (provider.api_key ? [String(provider.api_key)] : [])"
                     @update="updateProvider(index, 'api_key', $event)"
                     placeholder="输入 API 密钥"
                     add-button-text="添加备用密钥"
                     empty-text="请添加至少一个 API 密钥"
                     :is-secret="true"
                   />
+                  <p class="field-hint" style="margin-top: 4px; font-size: 12px; color: var(--text-tertiary);">
+                    支持配置多个 API 密钥，系统将自动轮询使用
+                  </p>
                 </div>
+                
+                <!-- Bedrock 专用配置 -->
+                <template v-if="provider.client_type === 'bedrock'">
+                  <div class="form-group full-width">
+                    <label>AWS Secret Key</label>
+                    <input 
+                      type="password" 
+                      class="form-input" 
+                      :value="(provider.extra_params as Record<string, unknown>)?.aws_secret_key ?? ''"
+                      @input="updateProviderExtraParam(index, 'aws_secret_key', ($event.target as HTMLInputElement).value)"
+                      placeholder="你的 AWS Secret Access Key（IAM 角色模式可留空）"
+                    />
+                    <p class="field-hint" style="margin-top: 4px; font-size: 12px; color: var(--text-tertiary);">
+                      IAM 角色模式下无需配置，系统将自动使用环境变量认证
+                    </p>
+                  </div>
+                  <div class="form-group">
+                    <label>AWS 区域</label>
+                    <div class="custom-select" :class="{ open: activeDropdown === `provider-region-${index}` }">
+                      <div class="select-trigger" @click.stop="toggleDropdown(`provider-region-${index}`, $event)">
+                        <span>{{ (provider.extra_params as Record<string, unknown>)?.region ?? 'us-east-1' }}</span>
+                        <Icon icon="lucide:chevron-down" class="chevron" :class="{ rotated: activeDropdown === `provider-region-${index}` }" />
+                      </div>
+                      <Teleport to="body">
+                        <Transition name="dropdown-fade">
+                          <div v-if="activeDropdown === `provider-region-${index}`" class="select-options" :style="dropdownStyle">
+                            <div class="select-option" @click="updateProviderExtraParam(index, 'region', 'us-east-1'); activeDropdown = null">
+                              <span>us-east-1 (弗吉尼亚北部)</span>
+                            </div>
+                            <div class="select-option" @click="updateProviderExtraParam(index, 'region', 'us-west-2'); activeDropdown = null">
+                              <span>us-west-2 (俄勒冈)</span>
+                            </div>
+                            <div class="select-option" @click="updateProviderExtraParam(index, 'region', 'eu-central-1'); activeDropdown = null">
+                              <span>eu-central-1 (法兰克福)</span>
+                            </div>
+                            <div class="select-option" @click="updateProviderExtraParam(index, 'region', 'eu-west-1'); activeDropdown = null">
+                              <span>eu-west-1 (爱尔兰)</span>
+                            </div>
+                            <div class="select-option" @click="updateProviderExtraParam(index, 'region', 'ap-southeast-1'); activeDropdown = null">
+                              <span>ap-southeast-1 (新加坡)</span>
+                            </div>
+                            <div class="select-option" @click="updateProviderExtraParam(index, 'region', 'ap-northeast-1'); activeDropdown = null">
+                              <span>ap-northeast-1 (东京)</span>
+                            </div>
+                          </div>
+                        </Transition>
+                      </Teleport>
+                      <Teleport to="body">
+                        <div v-if="activeDropdown === `provider-region-${index}`" class="dropdown-overlay" @click.stop="activeDropdown = null"></div>
+                      </Teleport>
+                    </div>
+                  </div>
+                </template>
+                
                 <div class="form-group">
                   <label>最大重试</label>
                   <div class="number-input-wrapper">
@@ -629,22 +655,68 @@
             </button>
           </div>
           <div class="modal-body">
-            <!-- 预设模板 -->
-            <div class="preset-providers">
-              <h4>选择预设模板</h4>
-              <div class="preset-grid">
-                <button 
-                  v-for="preset in providerPresets" 
-                  :key="preset.name"
-                  class="preset-btn"
-                  :class="{ active: newProvider.name === preset.name }"
-                  @click="selectPreset(preset)"
-                >
-                  <Icon :icon="preset.icon" />
-                  <span>{{ preset.name }}</span>
-                  <small>{{ preset.description }}</small>
-                </button>
+            <!-- 预设模板选择 -->
+            <div class="config-field">
+              <label>提供商模板</label>
+              <div class="searchable-select" :class="{ open: activeDropdown === 'preset-provider-select' }">
+                <div class="select-trigger-with-search" @click.stop="toggleDropdown('preset-provider-select', $event)">
+                  <Icon v-if="selectedPreset" :icon="selectedPreset.icon" class="preset-icon" />
+                  <span>{{ selectedPreset ? selectedPreset.name : '选择预设模板' }}</span>
+                  <small v-if="selectedPreset" class="preset-hint">{{ selectedPreset.description }}</small>
+                  <Icon icon="lucide:chevron-down" class="chevron" :class="{ rotated: activeDropdown === 'preset-provider-select' }" />
+                </div>
+                <Teleport to="body">
+                  <Transition name="dropdown-fade">
+                    <div 
+                      v-if="activeDropdown === 'preset-provider-select'" 
+                      class="select-options searchable" 
+                      :style="dropdownStyle"
+                      @click.stop
+                      @mousedown.stop
+                    >
+                      <div class="search-in-dropdown" @mousedown.stop>
+                        <Icon icon="lucide:search" />
+                        <input 
+                          type="text" 
+                          v-model="presetSearchQuery" 
+                          placeholder="搜索提供商..." 
+                          class="dropdown-search-input"
+                          @click.stop
+                          @mousedown.stop
+                        />
+                      </div>
+                      <div class="options-list" @mousedown.stop>
+                        <div 
+                          v-for="preset in filteredProviderPresets" 
+                          :key="preset.name" 
+                          class="select-option with-icon"
+                          :class="{ selected: selectedPreset?.name === preset.name }"
+                          @click="selectPreset(preset); activeDropdown = null"
+                        >
+                          <Icon :icon="preset.icon" class="option-icon" />
+                          <div class="option-content">
+                            <span class="option-name">{{ preset.name }}</span>
+                            <small class="option-desc">{{ preset.description }}</small>
+                          </div>
+                          <Icon v-if="selectedPreset?.name === preset.name" icon="lucide:check" class="check-icon" />
+                        </div>
+                        <div v-if="filteredProviderPresets.length === 0" class="no-results">
+                          <Icon icon="lucide:search-x" />
+                          <span>无匹配结果</span>
+                        </div>
+                      </div>
+                    </div>
+                  </Transition>
+                </Teleport>
+                <Teleport to="body">
+                  <div 
+                    v-if="activeDropdown === 'preset-provider-select'" 
+                    class="dropdown-overlay" 
+                    @click.stop="activeDropdown = null"
+                  ></div>
+                </Teleport>
               </div>
+              <p class="field-tip">选择预设模板可自动填充 URL 和客户端类型，支持搜索</p>
             </div>
             
             <div class="divider">
@@ -656,29 +728,59 @@
                 <label>提供商名称</label>
                 <input v-model="newProvider.name" type="text" class="input" placeholder="例如: DeepSeek" />
               </div>
-              <div class="config-field">
-                <label>API 地址</label>
-                <input v-model="newProvider.base_url" type="text" class="input" placeholder="https://api.example.com/v1" />
+              <div class="config-field" v-if="newProvider.client_type !== 'bedrock'">
+                <label>
+                  API 地址
+                  <span v-if="isUsingPreset" class="field-lock"><Icon icon="lucide:lock" /> 由模板指定</span>
+                </label>
+                <input 
+                  v-model="newProvider.base_url" 
+                  type="text" 
+                  class="input" 
+                  :class="{ disabled: isUsingPreset }"
+                  :disabled="isUsingPreset"
+                  placeholder="https://api.example.com/v1" 
+                />
               </div>
               <div class="config-field">
-                <label>API 密钥</label>
-                <input v-model="newProvider.api_key" type="password" class="input" placeholder="你的 API 密钥" />
+                <label>
+                  {{ newProvider.client_type === 'bedrock' ? 'AWS Access Key ID' : 'API 密钥' }}
+                  <span class="field-hint">支持多行配置，系统将自动轮询</span>
+                </label>
+                <StringArrayEditor
+                  :value="Array.isArray(newProvider.api_key) ? newProvider.api_key : (newProvider.api_key ? [String(newProvider.api_key)] : [])"
+                  @update="newProvider.api_key = $event"
+                  :placeholder="newProvider.client_type === 'bedrock' ? '你的 AWS Access Key ID' : '你的 API 密钥'"
+                  add-button-text="添加备用密钥"
+                  empty-text="请添加至少一个 API 密钥"
+                  :is-secret="true"
+                />
               </div>
               <div class="config-field">
-                <label>客户端类型</label>
-                <div class="custom-select" :class="{ open: activeDropdown === 'new-provider-client' }">
-                  <div class="select-trigger" @click.stop="toggleDropdown('new-provider-client', $event)">
+                <label>
+                  客户端类型
+                  <span v-if="isUsingPreset" class="field-lock"><Icon icon="lucide:lock" /> 由模板指定</span>
+                </label>
+                <div class="custom-select" :class="{ open: activeDropdown === 'new-provider-client', disabled: isUsingPreset }">
+                  <div 
+                    class="select-trigger" 
+                    :class="{ disabled: isUsingPreset }"
+                    @click.stop="!isUsingPreset && toggleDropdown('new-provider-client', $event)"
+                  >
                     <span>{{ getClientTypeLabel(newProvider.client_type) }}</span>
                     <Icon icon="lucide:chevron-down" class="chevron" :class="{ rotated: activeDropdown === 'new-provider-client' }" />
                   </div>
                   <Teleport to="body">
                     <Transition name="dropdown-fade">
-                      <div v-if="activeDropdown === 'new-provider-client'" class="select-options" :style="dropdownStyle">
+                      <div v-if="activeDropdown === 'new-provider-client' && !isUsingPreset" class="select-options" :style="dropdownStyle">
                         <div class="select-option" @click="newProvider.client_type = 'openai'; activeDropdown = null">
                           <span>OpenAI 兼容</span>
                         </div>
                         <div class="select-option" @click="newProvider.client_type = 'aiohttp_gemini'; activeDropdown = null">
                           <span>Gemini（Google）</span>
+                        </div>
+                        <div class="select-option" @click="newProvider.client_type = 'bedrock'; activeDropdown = null">
+                          <span>AWS Bedrock</span>
                         </div>
                       </div>
                     </Transition>
@@ -688,11 +790,163 @@
                   </Teleport>
                 </div>
               </div>
+              
+              <!-- Bedrock 专用配置 -->
+              <template v-if="newProvider.client_type === 'bedrock'">
+                <div class="config-field">
+                  <label>
+                    AWS Secret Key
+                    <span class="field-hint">IAM 角色模式下可留空</span>
+                  </label>
+                  <input 
+                    v-model="newProvider.aws_secret_key" 
+                    type="password" 
+                    class="input" 
+                    placeholder="你的 AWS Secret Access Key" 
+                  />
+                </div>
+                <div class="config-field">
+                  <label>AWS 区域</label>
+                  <div class="custom-select" :class="{ open: activeDropdown === 'new-provider-region' }">
+                    <div 
+                      class="select-trigger" 
+                      @click.stop="toggleDropdown('new-provider-region', $event)"
+                    >
+                      <span>{{ newProvider.aws_region || 'us-east-1' }}</span>
+                      <Icon icon="lucide:chevron-down" class="chevron" :class="{ rotated: activeDropdown === 'new-provider-region' }" />
+                    </div>
+                    <Teleport to="body">
+                      <Transition name="dropdown-fade">
+                        <div v-if="activeDropdown === 'new-provider-region'" class="select-options" :style="dropdownStyle">
+                          <div class="select-option" @click="newProvider.aws_region = 'us-east-1'; activeDropdown = null">
+                            <span>us-east-1 (弗吉尼亚北部)</span>
+                          </div>
+                          <div class="select-option" @click="newProvider.aws_region = 'us-west-2'; activeDropdown = null">
+                            <span>us-west-2 (俄勒冈)</span>
+                          </div>
+                          <div class="select-option" @click="newProvider.aws_region = 'eu-central-1'; activeDropdown = null">
+                            <span>eu-central-1 (法兰克福)</span>
+                          </div>
+                          <div class="select-option" @click="newProvider.aws_region = 'eu-west-1'; activeDropdown = null">
+                            <span>eu-west-1 (爱尔兰)</span>
+                          </div>
+                          <div class="select-option" @click="newProvider.aws_region = 'ap-southeast-1'; activeDropdown = null">
+                            <span>ap-southeast-1 (新加坡)</span>
+                          </div>
+                          <div class="select-option" @click="newProvider.aws_region = 'ap-northeast-1'; activeDropdown = null">
+                            <span>ap-northeast-1 (东京)</span>
+                          </div>
+                        </div>
+                      </Transition>
+                    </Teleport>
+                    <Teleport to="body">
+                      <div v-if="activeDropdown === 'new-provider-region'" class="dropdown-overlay" @click.stop="activeDropdown = null"></div>
+                    </Teleport>
+                  </div>
+                </div>
+              </template>
+              
+              <!-- 高级设置 -->
+              <div class="advanced-settings-section">
+                <div class="advanced-toggle" @click="showNewProviderAdvanced = !showNewProviderAdvanced">
+                  <Icon :icon="showNewProviderAdvanced ? 'lucide:chevron-up' : 'lucide:chevron-down'" />
+                  <span>高级设置</span>
+                </div>
+                <Transition name="slide">
+                  <div v-if="showNewProviderAdvanced" class="advanced-fields">
+                    <div class="config-field-row">
+                      <div class="config-field half">
+                        <label>最大重试次数</label>
+                        <div class="number-input-wrapper">
+                          <button 
+                            class="number-btn" 
+                            @click="newProvider.max_retry = Math.max(0, (newProvider.max_retry ?? 2) - 1)"
+                            :disabled="(newProvider.max_retry ?? 2) <= 0"
+                          >
+                            <Icon icon="lucide:minus" />
+                          </button>
+                          <input 
+                            type="number" 
+                            class="form-input number-center" 
+                            v-model.number="newProvider.max_retry"
+                            min="0" max="10"
+                            placeholder="2"
+                          />
+                          <button 
+                            class="number-btn" 
+                            @click="newProvider.max_retry = Math.min(10, (newProvider.max_retry ?? 2) + 1)"
+                            :disabled="(newProvider.max_retry ?? 2) >= 10"
+                          >
+                            <Icon icon="lucide:plus" />
+                          </button>
+                        </div>
+                        <p class="field-hint">请求失败时的最大重试次数</p>
+                      </div>
+                      <div class="config-field half">
+                        <label>超时时间(秒)</label>
+                        <div class="number-input-wrapper">
+                          <button 
+                            class="number-btn" 
+                            @click="newProvider.timeout = Math.max(5, (newProvider.timeout ?? 30) - 5)"
+                            :disabled="(newProvider.timeout ?? 30) <= 5"
+                          >
+                            <Icon icon="lucide:minus" />
+                          </button>
+                          <input 
+                            type="number" 
+                            class="form-input number-center" 
+                            v-model.number="newProvider.timeout"
+                            min="5" max="300" step="5"
+                            placeholder="30"
+                          />
+                          <button 
+                            class="number-btn" 
+                            @click="newProvider.timeout = Math.min(300, (newProvider.timeout ?? 30) + 5)"
+                            :disabled="(newProvider.timeout ?? 30) >= 300"
+                          >
+                            <Icon icon="lucide:plus" />
+                          </button>
+                        </div>
+                        <p class="field-hint">单次请求的超时时间</p>
+                      </div>
+                    </div>
+                    <div class="config-field-row">
+                      <div class="config-field half">
+                        <label>重试间隔(秒)</label>
+                        <div class="number-input-wrapper">
+                          <button 
+                            class="number-btn" 
+                            @click="newProvider.retry_interval = Math.max(1, (newProvider.retry_interval ?? 10) - 1)"
+                            :disabled="(newProvider.retry_interval ?? 10) <= 1"
+                          >
+                            <Icon icon="lucide:minus" />
+                          </button>
+                          <input 
+                            type="number" 
+                            class="form-input number-center" 
+                            v-model.number="newProvider.retry_interval"
+                            min="1" max="60"
+                            placeholder="10"
+                          />
+                          <button 
+                            class="number-btn" 
+                            @click="newProvider.retry_interval = Math.min(60, (newProvider.retry_interval ?? 10) + 1)"
+                            :disabled="(newProvider.retry_interval ?? 10) >= 60"
+                          >
+                            <Icon icon="lucide:plus" />
+                          </button>
+                        </div>
+                        <p class="field-hint">重试之间的等待时间</p>
+                      </div>
+                    </div>
+                  </div>
+                </Transition>
+              </div>
             </div>
           </div>
           <div class="modal-footer">
             <button class="btn btn-secondary" @click="showAddProviderModal = false">取消</button>
-            <button class="btn btn-primary" @click="confirmAddProvider" :disabled="!newProvider.name || !newProvider.base_url">
+            <button class="btn btn-primary" @click="confirmAddProvider" :disabled="!newProvider.name || (newProvider.client_type !== 'bedrock' && !newProvider.base_url)">
               <Icon icon="lucide:check" />
               添加
             </button>
@@ -900,6 +1154,48 @@
                       <span class="slider"></span>
                     </label>
                   </div>
+                  
+                  <div v-if="newModel.enable_prompt_perturbation" class="perturbation-sub-options">
+                    <div class="config-field">
+                      <label>扰动强度</label>
+                      <div class="custom-select" :class="{ open: activeDropdown === 'new-model-perturbation' }">
+                        <div class="select-trigger" @click.stop="toggleDropdown('new-model-perturbation', $event)">
+                          <span>{{ {'light': '轻度', 'medium': '中度', 'heavy': '重度'}[newModel.perturbation_strength as string] || '轻度' }}</span>
+                          <Icon icon="lucide:chevron-down" class="chevron" :class="{ rotated: activeDropdown === 'new-model-perturbation' }" />
+                        </div>
+                        <Teleport to="body">
+                          <Transition name="dropdown-fade">
+                            <div v-if="activeDropdown === 'new-model-perturbation'" class="select-options" :style="dropdownStyle">
+                              <div class="select-option" @click="newModel.perturbation_strength = 'light'; activeDropdown = null">
+                                <span>轻度</span>
+                              </div>
+                              <div class="select-option" @click="newModel.perturbation_strength = 'medium'; activeDropdown = null">
+                                <span>中度</span>
+                              </div>
+                              <div class="select-option" @click="newModel.perturbation_strength = 'heavy'; activeDropdown = null">
+                                <span>重度</span>
+                              </div>
+                            </div>
+                          </Transition>
+                        </Teleport>
+                        <Teleport to="body">
+                          <div v-if="activeDropdown === 'new-model-perturbation'" class="dropdown-overlay" @click.stop="activeDropdown = null"></div>
+                        </Teleport>
+                      </div>
+                    </div>
+                    <div class="feature-toggle compact" @click="newModel.enable_semantic_variants = !newModel.enable_semantic_variants">
+                      <div class="feature-toggle-info">
+                        <span class="feature-name">语义变体</span>
+                      </div>
+                      <label class="switch small" @click.stop>
+                        <input 
+                          type="checkbox" 
+                          v-model="newModel.enable_semantic_variants"
+                        />
+                        <span class="slider"></span>
+                      </label>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1012,7 +1308,6 @@ const taskCategoryMap: Record<string, string> = {
 }
 
 // 状态
-const showApiKey = ref<Record<number, boolean>>({})
 const showModelAdvanced = ref<Record<number, boolean>>({})
 const showAddProviderModal = ref(false)
 const showAddModelModal = ref(false)
@@ -1047,8 +1342,34 @@ function toggleDropdown(id: string, event?: Event) {
 const newProvider = ref({
   name: '',
   base_url: '',
-  api_key: '',
-  client_type: 'openai'
+  api_key: [] as string[],
+  client_type: 'openai',
+  max_retry: 2,
+  timeout: 30,
+  retry_interval: 10,
+  // Bedrock 额外参数
+  aws_secret_key: '',
+  aws_region: 'us-east-1'
+})
+
+// 预设模板相关状态
+const selectedPreset = ref<typeof providerPresets[0] | null>(null)
+const presetSearchQuery = ref('')
+const showNewProviderAdvanced = ref(false)
+
+// 是否正在使用预设模板（非自定义）
+const isUsingPreset = computed(() => {
+  return selectedPreset.value !== null && selectedPreset.value.name !== '自定义'
+})
+
+// 过滤后的预设模板列表
+const filteredProviderPresets = computed(() => {
+  if (!presetSearchQuery.value) return providerPresets
+  const query = presetSearchQuery.value.toLowerCase()
+  return providerPresets.filter(p => 
+    p.name.toLowerCase().includes(query) ||
+    p.description.toLowerCase().includes(query)
+  )
 })
 
 // 新模型表单
@@ -1061,7 +1382,9 @@ const newModel = ref({
   max_tokens: undefined as number | undefined,
   temperature: undefined as number | undefined,
   anti_truncation: false,
-  enable_prompt_perturbation: false
+  enable_prompt_perturbation: false,
+  perturbation_strength: 'light',
+  enable_semantic_variants: false
 })
 
 // 计算 API 提供商列表
@@ -1112,10 +1435,6 @@ const filteredTasks = computed(() => {
 })
 
 // 方法
-function toggleApiKeyVisibility(index: number) {
-  showApiKey.value[index] = !showApiKey.value[index]
-}
-
 function toggleModelAdvanced(index: number) {
   showModelAdvanced.value[index] = !showModelAdvanced.value[index]
 }
@@ -1132,6 +1451,9 @@ function getProviderIcon(name: string): string {
     'deepseek': 'lucide:brain-circuit',
     'siliconflow': 'lucide:cpu',
     '硅基': 'lucide:cpu',
+    'aws': 'simple-icons:amazonaws',
+    'bedrock': 'simple-icons:amazonaws',
+    'amazon': 'simple-icons:amazonaws',
   }
   
   const lowerName = name.toLowerCase()
@@ -1146,7 +1468,8 @@ function getProviderIcon(name: string): string {
 function getClientTypeLabel(clientType?: string): string {
   const labels: Record<string, string> = {
     'openai': 'OpenAI 兼容',
-    'aiohttp_gemini': 'Gemini（Google）'
+    'aiohttp_gemini': 'Gemini（Google）',
+    'bedrock': 'AWS Bedrock'
   }
   return labels[clientType || 'openai'] || 'OpenAI 兼容'
 }
@@ -1156,22 +1479,27 @@ function getProviderModelCount(providerName?: string): number {
   return models.value.filter(m => m.api_provider === providerName).length
 }
 
-function formatApiKey(apiKey: unknown): string {
-  if (Array.isArray(apiKey)) {
-    return apiKey.join(', ')
-  }
-  return String(apiKey || '')
-}
-
-function parseApiKey(value: string): string | string[] {
-  if (value.includes(',')) {
-    return value.split(',').map(s => s.trim()).filter(s => s)
-  }
-  return value
-}
-
 function updateProvider(index: number, key: string, value: unknown) {
   const updatedProvider = { ...apiProviders.value[index], [key]: value }
+  const newProviders = [...apiProviders.value]
+  newProviders[index] = updatedProvider
+  emit('update', 'api_providers', newProviders)
+}
+
+// 更新提供商的 extra_params 中的某个字段
+function updateProviderExtraParam(index: number, key: string, value: unknown) {
+  const provider = apiProviders.value[index]
+  if (!provider) return
+  
+  const currentExtraParams = (provider.extra_params as Record<string, unknown>) || {}
+  const updatedExtraParams = { ...currentExtraParams, [key]: value }
+  
+  // 如果值为空字符串，删除该字段
+  if (value === '') {
+    delete updatedExtraParams[key]
+  }
+  
+  const updatedProvider = { ...provider, extra_params: updatedExtraParams }
   const newProviders = [...apiProviders.value]
   newProviders[index] = updatedProvider
   emit('update', 'api_providers', newProviders)
@@ -1185,31 +1513,70 @@ function updateModel(index: number, key: string, value: unknown) {
 }
 
 function selectPreset(preset: typeof providerPresets[0]) {
+  selectedPreset.value = preset
   newProvider.value = {
     name: preset.name === '自定义' ? '' : preset.name,
     base_url: preset.base_url,
-    api_key: '',
-    client_type: preset.client_type
+    api_key: [] as string[],
+    client_type: preset.client_type,
+    max_retry: newProvider.value.max_retry ?? 2,
+    timeout: preset.client_type === 'bedrock' ? 60 : (newProvider.value.timeout ?? 30),
+    retry_interval: newProvider.value.retry_interval ?? 10,
+    // Bedrock 额外参数
+    aws_secret_key: '',
+    aws_region: 'us-east-1'
   }
+  presetSearchQuery.value = ''
 }
 
 function confirmAddProvider() {
-  if (!newProvider.value.name || !newProvider.value.base_url) return
+  // Bedrock 不需要 base_url，其他类型需要
+  const isBedrock = newProvider.value.client_type === 'bedrock'
+  if (!newProvider.value.name || (!isBedrock && !newProvider.value.base_url)) return
   
-  const newProviders = [...apiProviders.value, {
+  // 构建提供商对象
+  const providerData: Record<string, unknown> = {
     name: newProvider.value.name,
     base_url: newProvider.value.base_url,
     api_key: newProvider.value.api_key,
     client_type: newProvider.value.client_type,
-    max_retry: 2,
-    timeout: 30,
-    retry_interval: 10
-  }]
+    max_retry: newProvider.value.max_retry ?? 2,
+    timeout: newProvider.value.timeout ?? 30,
+    retry_interval: newProvider.value.retry_interval ?? 10
+  }
+  
+  // 如果是 Bedrock，添加 extra_params
+  if (isBedrock) {
+    const extraParams: Record<string, unknown> = {
+      region: newProvider.value.aws_region || 'us-east-1'
+    }
+    // 只有在提供了 secret key 时才添加
+    if (newProvider.value.aws_secret_key) {
+      extraParams.aws_secret_key = newProvider.value.aws_secret_key
+    }
+    providerData.extra_params = extraParams
+  }
+  
+  const newProviders = [...apiProviders.value, providerData]
   
   emit('update', 'api_providers', newProviders)
   
   showAddProviderModal.value = false
-  newProvider.value = { name: '', base_url: '', api_key: '', client_type: 'openai' }
+  // 重置表单
+  newProvider.value = { 
+    name: '', 
+    base_url: '', 
+    api_key: [] as string[], 
+    client_type: 'openai', 
+    max_retry: 2, 
+    timeout: 30, 
+    retry_interval: 10,
+    aws_secret_key: '',
+    aws_region: 'us-east-1'
+  }
+  selectedPreset.value = null
+  presetSearchQuery.value = ''
+  showNewProviderAdvanced.value = false
   
   // 展开新添加的提供商
   selectedProvider.value = newProviders.length - 1
@@ -1276,7 +1643,9 @@ function confirmAddModel() {
     max_tokens: undefined,
     temperature: undefined,
     anti_truncation: false,
-    enable_prompt_perturbation: false
+    enable_prompt_perturbation: false,
+    perturbation_strength: 'light',
+    enable_semantic_variants: false
   }
   
   // 展开新添加的模型
@@ -1575,7 +1944,16 @@ async function fetchAvailableModels() {
 }
 
 // 监听滚动和调整大小以关闭下拉框
-function closeDropdowns() {
+function closeDropdowns(event?: Event) {
+  // 如果滚动发生在下拉框内部（options-list），则不关闭
+  if (event && event.target) {
+    const target = event.target as HTMLElement
+    if (target.classList?.contains('options-list') || 
+        target.closest?.('.options-list') ||
+        target.closest?.('.select-options')) {
+      return
+    }
+  }
   activeDropdown.value = null
   openTaskModelDropdown.value = null
 }
@@ -2528,11 +2906,12 @@ select.form-input {
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   width: 90%;
-  max-width: 480px;
+  max-width: 420px;
   max-height: 85vh;
   display: flex;
   flex-direction: column;
   animation: modalIn 0.2s ease;
+  overflow: hidden;
 }
 
 @keyframes modalIn {
@@ -2550,7 +2929,7 @@ select.form-input {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--border-color);
 }
 
@@ -2559,7 +2938,7 @@ select.form-input {
   align-items: center;
   gap: 8px;
   margin: 0;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -2587,24 +2966,261 @@ select.form-input {
 }
 
 .modal-body {
-  padding: 20px;
+  padding: 16px;
   overflow-y: auto;
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
 }
 
 .modal-footer {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  padding: 16px 20px;
+  padding: 12px 16px;
   border-top: 1px solid var(--border-color);
   background: var(--bg-secondary);
 }
 
-/* 预设模板 */
+/* 带搜索的下拉选择器 */
+.searchable-select {
+  position: relative;
+}
+
+.select-trigger-with-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.select-trigger-with-search:hover {
+  border-color: var(--primary);
+}
+
+.searchable-select.open .select-trigger-with-search {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-bg);
+}
+
+.select-trigger-with-search .preset-icon {
+  font-size: 18px;
+  color: var(--primary);
+}
+
+.select-trigger-with-search span {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.select-trigger-with-search .preset-hint {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-left: auto;
+  margin-right: 8px;
+}
+
+.select-options.searchable {
+  max-height: 320px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 9999;
+}
+
+.search-in-dropdown {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  position: sticky;
+  top: 0;
+  flex-shrink: 0;
+  z-index: 1;
+}
+
+.search-in-dropdown svg {
+  font-size: 16px;
+  color: var(--text-tertiary);
+}
+
+.dropdown-search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.dropdown-search-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.options-list {
+  overflow-y: auto;
+  max-height: 260px;
+  overscroll-behavior: contain;
+  flex: 1;
+}
+
+.select-option.with-icon {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+}
+
+.select-option.with-icon .option-icon {
+  font-size: 18px;
+  color: var(--text-secondary);
+}
+
+.select-option.with-icon:hover .option-icon,
+.select-option.with-icon.selected .option-icon {
+  color: var(--primary);
+}
+
+.select-option .option-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.select-option .option-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.select-option .option-desc {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.select-option .check-icon {
+  font-size: 16px;
+  color: var(--primary);
+}
+
+.select-option.selected {
+  background: var(--primary-bg);
+}
+
+.no-results {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px;
+  color: var(--text-tertiary);
+}
+
+.no-results svg {
+  font-size: 24px;
+  opacity: 0.5;
+}
+
+.no-results span {
+  font-size: 12px;
+}
+
+.field-tip {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin: 4px 0 0 0;
+}
+
+.field-lock {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--warning);
+  font-weight: 400;
+  margin-left: 8px;
+}
+
+.field-lock svg {
+  font-size: 12px;
+}
+
+.input.disabled,
+.select-trigger.disabled,
+.custom-select.disabled .select-trigger {
+  background: var(--bg-secondary);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* 高级设置区域 */
+.advanced-settings-section {
+  margin-top: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.advanced-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--bg-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.advanced-toggle:hover {
+  background: var(--bg-hover);
+}
+
+.advanced-toggle svg {
+  font-size: 16px;
+  color: var(--text-secondary);
+}
+
+.advanced-toggle span {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.advanced-fields {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: var(--bg-primary);
+}
+
+.config-field-row {
+  display: flex;
+  gap: 12px;
+}
+
+.config-field.half {
+  flex: 1;
+}
+
+.config-field .field-hint {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  margin: 4px 0 0 0;
+}
+
+/* 预设模板（保留兼容性） */
 .preset-providers h4 {
   font-size: 12px;
   font-weight: 500;
@@ -3185,7 +3801,7 @@ select.input {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 2000;
+  z-index: 9998;
   cursor: default;
 }
 
@@ -3213,6 +3829,7 @@ select.input {
   height: 32px;
   width: 100%;
   -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 .number-input-wrapper .form-input:focus {
@@ -3249,5 +3866,64 @@ select.input {
 .number-btn:disabled {
   opacity: 0.3;
   cursor: not-allowed;
+}
+
+/* Perturbation Options Styling */
+.perturbation-options,
+.perturbation-sub-options {
+  margin-top: 8px;
+  padding: 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  animation: slideDown 0.2s ease-out;
+}
+
+.perturbation-options .form-group,
+.perturbation-sub-options .config-field {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.perturbation-options .toggle-item.compact,
+.perturbation-sub-options .feature-toggle.compact {
+  flex: 1;
+  margin-bottom: 0;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 40px; /* Match input height roughly */
+}
+
+.perturbation-options .toggle-item.compact .toggle-info,
+.perturbation-sub-options .feature-toggle.compact .feature-toggle-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.perturbation-options .toggle-item.compact .toggle-label,
+.perturbation-sub-options .feature-toggle.compact .feature-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 </style>
