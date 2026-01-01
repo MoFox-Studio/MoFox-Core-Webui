@@ -73,9 +73,9 @@
     </aside>
 
     <!-- 右侧：聊天区域 -->
-    <main class="chat-panel">
+    <main class="chat-panel m3-card">
       <!-- 顶部栏 -->
-      <header class="chat-header m3-card">
+      <header class="chat-header">
         <div v-if="selectedUser" class="header-content">
           <div class="user-avatar">
             <img v-if="selectedUser.avatar" :src="selectedUser.avatar" :alt="selectedUser.nickname" />
@@ -92,24 +92,24 @@
         </div>
         
         <div class="header-actions">
-          <button 
-            v-if="selectedUser" 
-            class="m3-button icon-only" 
+          <button
+            v-if="selectedUser"
+            class="m3-button icon-only"
             @click="showResetConfirm = true"
             title="重置关系"
           >
             <span class="material-symbols-rounded">restart_alt</span>
           </button>
-          <button 
-            v-if="selectedUser" 
-            class="m3-button icon-only" 
+          <button
+            v-if="selectedUser"
+            class="m3-button icon-only"
             @click="showEditUserDialog = true"
             title="编辑用户"
           >
             <span class="material-symbols-rounded">edit</span>
           </button>
-          <button 
-            class="m3-button icon-only" 
+          <button
+            class="m3-button icon-only"
             @click="loadMessages"
             title="刷新消息"
           >
@@ -200,7 +200,7 @@
       </div>
 
       <!-- 输入区域 -->
-      <footer class="input-area m3-card">
+      <footer class="input-area">
         <div class="input-container">
           <div class="input-wrapper" :class="{ focused: isInputFocused }">
             <textarea
@@ -1360,8 +1360,6 @@ function showToast(message: string, type: 'success' | 'error' = 'success') {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border-radius: 16px;
-  background: var(--md-sys-color-surface);
 }
 
 .chat-header {
@@ -1370,6 +1368,7 @@ function showToast(message: string, type: 'success' | 'error' = 'success') {
   justify-content: space-between;
   padding: 16px 20px;
   border-bottom: 1px solid var(--md-sys-color-outline-variant);
+  flex-shrink: 0;
 }
 
 .chat-header .header-content {
@@ -1414,6 +1413,8 @@ function showToast(message: string, type: 'success' | 'error' = 'success') {
   overflow-y: auto;
   padding: 20px;
   background-color: var(--md-sys-color-surface-container-low);
+  border-top: none;
+  border-bottom: none;
 }
 
 .welcome-state,
@@ -1675,6 +1676,9 @@ function showToast(message: string, type: 'success' | 'error' = 'success') {
 .input-area {
   padding: 16px 20px;
   border-top: 1px solid var(--md-sys-color-outline-variant);
+  flex-shrink: 0;
+  background-color: var(--md-sys-color-surface);
+  border-radius: 0 0 16px 16px;
 }
 
 .input-container {
