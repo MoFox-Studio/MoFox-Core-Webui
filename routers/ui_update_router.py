@@ -70,10 +70,21 @@ class UIUpdateRouterComponent(BaseRouterComponent):
         async def rollback_ui(
             request: UIRollbackRequest, _=VerifiedDep
         ) -> UIUpdateResponse:
-            """回滚到指定的备份版本"""
+            """回滚到指定的 Git 提交"""
             try:
                 manager = UIVersionManager()
-                result = manager.rollback(request.backup_name)
+                result = manager.rollback(request.commit_hash)
+                return UIUpdateResponse(**result)
+            except Exception as e:
+                logger.error(f"UI 回滚失败: {e}")
+                return UIUpdateResponse(success=False, message="回滚失败", error=str(e))
+
+        @self.router.post("/rollback-last", summary="回滚到上次更新前")
+        async def rollback_last_update(_=VerifiedDep) -> UIUpdateResponse:
+            """回滚到上一次更新前的状态"""
+            try:
+                manager = UIVersionManager()
+                result = manager.rollback_last_update()
                 return UIUpdateResponse(**result)
             except Exception as e:
                 logger.error(f"UI 回滚失败: {e}")

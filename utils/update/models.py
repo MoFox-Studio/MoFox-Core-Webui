@@ -156,20 +156,24 @@ class UIUpdateResponse(BaseModel):
     success: bool
     message: str
     version: Optional[str] = None
-    backup_name: Optional[str] = None
+    backup_commit: Optional[str] = None  # 更新前的提交 hash（用于回滚）
+    commit: Optional[str] = None  # 当前提交 hash
+    commit_short: Optional[str] = None  # 当前提交简短 hash
     error: Optional[str] = None
 
 
 class UIBackupInfo(BaseModel):
-    """UI 备份信息"""
+    """UI 备份信息（Git 提交记录）"""
 
-    name: str
-    version: Optional[str] = None
-    timestamp: str
-    size: Optional[int] = None
+    commit: str  # 完整 commit hash
+    commit_short: str  # 简短 commit hash
+    version: Optional[str] = None  # 版本号
+    message: str  # 提交消息
+    timestamp: str  # 提交时间
+    is_current: bool = False  # 是否是当前版本
 
 
 class UIRollbackRequest(BaseModel):
     """UI 回滚请求"""
 
-    backup_name: str
+    commit_hash: str  # 要回滚到的 commit hash
