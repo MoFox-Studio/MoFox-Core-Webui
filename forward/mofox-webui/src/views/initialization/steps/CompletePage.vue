@@ -1,14 +1,21 @@
 <template>
   <div class="complete-page">
+    <!-- 全屏彩带效果 -->
+    <div class="confetti-container" ref="confettiContainer">
+      <div 
+        v-for="piece in confettiPieces" 
+        :key="piece.id" 
+        class="confetti-piece"
+        :style="piece.style"
+      ></div>
+    </div>
+    
     <div class="card m3-card">
       <div class="complete-content">
         <!-- 成功图标 -->
         <div class="success-icon">
           <div class="icon-circle">
             <span class="material-symbols-rounded">check_circle</span>
-          </div>
-          <div class="confetti">
-            <div v-for="i in 20" :key="i" class="confetti-piece" :style="confettiStyle(i)"></div>
           </div>
         </div>
         
@@ -59,25 +66,132 @@
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted, reactive } from 'vue'
+
 defineEmits<{
   next: []
 }>()
 
-// 生成彩纸样式
-function confettiStyle(index: number) {
-  const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F']
-  const randomColor = colors[index % colors.length]
-  const randomDelay = Math.random() * 0.5
-  const randomX = (Math.random() - 0.5) * 200
-  const randomRotate = Math.random() * 720
-  
-  return {
-    '--confetti-color': randomColor,
-    '--confetti-delay': `${randomDelay}s`,
-    '--confetti-x': `${randomX}px`,
-    '--confetti-rotate': `${randomRotate}deg`
+// 彩带数据
+interface ConfettiPiece {
+  id: number
+  style: Record<string, string>
+}
+
+const confettiPieces = ref<ConfettiPiece[]>([])
+const confettiContainer = ref<HTMLElement | null>(null)
+
+// 彩带颜色
+const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#DDA0DD', '#87CEEB']
+
+// 播放音效
+function playPopSound() {
+  try {
+    // 使用 Web Audio API 生成简单的"砰"声
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+    
+    // 创建振荡器
+    const oscillator = audioContext.createOscillator()
+    const gainNode = audioContext.createGain()
+    
+    oscillator.connect(gainNode)
+    gainNode.connect(audioContext.destination)
+    
+    // 设置音调 - 低沉的砰声
+    oscillator.frequency.setValueAtTime(150, audioContext.currentTime)
+    oscillator.frequency.exponentialRampToValueAtTime(50, audioContext.currentTime + 0.1)
+    
+    // 设置音量包络 - 快速衰减
+    gainNode.gain.setValueAtTime(0.5, audioContext.currentTime)
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2)
+    
+    oscillator.type = 'sine'
+    oscillator.start(audioContext.currentTime)
+    oscillator.stop(audioContext.currentTime + 0.2)
+    
+    // 添加第二个音调增加层次感
+    setTimeout(() => {
+      const osc2 = audioContext.createOscillator()
+      const gain2 = audioContext.createGain()
+      
+      osc2.connect(gain2)
+      gain2.connect(audioContext.destination)
+      
+      osc2.frequency.setValueAtTime(200, audioContext.currentTime)
+      osc2.frequency.exponentialRampToValueAtTime(80, audioContext.currentTime + 0.08)
+      
+      gain2.gain.setValueAtTime(0.3, audioContext.currentTime)
+      gain2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15)
+      
+      osc2.type = 'sine'
+      osc2.start(audioContext.currentTime)
+      osc2.stop(audioContext.currentTime + 0.15)
+    }, 50)
+  } catch (e) {
+    console.log('Audio not supported')
   }
 }
+
+// 生成从两侧喷出的彩带
+function createConfetti() {
+  const pieces: ConfettiPiece[] = []
+  const totalPieces = 60
+  
+  for (let i = 0; i < totalPieces; i++) {
+    // 决定从左侧还是右侧喷出
+    const fromLeft = i < totalPieces / 2
+    
+    // 起始位置
+    const startX = fromLeft ? -20 : window.innerWidth + 20
+    const startY = window.innerHeight * (0.3 + Math.random() * 0.4) // 从中间偏上的位置喷出
+    
+    // 目标位置 - 向对侧喷射并下落
+    const endX = fromLeft 
+      ? 100 + Math.random() * (window.innerWidth * 0.6)
+      : window.innerWidth - 100 - Math.random() * (window.innerWidth * 0.6)
+    const endY = window.innerHeight + 100
+    
+    // 随机属性
+    const color = colors[Math.floor(Math.random() * colors.length)]
+    const size = 8 + Math.random() * 8
+    const duration = 2 + Math.random() * 1.5
+    const delay = Math.random() * 0.3
+    const rotation = Math.random() * 1080 - 540
+    
+    // 形状变化
+    const isRectangle = Math.random() > 0.5
+    const width = isRectangle ? size : size * 0.6
+    const height = isRectangle ? size * 0.6 : size
+    
+    pieces.push({
+      id: i,
+      style: {
+        '--start-x': `${startX}px`,
+        '--start-y': `${startY}px`,
+        '--end-x': `${endX}px`,
+        '--end-y': `${endY}px`,
+        '--color': color!,
+        '--width': `${width}px`,
+        '--height': `${height}px`,
+        '--duration': `${duration}s`,
+        '--delay': `${delay}s`,
+        '--rotation': `${rotation}deg`,
+        '--mid-x': `${(startX + endX) / 2 + (Math.random() - 0.5) * 200}px`,
+        '--mid-y': `${Math.min(startY, endY) - 100 - Math.random() * 150}px`
+      }
+    })
+  }
+  
+  confettiPieces.value = pieces
+}
+
+onMounted(() => {
+  // 延迟一点播放，让页面先渲染
+  setTimeout(() => {
+    playPopSound()
+    createConfetti()
+  }, 300)
+})
 </script>
 
 <style scoped>
@@ -87,6 +201,7 @@ function confettiStyle(index: number) {
   align-items: center;
   min-height: 500px;
   animation: fadeIn 0.5s ease-out;
+  position: relative;
 }
 
 @keyframes fadeIn {
@@ -100,6 +215,51 @@ function confettiStyle(index: number) {
   }
 }
 
+/* 全屏彩带容器 */
+.confetti-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.confetti-piece {
+  position: absolute;
+  width: var(--width);
+  height: var(--height);
+  background: var(--color);
+  border-radius: 2px;
+  left: var(--start-x);
+  top: var(--start-y);
+  animation: confettiShoot var(--duration) cubic-bezier(0.25, 0.46, 0.45, 0.94) var(--delay) forwards;
+  opacity: 0;
+}
+
+@keyframes confettiShoot {
+  0% {
+    opacity: 1;
+    left: var(--start-x);
+    top: var(--start-y);
+    transform: rotate(0deg) scale(1);
+  }
+  30% {
+    opacity: 1;
+    left: var(--mid-x);
+    top: var(--mid-y);
+    transform: rotate(calc(var(--rotation) * 0.3)) scale(1.2);
+  }
+  100% {
+    opacity: 0;
+    left: var(--end-x);
+    top: var(--end-y);
+    transform: rotate(var(--rotation)) scale(0.5);
+  }
+}
+
 .card {
   width: 100%;
   max-width: 600px;
@@ -107,6 +267,8 @@ function confettiStyle(index: number) {
   background: var(--md-sys-color-surface);
   border-radius: 28px;
   box-shadow: var(--md-sys-elevation-3);
+  position: relative;
+  z-index: 1;
 }
 
 .complete-content {
@@ -157,35 +319,6 @@ function confettiStyle(index: number) {
   to {
     opacity: 1;
     transform: scale(1);
-  }
-}
-
-/* 彩纸效果 */
-.confetti {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.confetti-piece {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 8px;
-  height: 12px;
-  background: var(--confetti-color);
-  animation: confettiFall 1.5s ease-out var(--confetti-delay) forwards;
-  opacity: 0;
-}
-
-@keyframes confettiFall {
-  0% {
-    opacity: 1;
-    transform: translate(0, 0) rotate(0deg);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(var(--confetti-x), 200px) rotate(var(--confetti-rotate));
   }
 }
 
