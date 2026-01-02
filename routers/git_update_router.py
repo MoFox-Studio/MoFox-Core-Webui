@@ -26,18 +26,13 @@ logger = get_logger("WebUI.GitUpdateRouter")
 # ==================== 请求/响应模型 ====================
 
 
-class GitStatusResponse(BaseModel):
-    """Git 状态响应"""
+class RepoStatusResponse(BaseModel):
+    """主程序仓库状态响应"""
 
-    git_available: bool
-    git_version: Optional[str] = None
-    git_path: Optional[str] = None
-    git_source: str = "unknown"  # 'custom' | 'portable' | 'system' | 'unknown'
-    is_portable: bool = False
-    system_os: str
     is_git_repo: bool = False  # 是否为 Git 仓库
     current_branch: Optional[str] = None  # 当前分支
     available_branches: list[str] = []  # 可用分支列表
+    error: Optional[str] = None
 
 
 class GitCheckUpdateResponse(BaseModel):
@@ -1267,20 +1262,32 @@ class GitUpdateRouterComponent(BaseRouterComponent):
     def register_endpoints(self) -> None:
         """注册所有 HTTP 端点"""
 
-        @self.router.get("/status", response_model=GitStatusResponse)
-        async def get_git_status(_=VerifiedDep):
-            """获取 Git 环境状态"""
-            detector = GitDetector()
-            git_available = detector.is_git_available()
-            
-            # 检查主程序是否为 Git 仓库
-            repo_path = Path(PROJECT_ROOT)
-            is_git_repo = detector.is_git_repo(repo_path)
-            
-            # 获取分支信息（如果是 Git 仓库）
-            current_branch = None
-            available_branches = []
-            if is_git_repo and git_available:
+        @self.router.get("/status", response_model=RepoStatusResponse)
+        async def get_repo_status(_=VerifiedDep):
+            """获取主程序仓库状态"""
+            try:
+                detector = GitDetector()
+                git_available = detector.is_git_available()
+                
+                # 检查主程序是否为 Git 仓库
+                repo_path = Path(PROJECT_ROOT)
+                is_git_repo = detector.is_git_repo(repo_path)
+                
+                if not is_git_repo:
+                    return RepoStatusResponse(
+                        is_git_repo=False,
+                        error="主程序不是 Git 仓库"
+                    )
+                
+                if not git_available:
+                    return RepoStatusResponse(
+                        is_git_repo=True,
+                        error="Git 不可用"
+                    )
+                
+                # 获取分支信息
+                current_branch = None
+                available_branches = []
                 try:
                     updater = GitUpdater(repo_path)
                     branch_info = updater.get_branches()
@@ -1290,31 +1297,17 @@ class GitUpdateRouterComponent(BaseRouterComponent):
                 except Exception as e:
                     logger.warning(f"获取分支信息失败: {e}")
 
-            return GitStatusResponse(
-                git_available=git_available,
-                git_version=detector.get_git_version() if git_available else None,
-                git_path=detector.get_git_executable() if git_available else None,
-                git_source=BackendStorage.get_git_source(),
-                is_portable=detector.find_portable_git() is not None,
-                system_os=platform.system(),
-                is_git_repo=is_git_repo,
-                current_branch=current_branch,
-                available_branches=available_branches,
-            )
-
-        @self.router.post("/install", response_model=GitInstallResponse)
-        async def install_git(_=VerifiedDep):
-            """自动安装 Git（支持全平台）"""
-            logger.info(f"开始安装 Git，当前系统: {platform.system()}")
-            
-            result = await GitInstaller.install_git()
-            
-            return GitInstallResponse(
-                success=result["success"],
-                message=result["message"],
-                install_path=result.get("install_path"),
-                error=result.get("error"),
-            )
+                return RepoStatusResponse(
+                    is_git_repo=is_git_repo,
+                    current_branch=current_branch,
+                    available_branches=available_branches,
+                )
+            except Exception as e:
+                logger.error(f"获取仓库状态失败: {e}")
+                return RepoStatusResponse(
+                    is_git_repo=False,
+                    error=str(e)
+                )
 
         @self.router.get("/check", response_model=GitCheckUpdateResponse)
         async def check_updates(_=VerifiedDep):
@@ -1460,80 +1453,6 @@ class GitUpdateRouterComponent(BaseRouterComponent):
                 return GitSwitchBranchResponse(
                     success=False,
                     message="切换分支失败",
-                    error=str(e)
-                )
-
-        @self.router.post("/set-path", response_model=GitSetPathResponse)
-        async def set_git_path(request: GitSetPathRequest, _=VerifiedDep):
-            """设置自定义 Git 路径"""
-            try:
-                git_path = Path(request.path)
-                
-                # 验证路径是否存在
-                if not git_path.exists():
-                    return GitSetPathResponse(
-                        success=False,
-                        message="指定的 Git 路径不存在",
-                        error=f"路径不存在: {request.path}"
-                    )
-                
-                # 验证是否为有效的 Git 可执行文件
-                try:
-                    result = subprocess.run(
-                        [str(git_path), "--version"],
-                        capture_output=True,
-                        text=True,
-                        check=True,
-                        timeout=5,
-                    )
-                    git_version = result.stdout.strip()
-                except Exception as e:
-                    return GitSetPathResponse(
-                        success=False,
-                        message="指定的路径不是有效的 Git 可执行文件",
-                        error=f"验证失败: {str(e)}"
-                    )
-                
-                # 保存自定义路径
-                BackendStorage.set_git_path(str(git_path.resolve()))
-                BackendStorage.set_git_source("custom")
-                
-                logger.info(f"已设置自定义 Git 路径: {git_path}")
-                
-                return GitSetPathResponse(
-                    success=True,
-                    message="Git 路径设置成功",
-                    git_path=str(git_path.resolve()),
-                    git_version=git_version
-                )
-                
-            except Exception as e:
-                logger.error(f"设置 Git 路径失败: {e}")
-                return GitSetPathResponse(
-                    success=False,
-                    message="设置 Git 路径失败",
-                    error=str(e)
-                )
-
-        @self.router.delete("/clear-path", response_model=GitSetPathResponse)
-        async def clear_git_path(_=VerifiedDep):
-            """清除自定义 Git 路径"""
-            try:
-                BackendStorage.clear_git_path()
-                BackendStorage.set_git_source("unknown")
-                
-                logger.info("已清除自定义 Git 路径")
-                
-                return GitSetPathResponse(
-                    success=True,
-                    message="已清除自定义 Git 路径，将重新自动检测"
-                )
-                
-            except Exception as e:
-                logger.error(f"清除 Git 路径失败: {e}")
-                return GitSetPathResponse(
-                    success=False,
-                    message="清除 Git 路径失败",
                     error=str(e)
                 )
 

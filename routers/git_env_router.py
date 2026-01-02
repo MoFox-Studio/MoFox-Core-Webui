@@ -10,7 +10,6 @@ from fastapi import APIRouter
 
 from src.common.logger import get_logger
 from src.common.security import VerifiedDep
-from src.config.config import PROJECT_ROOT
 from src.plugin_system import BaseRouterComponent
 
 from ..utils.update import (
@@ -26,7 +25,6 @@ from ..utils.backend_storage import BackendStorage
 
 logger = get_logger("WebUI.GitEnvRouter")
 
-PROJECT_PATH = Path(PROJECT_ROOT) 
 
 class GitEnvRouterComponent(BaseRouterComponent):
     """Git 环境管理路由组件"""
@@ -47,15 +45,6 @@ class GitEnvRouterComponent(BaseRouterComponent):
                 git_version = GitDetector.get_git_version() if git_available else None
                 git_path = GitDetector.get_git_executable()
                 git_source = GitDetector.get_git_source()
-                is_git_repo = GitDetector.is_git_repo(PROJECT_PATH)
-                
-                # 获取分支信息
-                current_branch = None
-                available_branches = []
-                
-                if is_git_repo and git_available:
-                    current_branch = GitDetector.get_current_branch(PROJECT_PATH)
-                    available_branches = GitDetector.get_available_branches(PROJECT_PATH)
 
                 return GitStatusResponse(
                     git_available=git_available,
@@ -64,9 +53,6 @@ class GitEnvRouterComponent(BaseRouterComponent):
                     git_source=git_source,
                     is_portable=git_source == "portable",
                     system_os=platform.system(),
-                    is_git_repo=is_git_repo,
-                    current_branch=current_branch,
-                    available_branches=available_branches,
                 )
             except Exception as e:
                 logger.error(f"获取 Git 状态失败: {e}")
@@ -77,7 +63,7 @@ class GitEnvRouterComponent(BaseRouterComponent):
 
         @self.router.post("/install", summary="安装 Git")
         async def install_git(_ = VerifiedDep) -> GitInstallResponse:
-            """自动安装 Git（Windows 便携版）"""
+            """自动安装 Git"""
             try:
                 result = await GitInstaller.install_git()
                 return GitInstallResponse(**result)
@@ -151,30 +137,48 @@ class GitEnvRouterComponent(BaseRouterComponent):
                     error=str(e)
                 )
 
-        @self.router.delete("/clear-path", summary="清除自定义 Git 路径")
-        async def clear_git_path(_ = VerifiedDep) -> GitSetPathResponse:
-            """清除自定义 Git 路径，恢复自动检测"""
+        @self.router.post("/auto-detect", summary="自动检测 Git")
+        async def auto_detect_git(_ = VerifiedDep) -> GitSetPathResponse:
+            """清除当前配置并重新自动检测 Git"""
             try:
                 BackendStorage.clear_git_path()
                 BackendStorage.set_git_source("unknown")
                 
                 # 重新检测 Git
                 git_path = GitDetector.get_git_executable()
-                git_version = GitDetector.get_git_version() if git_path else None
                 
-                logger.info("已清除自定义 Git 路径")
-                
-                return GitSetPathResponse(
-                    success=True,
-                    message="已清除自定义路径，将使用自动检测",
-                    git_path=git_path,
-                    git_version=git_version
-                )
+                if git_path:
+                    git_version = GitDetector.get_git_version()
+                    git_source = BackendStorage.get_git_source()
+                    
+                    source_label = {
+                        "portable": "便携版",
+                        "system": "系统",
+                        "custom": "自定义"
+                    }.get(git_source, "")
+                    
+                    message = f"已检测到 Git ({source_label})" if source_label else "已检测到 Git"
+                    logger.info(f"自动检测到 Git: {git_path} ({source_label})")
+                    
+                    return GitSetPathResponse(
+                        success=True,
+                        message=message,
+                        git_path=git_path,
+                        git_version=git_version
+                    )
+                else:
+                    logger.info("自动检测未找到 Git")
+                    return GitSetPathResponse(
+                        success=False,
+                        message="未检测到 Git",
+                        error="系统中未找到 Git，请手动设置路径或下载便携版"
+                    )
+                    
             except Exception as e:
-                logger.error(f"清除 Git 路径失败: {e}")
+                logger.error(f"自动检测 Git 失败: {e}")
                 return GitSetPathResponse(
                     success=False,
-                    message="清除失败",
+                    message="检测失败",
                     error=str(e)
                 )
 
@@ -193,3 +197,5 @@ class GitEnvRouterComponent(BaseRouterComponent):
                     "success": False,
                     "error": str(e)
                 }
+
+

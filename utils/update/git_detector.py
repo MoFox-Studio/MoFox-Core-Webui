@@ -7,6 +7,7 @@ import shutil
 import subprocess
 from pathlib import Path
 from typing import Optional
+from src.config.config import PROJECT_ROOT
 
 from src.common.logger import get_logger
 
@@ -15,6 +16,9 @@ import sys
 backend_utils_path = Path(__file__).parent.parent
 sys.path.insert(0, str(backend_utils_path))
 from backend_storage import BackendStorage
+
+PROJECT_PATH = Path(PROJECT_ROOT) 
+
 
 logger = get_logger("WebUI.GitDetector")
 
@@ -111,6 +115,7 @@ class GitDetector:
         """查找便携版 Git"""
         # 获取后端目录
         backend_dir = Path(__file__).parent.parent.parent
+        onekey_dir =PROJECT_PATH.parent.parent
         
         # 检查标准位置（优先使用后端目录）
         possible_paths = [
@@ -120,6 +125,7 @@ class GitDetector:
             Path("PortableGit/bin/git"),
             Path("../PortableGit/bin/git.exe"),
             Path("../PortableGit/bin/git"),
+            onekey_dir /  "PortableGit"  / "bin" / "git.exe"
         ]
 
         for path in possible_paths:

@@ -11,7 +11,7 @@ from pydantic import BaseModel
 
 
 class GitStatusResponse(BaseModel):
-    """Git 状态响应"""
+    """Git 环境状态响应"""
 
     git_available: bool
     git_version: Optional[str] = None
@@ -19,9 +19,6 @@ class GitStatusResponse(BaseModel):
     git_source: str = "unknown"  # 'custom' | 'portable' | 'system' | 'unknown'
     is_portable: bool = False
     system_os: str
-    is_git_repo: bool = False  # 是否为 Git 仓库
-    current_branch: Optional[str] = None  # 当前分支
-    available_branches: List[str] = []  # 可用分支列表
 
 
 class GitCheckUpdateResponse(BaseModel):
