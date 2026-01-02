@@ -238,9 +238,9 @@ class RelationshipRouterComponent(BaseRouterComponent):
                 
                 logger.info(f"[get_person_detail] 找到用户: name={person.person_name}, platform={person.platform}, user_id={person.user_id},person.impression={person.impression},short={person.short_impression},{person.points}")
 
-                # 获取印象
-                impression = person.impression or "暂无印象"
-                short_impression = person.short_impression or "暂无印象"
+                # 获取印象（返回原始值，让前端决定如何显示）
+                impression = person.impression or ""
+                short_impression = person.short_impression or ""
 
                 # 解析记忆点
                 memory_points = []
