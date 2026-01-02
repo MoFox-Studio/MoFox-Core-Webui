@@ -13,7 +13,7 @@
     "@guolao/vue-monaco-editor": "^1.6.0",
     "@material/material-color-utilities": "^0.3.0",
     "axios": "^1.7.9",
-    "echarts": "^5.5.1",
+    "echarts": "^5.6.0",
     "marked": "^17.0.1",
     "pinia": "^2.3.0",
     "toml": "^3.0.0",
