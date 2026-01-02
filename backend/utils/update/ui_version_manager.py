@@ -618,24 +618,100 @@ class UIVersionManager:
             logger.error(f"回滚失败: {e}")
             return {"success": False, "error": str(e)}
 
-    def rollback_last_update(self) -> dict:
+    def get_commit_detail(self, commit_hash: str) -> dict:
         """
-        回滚到上一次更新前的状态
-        使用 git reflog 找到更新前的提交
+        获取指定提交的详细信息
         
+        Args:
+            commit_hash: 提交的 hash（完整或简短均可）
+            
         Returns:
-            dict: {"success": bool, "message": str, "version": str, "error": str}
+            dict: {
+                "success": bool,
+                "commit": str,
+                "commit_short": str,
+                "message": str,
+                "body": str,
+                "author": str,
+                "timestamp": str,
+                "files_changed": list,
+                "stats": str,
+                "error": str
+            }
         """
         try:
-            # 通过 reflog 获取上一个 HEAD 位置
-            backup_commit = self.get_backup_commit()
-            if not backup_commit:
-                return {"success": False, "error": "未找到可回滚的备份点"}
+            if not self._is_git_repo():
+                return {"success": False, "error": "当前目录不是 Git 仓库"}
             
-            return self.rollback(backup_commit)
+            # 验证提交是否存在
+            success, full_hash = self._run_git_command(["rev-parse", "--verify", commit_hash])
+            if not success:
+                return {"success": False, "error": f"提交不存在: {commit_hash}"}
+            
+            full_hash = full_hash.strip()
+            
+            # 获取简短 hash
+            success, commit_short = self._run_git_command(["rev-parse", "--short", full_hash])
+            commit_short = commit_short.strip() if success else full_hash[:7]
+            
+            # 获取提交标题
+            success, subject = self._run_git_command(["log", "-1", "--format=%s", full_hash])
+            subject = subject.strip() if success else ""
+            
+            # 获取提交正文（包含更新内容）
+            success, body = self._run_git_command(["log", "-1", "--format=%b", full_hash])
+            body = body.strip() if success else ""
+            
+            # 获取作者
+            success, author = self._run_git_command(["log", "-1", "--format=%an <%ae>", full_hash])
+            author = author.strip() if success else ""
+            
+            # 获取提交时间
+            success, timestamp = self._run_git_command(["log", "-1", "--format=%ci", full_hash])
+            timestamp = timestamp.strip() if success else ""
+            
+            # 获取修改的文件列表
+            success, files_output = self._run_git_command(["diff-tree", "--no-commit-id", "--name-status", "-r", full_hash])
+            files_changed = []
+            if success and files_output:
+                for line in files_output.strip().split("\n"):
+                    if line:
+                        parts = line.split("\t", 1)
+                        if len(parts) == 2:
+                            status, filepath = parts
+                            status_map = {"A": "新增", "M": "修改", "D": "删除", "R": "重命名"}
+                            files_changed.append({
+                                "status": status_map.get(status[0], status),
+                                "path": filepath
+                            })
+            
+            # 获取统计信息
+            success, stats = self._run_git_command(["diff-tree", "--stat", "--no-commit-id", full_hash])
+            stats = stats.strip() if success else ""
+            
+            # 提取版本号
+            version = None
+            if "Build: v" in subject:
+                try:
+                    version = subject.split("Build: v")[1].split()[0]
+                except Exception:
+                    pass
+            
+            return {
+                "success": True,
+                "commit": full_hash,
+                "commit_short": commit_short,
+                "version": version,
+                "message": subject,
+                "body": body,
+                "author": author,
+                "timestamp": timestamp,
+                "files_changed": files_changed,
+                "stats": stats
+            }
             
         except Exception as e:
-            logger.error(f"回滚失败: {e}")
+            logger.error(f"获取提交详情失败: {e}")
             return {"success": False, "error": str(e)}
     
     async def git_pull_update(self) -> dict:

@@ -114,3 +114,46 @@ export function clearGitPath() {
     error?: string
   }>('git_update/clear-path')
 }
+
+// ==================== 历史版本管理 ====================
+
+/**
+ * 主程序历史版本信息
+ */
+export interface MainBackupInfo {
+  commit: string  // 完整 commit hash
+  commit_short: string  // 简短 commit hash
+  message: string  // 提交消息
+  timestamp: string  // 提交时间
+  is_current: boolean  // 是否是当前版本
+}
+
+/**
+ * 主程序提交详情
+ */
+export interface MainCommitDetail {
+  success: boolean
+  commit?: string
+  commit_short?: string
+  message?: string
+  body?: string
+  author?: string
+  timestamp?: string
+  files_changed?: { status: string; path: string }[]
+  stats?: string
+  error?: string
+}
+
+/**
+ * 获取主程序历史版本列表
+ */
+export function getMainBackups() {
+  return api.get<{ success: boolean; data: MainBackupInfo[]; error?: string }>('git_update/backups')
+}
+
+/**
+ * 获取主程序提交详情
+ */
+export function getMainCommitDetail(commitHash: string) {
+  return api.get<MainCommitDetail>(`git_update/commits/${commitHash}`)
+}

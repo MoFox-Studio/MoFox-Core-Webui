@@ -123,6 +123,39 @@ class GitSetPathResponse(BaseModel):
     error: Optional[str] = None
 
 
+class GitBackupInfo(BaseModel):
+    """Git 历史版本/备份信息"""
+    
+    commit: str  # 完整 commit hash
+    commit_short: str  # 简短 commit hash
+    message: str  # 提交消息
+    timestamp: str  # 提交时间
+    is_current: bool = False  # 是否是当前版本
+
+
+class GitBackupsResponse(BaseModel):
+    """获取历史版本响应"""
+    
+    success: bool
+    data: list[GitBackupInfo] = []
+    error: Optional[str] = None
+
+
+class GitCommitDetailResponse(BaseModel):
+    """提交详情响应"""
+    
+    success: bool
+    commit: Optional[str] = None
+    commit_short: Optional[str] = None
+    message: Optional[str] = None
+    body: Optional[str] = None
+    author: Optional[str] = None
+    timestamp: Optional[str] = None
+    files_changed: list[dict] = []
+    stats: Optional[str] = None
+    error: Optional[str] = None
+
+
 # ==================== 核心工具类 ====================
 
 
@@ -1099,6 +1132,128 @@ class GitUpdater:
             logger.error(f"切换分支失败: {e}")
             return {"success": False, "error": str(e)}
 
+    def get_commit_history(self, max_count: int = 20) -> list[dict]:
+        """
+        获取提交历史列表（用于版本回退选择）
+        
+        Args:
+            max_count: 最大提交数量
+            
+        Returns:
+            提交历史列表
+        """
+        try:
+            # 获取当前 HEAD
+            head_result = self._run_git_command("rev-parse", "HEAD")
+            current_head = head_result.stdout.strip() if head_result.returncode == 0 else ""
+            
+            # 获取提交历史（排除合并提交）
+            # 格式: commit_hash|short_hash|时间|提交消息
+            log_result = self._run_git_command(
+                "log", f"-{max_count}", "--no-merges", "--format=%H|%h|%ci|%s"
+            )
+            
+            if log_result.returncode != 0:
+                return []
+            
+            commits = []
+            for line in log_result.stdout.strip().split("\n"):
+                if not line:
+                    continue
+                
+                parts = line.split("|", 3)
+                if len(parts) < 4:
+                    continue
+                
+                commit_hash, commit_short, timestamp, message = parts
+                
+                commits.append({
+                    "commit": commit_hash,
+                    "commit_short": commit_short,
+                    "message": message,
+                    "timestamp": timestamp,
+                    "is_current": commit_hash == current_head
+                })
+            
+            return commits
+            
+        except Exception as e:
+            logger.error(f"获取提交历史失败: {e}")
+            return []
+
+    def get_commit_detail(self, commit_hash: str) -> dict:
+        """
+        获取指定提交的详细信息
+        
+        Args:
+            commit_hash: 提交的 hash（完整或简短均可）
+            
+        Returns:
+            提交详情字典
+        """
+        try:
+            # 验证提交是否存在
+            verify_result = self._run_git_command("rev-parse", "--verify", commit_hash)
+            if verify_result.returncode != 0:
+                return {"success": False, "error": f"提交不存在: {commit_hash}"}
+            
+            full_hash = verify_result.stdout.strip()
+            
+            # 获取简短 hash
+            short_result = self._run_git_command("rev-parse", "--short", full_hash)
+            commit_short = short_result.stdout.strip() if short_result.returncode == 0 else full_hash[:7]
+            
+            # 获取提交标题
+            subject_result = self._run_git_command("log", "-1", "--format=%s", full_hash)
+            subject = subject_result.stdout.strip() if subject_result.returncode == 0 else ""
+            
+            # 获取提交正文
+            body_result = self._run_git_command("log", "-1", "--format=%b", full_hash)
+            body = body_result.stdout.strip() if body_result.returncode == 0 else ""
+            
+            # 获取作者
+            author_result = self._run_git_command("log", "-1", "--format=%an <%ae>", full_hash)
+            author = author_result.stdout.strip() if author_result.returncode == 0 else ""
+            
+            # 获取提交时间
+            time_result = self._run_git_command("log", "-1", "--format=%ci", full_hash)
+            timestamp = time_result.stdout.strip() if time_result.returncode == 0 else ""
+            
+            # 获取修改的文件列表
+            files_result = self._run_git_command("diff-tree", "--no-commit-id", "--name-status", "-r", full_hash)
+            files_changed = []
+            if files_result.returncode == 0 and files_result.stdout:
+                for line in files_result.stdout.strip().split("\n"):
+                    if line:
+                        parts = line.split("\t", 1)
+                        if len(parts) == 2:
+                            status, filepath = parts
+                            status_map = {"A": "新增", "M": "修改", "D": "删除", "R": "重命名"}
+                            files_changed.append({
+                                "status": status_map.get(status[0], status),
+                                "path": filepath
+                            })
+            
+            # 获取统计信息
+            stats_result = self._run_git_command("diff-tree", "--stat", "--no-commit-id", full_hash)
+            stats = stats_result.stdout.strip() if stats_result.returncode == 0 else ""
+            
+            return {
+                "success": True,
+                "commit": full_hash,
+                "commit_short": commit_short,
+                "message": subject,
+                "body": body,
+                "author": author,
+                "timestamp": timestamp,
+                "files_changed": files_changed,
+                "stats": stats
+            }
+            
+        except Exception as e:
+            logger.error(f"获取提交详情失败: {e}")
+            return {"success": False, "error": str(e)}
+
 
 # ==================== 路由组件 ====================
 
@@ -1379,5 +1534,60 @@ class GitUpdateRouterComponent(BaseRouterComponent):
                 return GitSetPathResponse(
                     success=False,
                     message="清除 Git 路径失败",
+                    error=str(e)
+                )
+
+        @self.router.get("/backups", response_model=GitBackupsResponse)
+        async def get_backups(_=VerifiedDep):
+            """获取主程序历史版本列表（用于回退）"""
+            try:
+                repo_path = Path(PROJECT_ROOT)
+                detector = GitDetector()
+                
+                if not detector.is_git_repo(repo_path):
+                    return GitBackupsResponse(
+                        success=False,
+                        error="主程序不是 Git 仓库"
+                    )
+                
+                updater = GitUpdater(repo_path)
+                commits = updater.get_commit_history(max_count=20)
+                
+                backups = [GitBackupInfo(**c) for c in commits]
+                
+                return GitBackupsResponse(
+                    success=True,
+                    data=backups
+                )
+                
+            except Exception as e:
+                logger.error(f"获取历史版本列表失败: {e}")
+                return GitBackupsResponse(
+                    success=False,
+                    error=str(e)
+                )
+
+        @self.router.get("/commits/{commit_hash}", response_model=GitCommitDetailResponse)
+        async def get_commit_detail(commit_hash: str, _=VerifiedDep):
+            """获取指定提交的详细信息"""
+            try:
+                repo_path = Path(PROJECT_ROOT)
+                detector = GitDetector()
+                
+                if not detector.is_git_repo(repo_path):
+                    return GitCommitDetailResponse(
+                        success=False,
+                        error="主程序不是 Git 仓库"
+                    )
+                
+                updater = GitUpdater(repo_path)
+                result = updater.get_commit_detail(commit_hash)
+                
+                return GitCommitDetailResponse(**result)
+                
+            except Exception as e:
+                logger.error(f"获取提交详情失败: {e}")
+                return GitCommitDetailResponse(
+                    success=False,
                     error=str(e)
                 )

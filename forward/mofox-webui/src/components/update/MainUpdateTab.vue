@@ -6,6 +6,7 @@
   1. 分支管理（切换分支）
   2. 检查主程序更新
   3. 执行更新操作
+  4. 历史版本管理与回退
 -->
 <template>
   <div class="main-update-tab">
@@ -146,6 +147,118 @@
         <span>{{ error }}</span>
       </div>
     </div>
+
+    <!-- 历史版本管理 -->
+    <div v-if="gitStatus?.git_available && gitStatus?.is_git_repo" class="m3-card backup-card">
+      <div class="card-header">
+        <span class="material-symbols-rounded">history</span>
+        <h3>历史版本</h3>
+        <button class="m3-icon-button" @click="loadBackups" :disabled="loadingBackups">
+          <span class="material-symbols-rounded" :class="{ spinning: loadingBackups }">refresh</span>
+        </button>
+      </div>
+
+      <div class="backup-list" v-if="backups.length">
+        <div 
+          v-for="backup in backups" 
+          :key="backup.commit"
+          class="backup-item"
+          :class="{ 'is-current': backup.is_current }"
+        >
+          <div class="backup-info">
+            <div class="backup-header">
+              <code class="backup-commit">{{ backup.commit_short }}</code>
+              <span v-if="backup.is_current" class="current-badge">当前</span>
+            </div>
+            <span class="backup-message">{{ backup.message }}</span>
+            <span class="backup-meta">{{ formatTime(backup.timestamp) }}</span>
+          </div>
+          <div class="backup-actions">
+            <button 
+              class="m3-button text"
+              @click="handleShowDetail(backup.commit)"
+              :disabled="loadingDetail"
+            >
+              <span class="material-symbols-rounded">info</span>
+              <span>详情</span>
+            </button>
+            <button 
+              class="m3-button text" 
+              @click="handleRollback(backup.commit)"
+              :disabled="rolling || backup.is_current"
+            >
+              <span class="material-symbols-rounded">restore</span>
+              <span>回滚</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div v-else class="no-backups">
+        <span class="material-symbols-rounded">history_toggle_off</span>
+        <span>暂无历史版本</span>
+      </div>
+    </div>
+
+    <!-- 提交详情弹窗 -->
+    <Teleport to="body">
+      <div v-if="showDetailDialog" class="detail-dialog-overlay" @click.self="showDetailDialog = false">
+        <div class="detail-dialog">
+          <div class="detail-header">
+            <h3>版本详情</h3>
+            <button class="m3-icon-button" @click="showDetailDialog = false">
+              <span class="material-symbols-rounded">close</span>
+            </button>
+          </div>
+          <div class="detail-content" v-if="commitDetail">
+            <div class="detail-section">
+              <div class="detail-row">
+                <span class="detail-label">Commit:</span>
+                <code class="detail-value">{{ commitDetail.commit_short }}</code>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">时间:</span>
+                <span class="detail-value">{{ formatTime(commitDetail.timestamp) }}</span>
+              </div>
+              <div class="detail-row" v-if="commitDetail.author">
+                <span class="detail-label">作者:</span>
+                <span class="detail-value">{{ commitDetail.author }}</span>
+              </div>
+            </div>
+            
+            <div class="detail-section" v-if="commitDetail.message">
+              <h4>提交消息</h4>
+              <p class="commit-message">{{ commitDetail.message }}</p>
+            </div>
+            
+            <div class="detail-section" v-if="commitDetail.body">
+              <h4>更新内容</h4>
+              <pre class="commit-body">{{ commitDetail.body }}</pre>
+            </div>
+            
+            <div class="detail-section" v-if="commitDetail.files_changed?.length">
+              <h4>修改文件 ({{ commitDetail.files_changed.length }})</h4>
+              <div class="files-list">
+                <div 
+                  v-for="(file, index) in commitDetail.files_changed.slice(0, 20)" 
+                  :key="index"
+                  class="file-item"
+                >
+                  <span class="file-status" :class="getStatusClass(file.status)">{{ file.status }}</span>
+                  <span class="file-path">{{ file.path }}</span>
+                </div>
+                <div v-if="commitDetail.files_changed.length > 20" class="files-more">
+                  ... 及其他 {{ commitDetail.files_changed.length - 20 }} 个文件
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="detail-content loading" v-else-if="loadingDetail">
+            <span class="material-symbols-rounded spinning">progress_activity</span>
+            <span>加载中...</span>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -156,8 +269,13 @@ import {
   checkUpdates, 
   updateMainProgram, 
   switchBranch,
+  rollbackVersion,
+  getMainBackups,
+  getMainCommitDetail,
   type GitStatus,
-  type UpdateCheck
+  type UpdateCheck,
+  type MainBackupInfo,
+  type MainCommitDetail
 } from '@/api/git_update'
 import { showSuccess, showError, showConfirm } from '@/utils/dialog'
 
@@ -169,12 +287,20 @@ const emit = defineEmits<{
 // State
 const gitStatus = ref<GitStatus | null>(null)
 const updateInfo = ref<UpdateCheck | null>(null)
+const backups = ref<MainBackupInfo[]>([])
 const selectedBranch = ref('')
 const showBranchDropdown = ref(false)
 const checking = ref(false)
 const updating = ref(false)
 const switching = ref(false)
+const rolling = ref(false)
+const loadingBackups = ref(false)
+const loadingDetail = ref(false)
 const error = ref('')
+
+// 详情弹窗状态
+const showDetailDialog = ref(false)
+const commitDetail = ref<MainCommitDetail | null>(null)
 
 const branchSelectWrapper = ref<HTMLElement | null>(null)
 
@@ -272,6 +398,8 @@ async function handleUpdate() {
     if (result.success && result.data?.success) {
       showSuccess(result.data.message || '更新成功')
       emit('update-complete', true)
+      // 更新后刷新历史版本列表
+      loadBackups()
     } else {
       showError(result.data?.error || result.error || '更新失败')
     }
@@ -280,6 +408,94 @@ async function handleUpdate() {
   } finally {
     updating.value = false
   }
+}
+
+// 加载历史版本列表
+async function loadBackups() {
+  loadingBackups.value = true
+  try {
+    const result = await getMainBackups()
+    if (result.success && result.data?.data) {
+      backups.value = result.data.data
+    }
+  } catch (e) {
+    console.error('加载历史版本列表失败:', e)
+  } finally {
+    loadingBackups.value = false
+  }
+}
+
+// 回滚到指定提交
+async function handleRollback(commitHash: string) {
+  const commitShort = commitHash.substring(0, 7)
+  const confirmed = await showConfirm({
+    title: '确认回滚',
+    message: `确定要回滚到版本 "${commitShort}" 吗？此操作将重置到该版本，回滚后需要重启程序。`,
+    confirmText: '回滚'
+  })
+  
+  if (!confirmed) return
+  
+  rolling.value = true
+  
+  try {
+    const result = await rollbackVersion(commitHash)
+    if (result.success && result.data?.success) {
+      showSuccess(result.data.message || '回滚成功')
+      emit('update-complete', true)
+      // 刷新历史版本列表
+      loadBackups()
+    } else {
+      showError(result.data?.error || result.error || '回滚失败')
+    }
+  } catch (e: any) {
+    showError(e.message || '回滚失败')
+  } finally {
+    rolling.value = false
+  }
+}
+
+// 显示提交详情
+async function handleShowDetail(commitHash: string) {
+  showDetailDialog.value = true
+  loadingDetail.value = true
+  commitDetail.value = null
+  
+  try {
+    const result = await getMainCommitDetail(commitHash)
+    if (result.success && result.data) {
+      commitDetail.value = result.data
+    } else {
+      showError(result.error || '获取详情失败')
+      showDetailDialog.value = false
+    }
+  } catch (e: any) {
+    showError(e.message || '获取详情失败')
+    showDetailDialog.value = false
+  } finally {
+    loadingDetail.value = false
+  }
+}
+
+// 格式化时间
+function formatTime(time: string | null | undefined): string {
+  if (!time) return '-'
+  try {
+    return new Date(time).toLocaleString('zh-CN')
+  } catch {
+    return time
+  }
+}
+
+// 获取文件状态样式类
+function getStatusClass(status: string): string {
+  const statusMap: Record<string, string> = {
+    '新增': 'status-add',
+    '修改': 'status-modify',
+    '删除': 'status-delete',
+    '重命名': 'status-rename'
+  }
+  return statusMap[status] || ''
 }
 
 // 点击外部关闭下拉
@@ -292,6 +508,7 @@ function handleClickOutside(e: MouseEvent) {
 // 初始化
 onMounted(() => {
   loadGitStatus()
+  loadBackups()
   document.addEventListener('click', handleClickOutside)
 })
 
@@ -303,6 +520,7 @@ onUnmounted(() => {
 defineExpose({
   refresh: () => {
     loadGitStatus()
+    loadBackups()
     updateInfo.value = null
   }
 })
@@ -626,5 +844,304 @@ defineExpose({
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+/* 历史版本卡片 */
+.backup-card .card-header {
+  margin-bottom: 12px;
+}
+
+.m3-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 20px;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.m3-icon-button:hover:not(:disabled) {
+  background: var(--md-sys-color-surface-container-high);
+}
+
+.m3-icon-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.backup-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* 美化滚动条 */
+.backup-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.backup-list::-webkit-scrollbar-track {
+  background: var(--md-sys-color-surface-container);
+  border-radius: 3px;
+}
+
+.backup-list::-webkit-scrollbar-thumb {
+  background: var(--md-sys-color-outline);
+  border-radius: 3px;
+}
+
+.backup-list::-webkit-scrollbar-thumb:hover {
+  background: var(--md-sys-color-on-surface-variant);
+}
+
+.backup-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--md-sys-color-surface-container);
+  border-radius: 12px;
+  transition: background 0.2s;
+}
+
+.backup-item:hover {
+  background: var(--md-sys-color-surface-container-high);
+}
+
+.backup-item.is-current {
+  border: 1px solid var(--md-sys-color-primary);
+  background: var(--md-sys-color-primary-container);
+}
+
+.backup-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.backup-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.backup-commit {
+  font-family: 'Noto Sans SC', sans-serif;
+  font-size: 13px;
+  padding: 2px 6px;
+  background: var(--md-sys-color-surface);
+  border-radius: 4px;
+}
+
+.current-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  border-radius: 10px;
+}
+
+.backup-message {
+  font-size: 14px;
+  color: var(--md-sys-color-on-surface);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.backup-meta {
+  font-size: 12px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.backup-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.m3-button.text {
+  background: transparent;
+  color: var(--md-sys-color-primary);
+  padding: 6px 12px;
+}
+
+.m3-button.text:hover:not(:disabled) {
+  background: var(--md-sys-color-primary-container);
+}
+
+.no-backups {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 32px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/* 提交详情弹窗 */
+.detail-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.detail-dialog {
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  background: var(--md-sys-color-surface-container-low);
+  border-radius: 24px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.detail-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: var(--md-sys-color-on-surface);
+}
+
+.detail-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+.detail-content.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 200px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.detail-section {
+  margin-bottom: 20px;
+}
+
+.detail-section:last-child {
+  margin-bottom: 0;
+}
+
+.detail-section h4 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.detail-row {
+  display: flex;
+  gap: 12px;
+  padding: 6px 0;
+}
+
+.detail-label {
+  color: var(--md-sys-color-on-surface-variant);
+  min-width: 80px;
+}
+
+.detail-value {
+  color: var(--md-sys-color-on-surface);
+}
+
+.detail-value code {
+  font-family: 'Noto Sans SC', sans-serif;
+  padding: 2px 6px;
+  background: var(--md-sys-color-surface-container);
+  border-radius: 4px;
+}
+
+.commit-message {
+  margin: 0;
+  color: var(--md-sys-color-on-surface);
+}
+
+.commit-body {
+  margin: 0;
+  padding: 12px;
+  background: var(--md-sys-color-surface-container);
+  border-radius: 8px;
+  font-family: 'Noto Sans SC', sans-serif;
+  font-size: 13px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.files-list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.file-item {
+  display: flex;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 13px;
+}
+
+.file-status {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  min-width: 40px;
+  text-align: center;
+}
+
+.file-status.status-add {
+  background: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
+}
+
+.file-status.status-modify {
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.file-status.status-delete {
+  background: var(--md-sys-color-error-container);
+  color: var(--md-sys-color-on-error-container);
+}
+
+.file-status.status-rename {
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+}
+
+.file-path {
+  color: var(--md-sys-color-on-surface);
+  word-break: break-all;
+}
+
+.files-more {
+  padding: 8px 0;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 13px;
 }
 </style>

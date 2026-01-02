@@ -79,13 +79,13 @@ class UIUpdateRouterComponent(BaseRouterComponent):
                 logger.error(f"UI 回滚失败: {e}")
                 return UIUpdateResponse(success=False, message="回滚失败", error=str(e))
 
-        @self.router.post("/rollback-last", summary="回滚到上次更新前")
-        async def rollback_last_update(_=VerifiedDep) -> UIUpdateResponse:
-            """回滚到上一次更新前的状态"""
+        @self.router.get("/commit/{commit_hash}", summary="获取提交详情")
+        async def get_commit_detail(commit_hash: str, _=VerifiedDep):
+            """获取指定提交的详细信息"""
             try:
                 manager = UIVersionManager()
-                result = manager.rollback_last_update()
-                return UIUpdateResponse(**result)
+                result = manager.get_commit_detail(commit_hash)
+                return result
             except Exception as e:
-                logger.error(f"UI 回滚失败: {e}")
-                return UIUpdateResponse(success=False, message="回滚失败", error=str(e))
+                logger.error(f"获取提交详情失败: {e}")
+                return {"success": False, "error": str(e)}

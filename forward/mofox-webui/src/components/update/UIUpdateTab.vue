@@ -143,14 +143,24 @@
             <span class="backup-message">{{ backup.message }}</span>
             <span class="backup-meta">{{ formatTime(backup.timestamp) }}</span>
           </div>
-          <button 
-            class="m3-button text" 
-            @click="handleRollback(backup.commit)"
-            :disabled="rolling || backup.is_current"
-          >
-            <span class="material-symbols-rounded">restore</span>
-            <span>回滚</span>
-          </button>
+          <div class="backup-actions">
+            <button 
+              class="m3-button text"
+              @click="handleShowDetail(backup.commit)"
+              :disabled="loadingDetail"
+            >
+              <span class="material-symbols-rounded">info</span>
+              <span>详情</span>
+            </button>
+            <button 
+              class="m3-button text" 
+              @click="handleRollback(backup.commit)"
+              :disabled="rolling || backup.is_current"
+            >
+              <span class="material-symbols-rounded">restore</span>
+              <span>回滚</span>
+            </button>
+          </div>
         </div>
       </div>
       <div v-else class="no-backups">
@@ -158,6 +168,71 @@
         <span>暂无历史版本</span>
       </div>
     </div>
+
+    <!-- 提交详情弹窗 -->
+    <Teleport to="body">
+      <div v-if="showDetailDialog" class="detail-dialog-overlay" @click.self="showDetailDialog = false">
+        <div class="detail-dialog">
+          <div class="detail-header">
+            <h3>版本详情</h3>
+            <button class="m3-icon-button" @click="showDetailDialog = false">
+              <span class="material-symbols-rounded">close</span>
+            </button>
+          </div>
+          <div class="detail-content" v-if="commitDetail">
+            <div class="detail-section">
+              <div class="detail-row">
+                <span class="detail-label">Commit:</span>
+                <code class="detail-value">{{ commitDetail.commit_short }}</code>
+              </div>
+              <div class="detail-row" v-if="commitDetail.version">
+                <span class="detail-label">版本:</span>
+                <span class="detail-value version-tag">v{{ commitDetail.version }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">时间:</span>
+                <span class="detail-value">{{ formatTime(commitDetail.timestamp) }}</span>
+              </div>
+              <div class="detail-row" v-if="commitDetail.author">
+                <span class="detail-label">作者:</span>
+                <span class="detail-value">{{ commitDetail.author }}</span>
+              </div>
+            </div>
+            
+            <div class="detail-section" v-if="commitDetail.message">
+              <h4>提交消息</h4>
+              <p class="commit-message">{{ commitDetail.message }}</p>
+            </div>
+            
+            <div class="detail-section" v-if="commitDetail.body">
+              <h4>更新内容</h4>
+              <pre class="commit-body">{{ commitDetail.body }}</pre>
+            </div>
+            
+            <div class="detail-section" v-if="commitDetail.files_changed?.length">
+              <h4>修改文件 ({{ commitDetail.files_changed.length }})</h4>
+              <div class="files-list">
+                <div 
+                  v-for="(file, index) in commitDetail.files_changed.slice(0, 20)" 
+                  :key="index"
+                  class="file-item"
+                >
+                  <span class="file-status" :class="getStatusClass(file.status)">{{ file.status }}</span>
+                  <span class="file-path">{{ file.path }}</span>
+                </div>
+                <div v-if="commitDetail.files_changed.length > 20" class="files-more">
+                  ... 及其他 {{ commitDetail.files_changed.length - 20 }} 个文件
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="detail-content loading" v-else-if="loadingDetail">
+            <span class="material-symbols-rounded spinning">progress_activity</span>
+            <span>加载中...</span>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -168,8 +243,10 @@ import {
   updateUI, 
   getUIBackups, 
   rollbackUI,
+  getCommitDetail,
   type UIStatusResult,
-  type UIBackupInfo
+  type UIBackupInfo,
+  type UICommitDetail
 } from '@/api/ui_update'
 import { showSuccess, showError, showConfirm } from '@/utils/dialog'
 
@@ -186,6 +263,11 @@ const updating = ref(false)
 const rolling = ref(false)
 const loadingBackups = ref(false)
 const error = ref('')
+
+// 详情弹窗状态
+const showDetailDialog = ref(false)
+const loadingDetail = ref(false)
+const commitDetail = ref<UICommitDetail | null>(null)
 
 // 计算当前版本（用于显示）
 const currentVersion = computed(() => {
@@ -330,6 +412,39 @@ async function handleRollback(commitHash: string) {
   } finally {
     rolling.value = false
   }
+}
+
+// 显示提交详情
+async function handleShowDetail(commitHash: string) {
+  showDetailDialog.value = true
+  loadingDetail.value = true
+  commitDetail.value = null
+  
+  try {
+    const result = await getCommitDetail(commitHash)
+    if (result.success && result.data) {
+      commitDetail.value = result.data
+    } else {
+      showError(result.error || '获取详情失败')
+      showDetailDialog.value = false
+    }
+  } catch (e: any) {
+    showError(e.message || '获取详情失败')
+    showDetailDialog.value = false
+  } finally {
+    loadingDetail.value = false
+  }
+}
+
+// 获取文件状态样式类
+function getStatusClass(status: string): string {
+  const statusMap: Record<string, string> = {
+    '新增': 'status-add',
+    '修改': 'status-modify',
+    '删除': 'status-delete',
+    '重命名': 'status-rename'
+  }
+  return statusMap[status] || ''
 }
 
 // 初始化
@@ -576,7 +691,7 @@ defineExpose({
 }
 
 .backup-commit {
-  font-family: 'JetBrains Mono', 'Consolas', monospace;
+  font-family: 'Noto Sans SC', sans-serif;
   font-size: 13px;
   background: var(--md-sys-color-surface-container-highest);
   padding: 2px 6px;
@@ -677,6 +792,207 @@ defineExpose({
 
 .m3-icon-button:hover:not(:disabled) {
   background: var(--md-sys-color-surface-container-highest);
+}
+
+/* 备份操作按钮组 */
+.backup-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* 详情弹窗 */
+.detail-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.detail-dialog {
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  background: var(--md-sys-color-surface-container-high);
+  border-radius: 24px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from { 
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.detail-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface);
+}
+
+.detail-content {
+  flex: 1;
+  padding: 20px 24px;
+  overflow-y: auto;
+}
+
+.detail-content.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 200px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.detail-section {
+  margin-bottom: 20px;
+}
+
+.detail-section:last-child {
+  margin-bottom: 0;
+}
+
+.detail-section h4 {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.detail-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.detail-label {
+  font-size: 14px;
+  color: var(--md-sys-color-on-surface-variant);
+  min-width: 60px;
+}
+
+.detail-value {
+  font-size: 14px;
+  color: var(--md-sys-color-on-surface);
+}
+
+.detail-value.version-tag {
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.commit-message {
+  margin: 0;
+  font-size: 14px;
+  color: var(--md-sys-color-on-surface);
+  line-height: 1.5;
+}
+
+.commit-body {
+  margin: 0;
+  padding: 12px;
+  background: var(--md-sys-color-surface-container);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--md-sys-color-on-surface);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.files-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 8px;
+  background: var(--md-sys-color-surface-container);
+  border-radius: 8px;
+}
+
+.file-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.file-status {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+  min-width: 40px;
+  text-align: center;
+}
+
+.file-status.status-add {
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+}
+
+.file-status.status-modify {
+  background: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
+}
+
+.file-status.status-delete {
+  background: var(--md-sys-color-error-container);
+  color: var(--md-sys-color-on-error-container);
+}
+
+.file-status.status-rename {
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.file-path {
+  color: var(--md-sys-color-on-surface);
+  font-family: 'Noto Sans SC', sans-serif;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.files-more {
+  font-size: 12px;
+  color: var(--md-sys-color-on-surface-variant);
+  padding: 4px 0;
+  text-align: center;
 }
 
 /* 动画 */

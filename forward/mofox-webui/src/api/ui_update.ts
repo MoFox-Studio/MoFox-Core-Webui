@@ -84,8 +84,25 @@ export function rollbackUI(commitHash: string) {
 }
 
 /**
- * 回滚到上一次更新前的状态
+ * 提交详情信息
  */
-export function rollbackUILast() {
-  return api.post<UIUpdateResult>('ui_update/rollback-last')
+export interface UICommitDetail {
+  success: boolean
+  commit?: string
+  commit_short?: string
+  version?: string
+  message?: string
+  body?: string
+  author?: string
+  timestamp?: string
+  files_changed?: { status: string; path: string }[]
+  stats?: string
+  error?: string
+}
+
+/**
+ * 获取提交详情
+ */
+export function getCommitDetail(commitHash: string) {
+  return api.get<UICommitDetail>(`ui_update/commit/${commitHash}`)
 }
