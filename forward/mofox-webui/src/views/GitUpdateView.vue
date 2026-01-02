@@ -81,6 +81,7 @@ import UIUpdateTab from '@/components/update/UIUpdateTab.vue'
 import MainUpdateTab from '@/components/update/MainUpdateTab.vue'
 import GitSettingsTab from '@/components/update/GitSettingsTab.vue'
 import RestartDialog from '@/components/update/RestartDialog.vue'
+import { restartBot } from '@/api'
 
 // 标签页配置
 const tabs = [
@@ -121,10 +122,14 @@ function handleMainUpdateComplete(needsRestart: boolean) {
 }
 
 // 重启
-function handleRestart() {
+async function handleRestart() {
   showRestartDialog.value = false
-  // 刷新页面
-  window.location.reload()
+  try {
+    // 调用后端重启接口
+    await restartBot()
+  } catch (error) {
+    console.error('重启失败:', error)
+  }
 }
 
 // 稍后重启
