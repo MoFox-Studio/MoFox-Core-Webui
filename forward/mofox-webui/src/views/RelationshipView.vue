@@ -160,11 +160,11 @@
         <div class="card-body">
           <div class="impression-section">
             <h3>详细印象</h3>
-            <p class="impression-text">{{ personDetail.impression }}</p>
+            <p class="impression-text">{{ personDetail.impression || '暂无印象' }}</p>
           </div>
           <div class="impression-section">
             <h3>简短印象</h3>
-            <p class="impression-text short">{{ personDetail.short_impression }}</p>
+            <p class="impression-text short">{{ personDetail.short_impression || '暂无印象' }}</p>
           </div>
         </div>
       </div>
