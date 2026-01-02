@@ -23,7 +23,7 @@
       <div class="doc-content">
         <iframe src="https://docs.mofox-sama.com/" frameborder="0"></iframe>
         <!-- 遮罩层，防止拖拽时鼠标事件被 iframe 捕获 -->
-        <div v-if="isDragging" class="iframe-mask"></div>
+        <div v-if="isDragging || isResizing" class="iframe-mask"></div>
       </div>
       <!-- 调整大小的手柄 -->
       <div class="resize-handle" @mousedown.stop="startResize">
@@ -140,6 +140,7 @@ onMounted(() => {
 <style scoped>
 .floating-doc {
   position: fixed;
+  will-change: width, height, left, top;
   background: var(--md-sys-color-surface);
   border: 1px solid var(--md-sys-color-outline-variant);
   border-radius: 16px;
