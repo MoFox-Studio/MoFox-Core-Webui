@@ -82,8 +82,8 @@
       </div>
     </header>
 
-    <!-- 可视化编辑模式 -->
-    <div v-if="editorMode === 'visual'" class="visual-editor">
+    <!-- 可视化编辑模式 (合并 Schema 增强模式和传统模式) -->
+    <div v-if="editorMode === 'visual'" class="visual-editor" :class="{ 'schema-mode': hasPluginSchema }">
       <div v-if="loading" class="loading-state">
         <span class="material-symbols-rounded spinning">progress_activity</span>
         <p>加载配置中...</p>
@@ -96,47 +96,101 @@
           重试
         </button>
       </div>
-      <template v-else-if="configSchema.length > 0">
+      <template v-else-if="mergedSections.length > 0">
+        <!-- Schema 模式提示 -->
+        <div v-if="hasPluginSchema" class="schema-mode-banner">
+          <span class="material-symbols-rounded">auto_awesome</span>
+          <span>Schema 增强模式</span>
+        </div>
+        
         <!-- 配置导航栏 -->
-        <div class="config-nav-bar" v-if="configSchema.length > 1">
+        <div class="config-nav-bar" v-if="mergedSections.length > 1">
           <div class="nav-tabs">
             <button
-              v-for="(section, idx) in configSchema"
+              v-for="(section, idx) in mergedSections"
               :key="section.name"
               class="nav-tab"
-              :class="{ active: activeSection === idx }"
+              :class="{ active: activeSection === idx, 'has-schema': section.hasSchema }"
               @click="activeSection = idx"
             >
-              <span class="material-symbols-rounded">{{ getSectionIcon(section.name) }}</span>
+              <span class="material-symbols-rounded">{{ section.icon || getSectionIcon(section.name) }}</span>
               {{ section.display_name }}
               <span class="field-badge">{{ section.fields.length }}</span>
+              <span v-if="section.hasSchema" class="schema-badge" title="Schema 增强">
+                <span class="material-symbols-rounded">auto_awesome</span>
+              </span>
             </button>
           </div>
         </div>
 
         <!-- 配置内容 -->
         <div class="config-content">
-          <div v-if="currentSection" class="config-section">
+          <div v-if="currentMergedSection" class="config-section">
             <div class="section-header">
               <div class="section-title">
-                <h3>{{ currentSection.display_name }}</h3>
-                <span class="section-badge">{{ currentSection.fields.length }} 项配置</span>
+                <span v-if="currentMergedSection.icon" class="material-symbols-rounded section-icon">{{ currentMergedSection.icon }}</span>
+                <h3>{{ currentMergedSection.display_name }}</h3>
+                <span class="section-badge">{{ currentMergedSection.fields.length }} 项配置</span>
+                <span v-if="currentMergedSection.hasSchema" class="schema-indicator">
+                  <span class="material-symbols-rounded">auto_awesome</span>
+                  Schema
+                </span>
               </div>
+              <p v-if="currentMergedSection.description" class="section-description">
+                {{ currentMergedSection.description }}
+              </p>
             </div>
             
             <div class="fields-list">
-              <div 
-                v-for="field in currentSection.fields" 
-                :key="field.full_key" 
-                class="m3-card field-card"
-                :class="{ 
-                  'inline-field': field.type === 'boolean',
-                  'has-description': !!field.description 
-                }"
-              >
-                <!-- Boolean 类型 -->
-                <template v-if="field.type === 'boolean'">
-                  <div class="field-left">
+              <!-- Schema 增强字段 -->
+              <template v-if="currentMergedSection.hasSchema && currentMergedSection.schemaFields">
+                <SchemaFieldEditor
+                  v-for="field in currentMergedSection.schemaFields"
+                  :key="field.key"
+                  :field="field"
+                  :model-value="getSchemaFieldValue(currentMergedSection.name, field.key)"
+                  :all-values="flatConfigValues"
+                  @update:model-value="(v: unknown) => updateSchemaFieldValue(currentMergedSection!.name, field.key, v)"
+                />
+              </template>
+              
+              <!-- 传统字段 -->
+              <template v-else>
+                <div 
+                  v-for="field in currentMergedSection.fields" 
+                  :key="field.full_key" 
+                  class="m3-card field-card"
+                  :class="{ 
+                    'inline-field': field.type === 'boolean',
+                    'has-description': !!field.description 
+                  }"
+                >
+                  <!-- Boolean 类型 -->
+                  <template v-if="field.type === 'boolean'">
+                    <div class="field-left">
+                      <div class="field-header">
+                        <span class="field-name">{{ field.key }}</span>
+                        <span class="field-type-badge">{{ getTypeLabel(field.type) }}</span>
+                      </div>
+                      <div v-if="field.description" class="field-description">
+                        <span class="material-symbols-rounded desc-icon">info</span>
+                        <span>{{ field.description }}</span>
+                      </div>
+                    </div>
+                    <label class="m3-switch">
+                      <input 
+                        type="checkbox" 
+                        :checked="Boolean(getFieldValue(field.full_key))"
+                        @change="(e: any) => updateFieldValue(field.full_key, e.target.checked)"
+                      >
+                      <span class="m3-switch-track">
+                        <span class="m3-switch-thumb"></span>
+                      </span>
+                    </label>
+                  </template>
+
+                  <!-- 数组对象类型 (如 api_providers) -->
+                  <template v-else-if="field.type === 'array_of_objects'">
                     <div class="field-header">
                       <span class="field-name">{{ field.key }}</span>
                       <span class="field-type-badge">{{ getTypeLabel(field.type) }}</span>
@@ -145,95 +199,73 @@
                       <span class="material-symbols-rounded desc-icon">info</span>
                       <span>{{ field.description }}</span>
                     </div>
-                  </div>
-                  <label class="m3-switch">
-                    <input 
-                      type="checkbox" 
-                      :checked="Boolean(getFieldValue(field.full_key))"
-                      @change="(e: any) => updateFieldValue(field.full_key, e.target.checked)"
-                    >
-                    <span class="m3-switch-track">
-                      <span class="m3-switch-thumb"></span>
-                    </span>
-                  </label>
-                </template>
-
-                <!-- 数组对象类型 (如 api_providers) -->
-                <template v-else-if="field.type === 'array_of_objects'">
-                  <div class="field-header">
-                    <span class="field-name">{{ field.key }}</span>
-                    <span class="field-type-badge">{{ getTypeLabel(field.type) }}</span>
-                  </div>
-                  <div v-if="field.description" class="field-description">
-                    <span class="material-symbols-rounded desc-icon">info</span>
-                    <span>{{ field.description }}</span>
-                  </div>
-                  <div class="array-objects-container">
-                    <div class="array-objects-info">
-                      <span class="material-symbols-rounded">dataset</span>
-                      包含 {{ field.items_count || 0 }} 个项目
+                    <div class="array-objects-container">
+                      <div class="array-objects-info">
+                        <span class="material-symbols-rounded">dataset</span>
+                        包含 {{ field.items_count || 0 }} 个项目
+                      </div>
+                      <button 
+                        class="m3-button text small" 
+                        @click="expandArrayField(field)"
+                      >
+                        <span class="material-symbols-rounded">open_in_full</span>
+                        在源码模式中编辑
+                      </button>
                     </div>
-                    <button 
-                      class="m3-button text small" 
-                      @click="expandArrayField(field)"
-                    >
-                      <span class="material-symbols-rounded">open_in_full</span>
-                      在源码模式中编辑
-                    </button>
-                  </div>
-                </template>
+                  </template>
 
-                <!-- 其他类型 -->
-                <template v-else>
-                  <div class="field-header">
-                    <span class="field-name">{{ field.key }}</span>
-                    <span class="field-type-badge">{{ getTypeLabel(field.type) }}</span>
-                  </div>
-                  <div v-if="field.description" class="field-description with-margin">
-                    <span class="material-symbols-rounded desc-icon">info</span>
-                    <span>{{ field.description }}</span>
-                  </div>
-                  
-                  <!-- 数组/列表类型 -->
-                  <div v-if="field.type === 'array'" class="field-input-container">
-                    <div class="array-input-wrapper">
-                      <textarea
-                        class="m3-input array-textarea"
-                        :value="formatArrayValue(getFieldValue(field.full_key))"
-                        @input="(e: any) => updateArrayValue(field.full_key, e.target.value)"
-                        placeholder="每行一个值"
-                        rows="5"
-                      ></textarea>
-                      <div class="input-hint">
-                        <span class="material-symbols-rounded">info</span>
-                        每行输入一个值
+                  <!-- 其他类型 -->
+                  <template v-else>
+                    <div class="field-header">
+                      <span class="field-name">{{ field.key }}</span>
+                      <span class="field-type-badge">{{ getTypeLabel(field.type) }}</span>
+                    </div>
+                    <div v-if="field.description" class="field-description with-margin">
+                      <span class="material-symbols-rounded desc-icon">info</span>
+                      <span>{{ field.description }}</span>
+                    </div>
+                    
+                    <!-- 数组/列表类型 -->
+                    <div v-if="field.type === 'array'" class="field-input-container">
+                      <div class="array-input-wrapper">
+                        <textarea
+                          class="m3-input array-textarea"
+                          :value="formatArrayValue(getFieldValue(field.full_key))"
+                          @input="(e: any) => updateArrayValue(field.full_key, e.target.value)"
+                          placeholder="每行一个值"
+                          rows="5"
+                        ></textarea>
+                        <div class="input-hint">
+                          <span class="material-symbols-rounded">info</span>
+                          每行输入一个值
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <!-- 数字类型 -->
-                  <div v-else-if="field.type === 'integer' || field.type === 'number'" class="field-input-container">
-                    <input 
-                      type="number"
-                      class="m3-input"
-                      :value="getFieldValue(field.full_key)"
-                      @input="(e: any) => updateFieldValue(field.full_key, parseNumber(e.target.value, field.type))"
-                      :step="field.type === 'number' ? '0.01' : '1'"
-                    >
-                  </div>
+                    <!-- 数字类型 -->
+                    <div v-else-if="field.type === 'integer' || field.type === 'number'" class="field-input-container">
+                      <input 
+                        type="number"
+                        class="m3-input"
+                        :value="getFieldValue(field.full_key)"
+                        @input="(e: any) => updateFieldValue(field.full_key, parseNumber(e.target.value, field.type))"
+                        :step="field.type === 'number' ? '0.01' : '1'"
+                      >
+                    </div>
 
-                  <!-- 字符串/默认类型 -->
-                  <div v-else class="field-input-container">
-                    <input 
-                      type="text"
-                      class="m3-input"
-                      :value="getFieldValue(field.full_key)"
-                      @input="(e: any) => updateFieldValue(field.full_key, e.target.value)"
-                      :placeholder="`输入 ${field.key}`"
-                    >
-                  </div>
-                </template>
-              </div>
+                    <!-- 字符串/默认类型 -->
+                    <div v-else class="field-input-container">
+                      <input 
+                        type="text"
+                        class="m3-input"
+                        :value="getFieldValue(field.full_key)"
+                        @input="(e: any) => updateFieldValue(field.full_key, e.target.value)"
+                        :placeholder="`输入 ${field.key}`"
+                      >
+                    </div>
+                  </template>
+                </div>
+              </template>
             </div>
           </div>
         </div>
@@ -350,6 +382,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useThemeStore } from '@/stores/theme'
 import { VueMonacoEditor } from '@guolao/vue-monaco-editor'
+import { SchemaFieldEditor } from '@/components/config/plugin-schema'
 import { 
   getConfigList,
   getConfigContent,
@@ -359,11 +392,27 @@ import {
   getConfigBackups, 
   restoreConfigBackup 
 } from '@/api'
+import {
+  getPluginSchema,
+  updatePluginConfig as updateSchemaConfig,
+  type SchemaField,
+} from '@/api/pluginConfigApi'
 import type { 
   ConfigFileInfo, 
   ConfigSection, 
   ConfigSchemaField 
 } from '@/api'
+
+// 合并后的配置节类型
+interface MergedSection {
+  name: string
+  display_name: string
+  description?: string
+  icon?: string
+  hasSchema: boolean
+  fields: ConfigSchemaField[]  // 传统字段
+  schemaFields?: SchemaField[] // Schema 字段
+}
 
 const route = useRoute()
 const router = useRouter()
@@ -386,6 +435,11 @@ const editedValues = ref<any>({})
 const sourceContent = ref('')
 const originalSource = ref('')
 const configSchema = ref<ConfigSection[]>([])
+
+// Schema 增强模式
+const hasPluginSchema = ref(false)
+const pluginName = ref('')
+const pluginSchema = ref<Record<string, SchemaField[]>>({})
 
 // 备份
 const showBackupsModal = ref(false)
@@ -414,12 +468,61 @@ const monacoOptions = {
   tabSize: 2
 }
 
-// 当前选中的配置节
-const currentSection = computed(() => {
-  if (configSchema.value.length > 0 && activeSection.value < configSchema.value.length) {
-    return configSchema.value[activeSection.value]
+// 合并后的配置节列表（Schema 优先，传统兜底）
+const mergedSections = computed<MergedSection[]>(() => {
+  const sections: MergedSection[] = []
+  const processedNames = new Set<string>()
+
+  // 首先处理 Schema 定义的配置节
+  if (hasPluginSchema.value && Object.keys(pluginSchema.value).length > 0) {
+    for (const [sectionName, schemaFields] of Object.entries(pluginSchema.value)) {
+      processedNames.add(sectionName)
+      sections.push({
+        name: sectionName,
+        display_name: formatSectionName(sectionName),
+        icon: getSectionIcon(sectionName),
+        hasSchema: true,
+        fields: [],
+        schemaFields: schemaFields,
+      })
+    }
+  }
+
+  // 然后处理传统配置节（未被 Schema 覆盖的）
+  for (const section of configSchema.value) {
+    if (!processedNames.has(section.name)) {
+      sections.push({
+        name: section.name,
+        display_name: section.display_name,
+        hasSchema: false,
+        fields: section.fields,
+      })
+    }
+  }
+
+  return sections
+})
+
+// 当前合并配置节
+const currentMergedSection = computed<MergedSection | null>(() => {
+  if (mergedSections.value.length > 0 && activeSection.value < mergedSections.value.length) {
+    return mergedSections.value[activeSection.value] ?? null
   }
   return null
+})
+
+// 扁平化配置值（用于条件判断）
+const flatConfigValues = computed(() => {
+  const flat: Record<string, unknown> = {}
+  for (const [sectionName, sectionValues] of Object.entries(editedValues.value)) {
+    if (typeof sectionValues === 'object' && sectionValues !== null) {
+      for (const [key, value] of Object.entries(sectionValues)) {
+        flat[key] = value
+        flat[`${sectionName}.${key}`] = value
+      }
+    }
+  }
+  return flat
 })
 
 // 是否有变更
@@ -427,6 +530,7 @@ const hasChanges = computed(() => {
   if (editorMode.value === 'source') {
     return sourceContent.value !== originalSource.value
   } else {
+    // 混合模式：统一使用 editedValues 检测变更
     return JSON.stringify(editedValues.value) !== JSON.stringify(originalParsed.value)
   }
 })
@@ -487,7 +591,10 @@ async function loadConfig() {
       sourceContent.value = contentRes.data.content || ''
       originalSource.value = contentRes.data.content || ''
       
-      // 加载配置模式（包含注释信息）
+      // 检测是否是插件配置并尝试加载 Schema
+      await checkPluginSchema()
+      
+      // 始终加载传统配置模式（用于没有 Schema 的配置节）
       await loadConfigSchema()
     } else {
       // 显示详细错误信息
@@ -498,6 +605,34 @@ async function loadConfig() {
     console.error('加载配置失败:', e)
   } finally {
     loading.value = false
+  }
+}
+
+// 检测插件 Schema
+async function checkPluginSchema() {
+  // 从路径提取插件名称 (格式: plugins/{plugin_name}/config.toml)
+  const pathMatch = decodedPath.value.match(/plugins[\/\\]([^\/\\]+)[\/\\]config\.toml$/i)
+  
+  if (!pathMatch || !pathMatch[1]) {
+    hasPluginSchema.value = false
+    pluginSchema.value = {}
+    return
+  }
+  
+  pluginName.value = pathMatch[1]
+  
+  try {
+    const schemaRes = await getPluginSchema(pluginName.value)
+    if (schemaRes.success && schemaRes.data?.schema && Object.keys(schemaRes.data.schema).length > 0) {
+      hasPluginSchema.value = true
+      pluginSchema.value = schemaRes.data.schema
+    } else {
+      hasPluginSchema.value = false
+      pluginSchema.value = {}
+    }
+  } catch (e) {
+    hasPluginSchema.value = false
+    pluginSchema.value = {}
   }
 }
 
@@ -621,6 +756,24 @@ function parseNumber(val: string, type: string): number {
   return isNaN(num) ? 0 : num
 }
 
+// 获取 Schema 字段值
+function getSchemaFieldValue(sectionName: string, key: string): unknown {
+  return editedValues.value[sectionName]?.[key]
+}
+
+// 更新 Schema 字段值
+function updateSchemaFieldValue(sectionName: string, key: string, value: unknown) {
+  if (!editedValues.value[sectionName]) {
+    editedValues.value[sectionName] = {}
+  }
+  editedValues.value[sectionName][key] = value
+}
+
+// 格式化配置节名称
+function formatSectionName(name: string): string {
+  return name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+}
+
 // 保存配置
 async function saveCurrentConfig() {
   if (saving.value) return
@@ -631,8 +784,11 @@ async function saveCurrentConfig() {
     if (editorMode.value === 'source') {
       // 源码模式：保存原始TOML
       res = await saveConfig(decodedPath.value, sourceContent.value, true)
+    } else if (hasPluginSchema.value && pluginName.value) {
+      // 混合模式：使用插件专用 API 保存
+      res = await updateSchemaConfig(pluginName.value, editedValues.value, true)
     } else {
-      // 可视化模式：发送更新
+      // 传统可视化模式：发送更新
       res = await updateConfig(decodedPath.value, editedValues.value, true)
     }
 
@@ -792,6 +948,32 @@ function getSectionIcon(sectionName: string): string {
     opacity: 1; 
     transform: translateY(0); 
   }
+}
+
+/* ==================== Schema 增强模式 ==================== */
+.schema-mode {
+  position: relative;
+}
+
+.schema-mode-banner {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: linear-gradient(135deg, var(--md-sys-color-tertiary-container), var(--md-sys-color-secondary-container));
+  color: var(--md-sys-color-on-tertiary-container);
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 600;
+  z-index: 10;
+  box-shadow: var(--md-sys-elevation-1);
+}
+
+.schema-mode-banner .material-symbols-rounded {
+  font-size: 16px;
 }
 
 /* ==================== 头部样式 ==================== */
@@ -999,6 +1181,24 @@ function getSectionIcon(sectionName: string): string {
   background: var(--md-sys-color-surface-container-high);
 }
 
+.nav-tab.has-schema {
+  border-left: 2px solid var(--md-sys-color-tertiary);
+}
+
+.schema-badge {
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  background: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
+  border-radius: 4px;
+  margin-left: 4px;
+}
+
+.schema-badge .material-symbols-rounded {
+  font-size: 12px;
+}
+
 .nav-tab.active {
   color: var(--md-sys-color-primary);
   background: var(--md-sys-color-surface-container-low);
@@ -1042,6 +1242,34 @@ function getSectionIcon(sectionName: string): string {
   font-weight: 500;
   color: var(--md-sys-color-on-surface);
   margin: 0;
+}
+
+.section-title .section-icon {
+  font-size: 24px;
+  color: var(--md-sys-color-primary);
+}
+
+.section-description {
+  font-size: 13px;
+  color: var(--md-sys-color-on-surface-variant);
+  margin: 8px 0 0;
+  line-height: 1.5;
+}
+
+.schema-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: linear-gradient(135deg, var(--md-sys-color-tertiary-container), var(--md-sys-color-secondary-container));
+  color: var(--md-sys-color-on-tertiary-container);
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.schema-indicator .material-symbols-rounded {
+  font-size: 14px;
 }
 
 .section-badge {

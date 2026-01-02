@@ -173,12 +173,12 @@ def create_discovery_app(main_host: str, main_port: int) -> FastAPI:
         # 检查是否有index.html文件
         index_file = static_dir / "index.html"
         if index_file.exists():
-            logger.info(f"发现编译好的前端文件，将托管静态文件: {static_dir}")
+            logger.debug(f"发现编译好的前端文件，将托管静态文件: {static_dir}")
             app.mount("/", SPAStaticFiles(directory=str(static_dir), html=True), name="static")
         else:
-            logger.info("静态目录存在但未找到index.html，不托管静态文件")
+            logger.error("静态目录存在但未找到index.html，不托管静态文件")
     else:
-        logger.info(f"未找到编译好的前端文件(路径: {static_dir})，不托管静态文件")
+        logger.warning(f"未找到编译好的前端文件(路径: {static_dir})，不托管静态文件")
     
     return app
 
@@ -211,7 +211,6 @@ async def start_discovery_server(
     _server_instance = uvicorn.Server(config)
     
     logger.info(f"发现服务器启动在 http://{discovery_host}:{DISCOVERY_PORT}")
-    logger.info(f"主程序地址配置为 http://{main_host}:{main_port}")
     
     try:
         await _server_instance.serve()

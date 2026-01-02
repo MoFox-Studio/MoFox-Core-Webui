@@ -5,6 +5,9 @@
 
 import asyncio
 import os
+import sys
+import webbrowser
+from pathlib import Path
 from typing import Set
 
 from mofox_wire import InProcessCoreSink
@@ -16,10 +19,52 @@ from src.common.server import get_global_server
 from ..discovery_server import start_discovery_server, DISCOVERY_PORT
 from ..adapters.ui_chatroom_adapter import UIChatroomAdapter, set_ui_chatroom_adapter
 
+# 导入后端存储管理
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from utils.backend_storage import BackendStorage
+
 logger = get_logger("WebUIAuth.StartupHandler")
+
+# 初始化状态的存储键名
+INIT_STATUS_KEY = "is_initialized"
 
 # 用于存储后台任务的集合
 _background_tasks: Set[asyncio.Task] = set()
+
+
+def check_initialization_status() -> bool:
+    """
+    检查系统是否已初始化
+    
+    Returns:
+        bool: 是否已初始化
+    """
+    try:
+        is_initialized = BackendStorage.get(INIT_STATUS_KEY, False)
+        return is_initialized
+    except Exception as e:
+        logger.warning(f"检查初始化状态失败: {e}，假定未初始化")
+        return False
+
+
+def open_initialization_page(host: str, port: int) -> None:
+    """
+    打开浏览器到初始化页面
+    
+    Args:
+        host: WebUI 主机地址
+        port: WebUI 端口
+    """
+    # 如果 host 是 0.0.0.0，使用 localhost 来打开浏览器
+    browser_host = "localhost" if host == "0.0.0.0" else host
+    init_url = f"http://{browser_host}:{port}/initialization"
+    
+    try:
+        logger.info(f"正在打开浏览器: {init_url}")
+        webbrowser.open(init_url)
+    except Exception as e:
+        logger.warning(f"自动打开浏览器失败: {e}")
+        logger.info(f"请手动打开浏览器访问: {init_url}")
 
 
 class WebUIStartupHandler(BaseEventHandler):
@@ -70,6 +115,28 @@ class WebUIStartupHandler(BaseEventHandler):
             task.add_done_callback(_background_tasks.discard)
             
             logger.info("发现服务器后台任务已创建")
+            
+            # 检查初始化状态
+            is_initialized = check_initialization_status()
+            
+            if not is_initialized:
+                # 未初始化，显示提示并打开浏览器
+                logger.warning("=" * 60)
+                logger.warning("⚠️  系统尚未完成初始化配置！")
+                logger.warning("=" * 60)
+                logger.warning("首次使用需要完成以下配置：")
+                logger.warning("  1. 机器人基本信息（QQ号、昵称、人格设定等）")
+                logger.warning("  2. AI模型配置（API密钥、模型提供商等）")
+                logger.warning("  3. Git配置（可选，用于更新功能）")
+                logger.warning("-" * 60)
+                logger.warning("正在自动打开浏览器进入初始化向导...")
+                logger.warning("=" * 60)
+                
+                # 延迟一小段时间后打开浏览器，确保服务器已启动
+                await asyncio.sleep(2)
+                open_initialization_page(main_host, 12318)
+            else:
+                logger.info("✓ 系统已完成初始化配置")
             
             return HandlerResult(
                 success=True,

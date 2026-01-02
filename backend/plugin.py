@@ -12,10 +12,10 @@ WebUI认证插件
     → 通过主程序的端口和IP访问插件系统定义的API接口
 """
 
-from typing import List, Tuple, Type
+from typing import List
 
 from src.common.logger import get_logger
-from src.plugin_system import BasePlugin, ComponentInfo, register_plugin
+from src.plugin_system import BasePlugin, register_plugin
 from src.plugin_system.base.config_types import ConfigField
 
 from .handlers import WebUIShutdownHandler, WebUIStartupHandler, LiveChatEventHandler
@@ -30,6 +30,7 @@ from .routers import (
     LogViewerRouterComponent,
     InitializationRouter,
     MarketplaceRouterComponent,
+    PluginConfigRouterComponent,
     RelationshipRouterComponent,
     WebUIAuthRouter,
     WebUIConfigRouter,
@@ -136,6 +137,7 @@ class WebUIAuthPlugin(BasePlugin):
              (InitializationRouter.get_router_info(),     InitializationRouter),
             (GitEnvRouterComponent.get_router_info(), GitEnvRouterComponent),
             (UIUpdateRouterComponent.get_router_info(), UIUpdateRouterComponent),
+            (PluginConfigRouterComponent.get_router_info(), PluginConfigRouterComponent),
             (UIChatroomAdapter.get_adapter_info(), UIChatroomAdapter),
             (WebUIModelRouter.get_router_info(),WebUIModelRouter),
             (WebUISettingRouter.get_router_info(), WebUISettingRouter),

@@ -726,6 +726,18 @@ export const API_ENDPOINTS = {
     UPDATE: (hash: string) => `emoji/${hash}`,
     BATCH: 'emoji/batch',
     STATS: 'emoji/stats'
+  },
+  // 插件配置管理（增强版，支持 Schema）
+  PLUGIN_CONFIG: {
+    LIST: 'plugin_config/list',
+    SCHEMA: (pluginName: string) => `plugin_config/${pluginName}/schema`,
+    CONTENT: (pluginName: string) => `plugin_config/${pluginName}/content`,
+    SAVE: (pluginName: string) => `plugin_config/${pluginName}/save`,
+    UPDATE: (pluginName: string) => `plugin_config/${pluginName}/update`,
+    RESET: (pluginName: string) => `plugin_config/${pluginName}/reset`,
+    BACKUPS: (pluginName: string) => `plugin_config/${pluginName}/backups`,
+    RESTORE: (pluginName: string, backupName: string) => `plugin_config/${pluginName}/restore/${backupName}`,
+    VALIDATE: (pluginName: string) => `plugin_config/${pluginName}/validate`
   }
 } as const
 
