@@ -1,6 +1,6 @@
 <!--
   @file ListEditor.vue
-  @description 列表编辑器组�?- Material Design 3 风格
+  @description 列表编辑器组件 - Material Design 3 风格
 -->
 <template>
   <div class="list-editor">
@@ -18,7 +18,7 @@
     </div>
 
     <div class="list-items">
-      <!-- 字符串列�?-->
+      <!-- 字符串列表 -->
       <template v-if="!field.item_type || field.item_type === 'string'">
         <TransitionGroup name="list">
           <div 
@@ -41,7 +41,7 @@
                 type="text"
                 class="item-input"
                 :value="item"
-                :placeholder="field.placeholder || `输入�?${index + 1} 项`"
+                :placeholder="field.placeholder || `输入第 ${index + 1} 项`"
                 @input="updateListItem(index, ($event.target as HTMLInputElement).value)"
               >
             </div>
@@ -81,7 +81,7 @@
                 type="number"
                 class="item-input"
                 :value="item"
-                :placeholder="field.placeholder || `输入�?${index + 1} 项`"
+                :placeholder="field.placeholder || `输入第 ${index + 1} 项`"
                 :min="field.min"
                 :max="field.max"
                 :step="field.step || 1"
@@ -158,7 +158,7 @@
         </TransitionGroup>
       </template>
 
-      <!-- 空状�?-->
+      <!-- 空状态 -->
       <div v-if="listValue.length === 0" class="empty-state">
         <span class="material-symbols-rounded empty-icon">inbox</span>
         <span class="empty-text">暂无项目，点击下方按钮添加</span>
@@ -192,32 +192,32 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: unknown): void
 }>()
 
-// 列表�?
+// 列表值
 const listValue = computed(() => {
   return Array.isArray(props.modelValue) ? props.modelValue : []
 })
 
-// 展开的项�?
-const expandedItems = ref<number[]>([0]) // 默认展开第一�?
+// 展开的项目
+const expandedItems = ref<number[]>([0]) // 默认展开第一项
 
-// 拖拽状�?
+// 拖拽状态
 const draggedIndex = ref<number | null>(null)
 
-// 更新列表�?
+// 更新列表项
 function updateListItem(index: number, value: unknown) {
   const newList = [...listValue.value]
   newList[index] = value
   emit('update:modelValue', newList)
 }
 
-// 更新对象列表项字�?
+// 更新对象列表项字段
 function updateObjectItemField(index: number, key: string, value: unknown) {
   const newList = [...listValue.value]
   newList[index] = { ...newList[index], [key]: value }
   emit('update:modelValue', newList)
 }
 
-// 添加列表�?
+// 添加列表项
 function addListItem() {
   const newItem = getDefaultItemValue()
   const newList = [...listValue.value, newItem]
@@ -229,7 +229,7 @@ function addListItem() {
   }
 }
 
-// 获取默认�?
+// 获取默认值
 function getDefaultItemValue() {
   if (props.field.item_type === 'number') return 0
   if (props.field.item_type === 'object') {
@@ -244,13 +244,13 @@ function getDefaultItemValue() {
   return ''
 }
 
-// 删除列表�?
+// 删除列表项
 function removeListItem(index: number) {
   const newList = [...listValue.value]
   newList.splice(index, 1)
   emit('update:modelValue', newList)
   
-  // 更新展开状�?
+  // 更新展开状态
   expandedItems.value = expandedItems.value
     .filter(i => i !== index)
     .map(i => i > index ? i - 1 : i)
@@ -266,7 +266,7 @@ function toggleObjectItem(index: number) {
   }
 }
 
-// 获取对象项标�?
+// 获取对象项标题
 function getObjectItemTitle(item: any, index: number): string {
   // 尝试找到第一个字符串字段作为标题
   if (props.field.item_fields) {
@@ -349,7 +349,7 @@ function onDragEnd() {
   border-radius: 12px;
 }
 
-/* 列表项容�?*/
+/* 列表项容器 */
 .list-items {
   display: flex;
   flex-direction: column;
@@ -357,7 +357,7 @@ function onDragEnd() {
   min-height: 48px;
 }
 
-/* 列表�?*/
+/* 列表项 */
 .list-item {
   display: flex;
   align-items: center;
@@ -427,7 +427,7 @@ function onDragEnd() {
   flex-shrink: 0;
 }
 
-/* 输入�?*/
+/* 输入框 */
 .item-input-wrapper {
   flex: 1;
 }
@@ -491,7 +491,7 @@ function onDragEnd() {
   font-size: 18px;
 }
 
-/* 对象项样�?*/
+/* 对象项样式 */
 .object-item-header {
   display: flex;
   align-items: center;
@@ -547,7 +547,7 @@ function onDragEnd() {
   border-top: 1px solid var(--md-sys-color-outline-variant);
 }
 
-/* 空状�?*/
+/* 空状态 */
 .empty-state {
   display: flex;
   flex-direction: column;

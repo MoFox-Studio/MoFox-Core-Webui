@@ -93,7 +93,7 @@ const flatValues = computed(() => {
     return flat
 })
 
-// 可见的字段（根据 depends_on 过滤�?
+// 可见的字段（根据 depends_on 过滤)
 const visibleFields = computed(() => {
   return props.fields.filter(field => {
     if (!field.depends_on) return true
