@@ -222,11 +222,49 @@ def toml_to_schema(parsed: dict, comments: dict, prefix: str = "") -> list[Confi
     return fields
 
 
+def _deep_merge_dict(target: dict, source: dict, path: str = "") -> None:
+    """
+    深度合并字典，保留 tomlkit 的注释结构
+    只更新叶子节点的值，不替换整个 section
+    """
+    for key, value in source.items():
+        current_path = f"{path}.{key}" if path else key
+        
+        if key in target:
+            # 键已存在
+            if isinstance(value, dict) and isinstance(target[key], dict):
+                # 两边都是字典，递归合并
+                _deep_merge_dict(target[key], value, current_path)
+            elif isinstance(value, list) and isinstance(target[key], list):
+                # 两边都是列表，需要特殊处理
+                # 对于数组，逐个元素合并或替换
+                target_list = target[key]
+                for i, item in enumerate(value):
+                    if i < len(target_list):
+                        if isinstance(item, dict) and isinstance(target_list[i], dict):
+                            _deep_merge_dict(target_list[i], item, f"{current_path}.{i}")
+                        else:
+                            target_list[i] = item
+                    else:
+                        target_list.append(item)
+                # 如果源列表更短，需要截断目标列表
+                while len(target_list) > len(value):
+                    target_list.pop()
+            else:
+                # 叶子节点或类型不同，直接替换
+                target[key] = value
+        else:
+            # 新键，直接添加
+            target[key] = value
+
+
 def apply_updates(original: dict, updates: dict) -> dict:
     """
     应用更新到原始配置
     支持点号分隔的键路径，如 "database.host" 或 "api_providers.0.name"
     支持 tomlkit 文档对象以保留注释
+    
+    ⚠️ 重要：当 value 是 dict 时，使用深度合并而不是直接替换，以保留注释
     """
     result = original  # 不复制，直接修改以保留 tomlkit 结构
     
@@ -259,11 +297,19 @@ def apply_updates(original: dict, updates: dict) -> dict:
             idx = int(final_key)
             if isinstance(current, list):
                 if idx < len(current):
-                    current[idx] = value
+                    if isinstance(value, dict) and isinstance(current[idx], dict):
+                        # 数组元素是字典，深度合并
+                        _deep_merge_dict(current[idx], value, f"{key_path}")
+                    else:
+                        current[idx] = value
                 else:
                     current.append(value)
         else:
-            current[final_key] = value
+            # 关键修复：如果 value 是 dict 且目标也是 dict，使用深度合并
+            if isinstance(value, dict) and final_key in current and isinstance(current[final_key], dict):
+                _deep_merge_dict(current[final_key], value, key_path)
+            else:
+                current[final_key] = value
     
     return result
 
