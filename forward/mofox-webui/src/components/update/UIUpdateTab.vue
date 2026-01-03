@@ -982,7 +982,7 @@ defineExpose({
 
 .file-path {
   color: var(--md-sys-color-on-surface);
-  font-family: 'Noto Sans SC', sans-serif;
+  font-family: 'Roboto Mono', 'Noto Sans SC', monospace;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

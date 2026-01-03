@@ -1530,7 +1530,10 @@ function getSectionIcon(sectionName: string): string {
   gap: 10px;
   font-size: 13px;
   color: var(--md-sys-color-on-surface-variant);
-  font-family: 'JetBrains Mono', monospace;
+}
+
+.file-path {
+  font-family: 'Roboto Mono', 'Noto Sans SC', monospace;
 }
 
 .toolbar-left .material-symbols-rounded {

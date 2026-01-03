@@ -1204,6 +1204,7 @@ defineExpose({
 
 .file-path {
   color: var(--md-sys-color-on-surface);
+  font-family: 'Roboto Mono', 'Noto Sans SC', monospace;
   word-break: break-all;
 }
 

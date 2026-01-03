@@ -1,27 +1,40 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
+
+// ==================== 路由懒加载 ====================
+// 使用动态 import 实现代码分割，优化首屏加载速度
+
+// 核心页面（首屏需要，保持同步加载）
 import Login from '@/views/Login.vue'
 import Dashboard from '@/views/Dashboard.vue'
-import DashboardHome from '@/views/DashboardHome.vue'
-import BotConfigView from '@/views/BotConfigView.vue'
-import ModelConfigView from '@/views/ModelConfigView.vue'
-import PluginConfigList from '@/views/PluginConfigList.vue'
-import PluginConfigView from '@/views/PluginConfigView.vue'
-import PluginManageView from '@/views/PluginManageView.vue'
-import PluginDetailView from '@/views/PluginDetailView.vue'
-import PluginMarketplace from '@/views/PluginMarketplace.vue'
-import PluginMarketplaceDetail from '@/views/PluginMarketplaceDetail.vue'
-import GitUpdateView from '@/views/GitUpdateView.vue'
-import LogViewerView from '@/views/LogViewerView.vue'
-import LiveLogView from '@/views/LiveLogView.vue'
-import ExpressionView from '@/views/ExpressionView.vue'
-import RelationshipView from '@/views/RelationshipView.vue'
-import ThemeConfigView from '@/views/ThemeConfigView.vue'
-import ChatroomView from '@/views/ChatroomView.vue'
-import LiveChatView from '@/views/LiveChatView.vue'
-import GitHubView from '@/views/GitHubView.vue'
-import EmojiManager from '@/components/emoji/EmojiManager.vue'
-import ModelStatsView from '@/views/ModelStatsView.vue'
-import InitializationView from '@/views/InitializationView.vue'
+
+// 仪表盘子页面（懒加载）
+const DashboardHome = () => import('@/views/DashboardHome.vue')
+const BotConfigView = () => import('@/views/BotConfigView.vue')
+const ModelConfigView = () => import('@/views/ModelConfigView.vue')
+const ModelStatsView = () => import('@/views/ModelStatsView.vue')
+const ThemeConfigView = () => import('@/views/ThemeConfigView.vue')
+
+// 插件相关页面（懒加载）
+const PluginConfigList = () => import('@/views/PluginConfigList.vue')
+const PluginConfigView = () => import('@/views/PluginConfigView.vue')
+const PluginManageView = () => import('@/views/PluginManageView.vue')
+const PluginDetailView = () => import('@/views/PluginDetailView.vue')
+const PluginMarketplace = () => import('@/views/PluginMarketplace.vue')
+const PluginMarketplaceDetail = () => import('@/views/PluginMarketplaceDetail.vue')
+
+// 功能页面（懒加载）
+const ExpressionView = () => import('@/views/ExpressionView.vue')
+const RelationshipView = () => import('@/views/RelationshipView.vue')
+const EmojiManager = () => import('@/components/emoji/EmojiManager.vue')
+const ChatroomView = () => import('@/views/ChatroomView.vue')
+const LiveChatView = () => import('@/views/LiveChatView.vue')
+
+// 系统页面（懒加载）
+const GitUpdateView = () => import('@/views/GitUpdateView.vue')
+const GitHubView = () => import('@/views/GitHubView.vue')
+const LogViewerView = () => import('@/views/LogViewerView.vue')
+const LiveLogView = () => import('@/views/LiveLogView.vue')
+const InitializationView = () => import('@/views/InitializationView.vue')
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -157,15 +170,16 @@ const router = createRouter({
   routes
 })
 
-// 导入初始化状态检查API
-import { getInitStatus } from '@/api/initialization'
-
-// 缓存初始化状态，避免重复请求
+// ==================== 初始化状态缓存 ====================
+// 缓存初始化状态，供组件使用
 let initStatusCache: { isInitialized: boolean; timestamp: number } | null = null
 const CACHE_DURATION = 60000 // 缓存1分钟
 
-// 获取初始化状态（带缓存）
-async function checkInitStatus(): Promise<boolean> {
+/**
+ * 获取初始化状态（带缓存）
+ * 供组件调用，非阻塞式
+ */
+export async function checkInitStatus(): Promise<boolean> {
   const now = Date.now()
   
   // 如果有有效缓存，直接返回
@@ -174,9 +188,10 @@ async function checkInitStatus(): Promise<boolean> {
   }
   
   try {
+    // 动态导入避免循环依赖
+    const { getInitStatus } = await import('@/api/initialization')
     const result = await getInitStatus()
     if (result.success && result.data) {
-      // 更新缓存
       initStatusCache = {
         isInitialized: result.data.is_initialized,
         timestamp: now
@@ -191,13 +206,16 @@ async function checkInitStatus(): Promise<boolean> {
   return true
 }
 
-// 清除初始化状态缓存（用于初始化完成后）
+/**
+ * 清除初始化状态缓存（用于初始化完成后）
+ */
 export function clearInitStatusCache() {
   initStatusCache = null
 }
 
-// 路由守卫
-router.beforeEach(async (to, _from, next) => {
+// ==================== 路由守卫 ====================
+// 轻量级守卫，只做认证检查，初始化状态检查移到 Dashboard 组件内
+router.beforeEach((to, _from, next) => {
   const isAuthenticated = localStorage.getItem('mofox_token')
   
   // 检查是否需要认证
@@ -206,29 +224,10 @@ router.beforeEach(async (to, _from, next) => {
     return
   }
   
-  // 登录页逻辑
+  // 登录页逻辑：已登录则跳转到仪表盘
   if (to.path === '/login' && isAuthenticated) {
     next('/dashboard')
     return
-  }
-  
-  // 检查初始化状态（仅在已认证且不跳过初始化检查的页面）
-  if (isAuthenticated && !to.meta.skipInitCheck) {
-    const isInitialized = await checkInitStatus()
-    
-    if (!isInitialized) {
-      // 未初始化，重定向到初始化页面
-      if (to.path !== '/initialization') {
-        next('/initialization')
-        return
-      }
-    } else {
-      // 已初始化，不允许访问初始化页面
-      if (to.path === '/initialization') {
-        next('/dashboard')
-        return
-      }
-    }
   }
   
   next()

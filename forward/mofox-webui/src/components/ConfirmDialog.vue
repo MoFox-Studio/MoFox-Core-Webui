@@ -131,7 +131,10 @@ const handleOverlayClick = () => {
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   max-width: 420px;
   width: 100%;
-  overflow: hidden;
+  overflow: visible;
+  max-height: calc(100vh - 40px);
+  display: flex;
+  flex-direction: column;
   animation: dialog-bounce 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
@@ -165,23 +168,23 @@ const handleOverlayClick = () => {
 }
 
 .icon-info {
-  background: rgba(59, 130, 246, 0.1);
-  color: var(--primary);
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
 }
 
 .icon-success {
-  background: rgba(34, 197, 94, 0.1);
-  color: var(--success);
+  background: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
 }
 
 .icon-warning {
-  background: rgba(245, 158, 11, 0.1);
-  color: var(--warning);
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
 }
 
 .icon-danger {
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--danger);
+  background: var(--md-sys-color-error-container);
+  color: var(--md-sys-color-on-error-container);
 }
 
 .dialog-title {
@@ -197,6 +200,8 @@ const handleOverlayClick = () => {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  overflow-y: auto;
+  flex-shrink: 1;
 }
 
 .dialog-message {
@@ -212,6 +217,7 @@ const handleOverlayClick = () => {
   display: flex;
   gap: 12px;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .dialog-button {
@@ -242,43 +248,47 @@ const handleOverlayClick = () => {
 }
 
 .confirm-button.primary {
-  background: var(--primary);
+  background: var(--md-sys-color-primary);
 }
 
 .confirm-button.primary:hover {
-  background: var(--primary-dark);
+  background: var(--md-sys-color-primary);
+  filter: brightness(0.9);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+  box-shadow: 0 4px 12px rgba(103, 80, 164, 0.3);
 }
 
 .confirm-button.success {
-  background: var(--success);
+  background: var(--md-sys-color-tertiary);
 }
 
 .confirm-button.success:hover {
-  background: #16a34a;
+  background: var(--md-sys-color-tertiary);
+  filter: brightness(0.9);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
+  box-shadow: 0 4px 12px rgba(125, 82, 96, 0.3);
 }
 
 .confirm-button.warning {
-  background: var(--warning);
+  background: var(--md-sys-color-secondary);
 }
 
 .confirm-button.warning:hover {
-  background: #d97706;
+  background: var(--md-sys-color-secondary);
+  filter: brightness(0.9);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+  box-shadow: 0 4px 12px rgba(98, 91, 113, 0.3);
 }
 
 .confirm-button.danger {
-  background: var(--danger);
+  background: var(--md-sys-color-error);
 }
 
 .confirm-button.danger:hover {
-  background: #dc2626;
+  background: var(--md-sys-color-error);
+  filter: brightness(0.9);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+  box-shadow: 0 4px 12px rgba(179, 38, 30, 0.3);
 }
 
 /* 过渡动画 */

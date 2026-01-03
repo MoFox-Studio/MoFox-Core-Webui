@@ -549,7 +549,7 @@ onMounted(() => {
   gap: 8px;
   font-size: 13px;
   color: var(--md-sys-color-on-surface-variant);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Roboto Mono', 'Noto Sans SC', monospace;
 }
 
 .toolbar-actions {

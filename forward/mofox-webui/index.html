@@ -5,13 +5,27 @@
     <link rel="icon" type="image/svg+xml" href="/mofox.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MoFox-Bot 管理控制台</title>
+    <!-- 预连接到 Google Fonts 以加速字体加载 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- 使用 display=swap 避免字体加载阻塞渲染 -->
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" />
+    <!-- 内联关键 CSS 避免 FOUC -->
+    <style>
+      body { margin: 0; background-color: #FEF7FF; }
+      @media (prefers-color-scheme: dark) { body { background-color: #141218; } }
+      .app-loading { display: flex; justify-content: center; align-items: center; height: 100vh; flex-direction: column; gap: 16px; font-family: system-ui, -apple-system, sans-serif; color: #49454F; }
+      @media (prefers-color-scheme: dark) { .app-loading { color: #CAC4D0; } }
+      .loading-spinner { width: 40px; height: 40px; border: 3px solid #EADDFF; border-top-color: #6750A4; border-radius: 50%; animation: spin 1s linear infinite; }
+      @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
   </head>
   <body>
     <div id="app">
-      <div style="display: flex; justify-content: center; align-items: center; height: 100vh; font-family: sans-serif;">
-        Loading MoFox-Bot WebUI...
+      <div class="app-loading">
+        <div class="loading-spinner"></div>
+        <span>正在加载 MoFox-Bot WebUI...</span>
       </div>
     </div>
     <script type="module" src="/src/main.ts"></script>

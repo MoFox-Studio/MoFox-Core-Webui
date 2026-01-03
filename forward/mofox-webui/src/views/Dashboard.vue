@@ -35,8 +35,44 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import Sidebar from '@/components/Sidebar.vue'
 import FloatingDoc from '@/components/FloatingDoc.vue'
+import { checkInitStatus } from '@/router'
+
+const router = useRouter()
+const route = useRoute()
+
+// 完全非阻塞式初始化状态检查
+// 使用 requestIdleCallback 或 setTimeout 延迟执行，确保不阻塞首屏渲染
+onMounted(() => {
+  // 如果当前在初始化页面，跳过检查
+  if (route.path === '/initialization') {
+    return
+  }
+  
+  // 延迟检查，让页面和背景先渲染
+  const doCheck = async () => {
+    try {
+      const isInitialized = await checkInitStatus()
+      
+      if (!isInitialized && route.path !== '/initialization') {
+        // 未初始化，跳转到初始化页面
+        router.replace('/initialization')
+      }
+    } catch (error) {
+      console.error('初始化状态检查失败:', error)
+    }
+  }
+  
+  // 使用 requestIdleCallback（如果可用）或 setTimeout 延迟执行
+  if ('requestIdleCallback' in window) {
+    requestIdleCallback(() => doCheck(), { timeout: 250 })
+  } else {
+    setTimeout(doCheck, 100)
+  }
+})
 </script>
 
 <style scoped>

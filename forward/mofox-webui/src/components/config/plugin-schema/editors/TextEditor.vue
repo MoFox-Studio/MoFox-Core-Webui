@@ -152,7 +152,7 @@ function clearValue() {
 .clear-button {
   position: absolute;
   right: 8px;
-  top: 50%;
+  top: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -164,7 +164,7 @@ function clearValue() {
   color: var(--md-sys-color-on-surface-variant);
   cursor: pointer;
   opacity: 0;
-  transform: translateY(-50%) scale(0.8);
+  transform: scale(0.8);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -180,7 +180,7 @@ function clearValue() {
 .m3-text-field-container:hover .clear-button,
 .is-focused .clear-button {
   opacity: 1;
-  transform: translateY(-50%) scale(1);
+  transform: scale(1);
 }
 
 /* 字符计数 */

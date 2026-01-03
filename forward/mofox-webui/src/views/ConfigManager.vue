@@ -1035,7 +1035,7 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  font-family: 'Noto Sans SC', sans-serif;
+  font-family: 'Roboto Mono', 'Noto Sans SC', monospace;
   color: var(--md-sys-color-on-surface-variant);
 }
 

@@ -111,7 +111,9 @@
   
   /* 其他 */
   --transition-fast: 0.2s ease;
+  --success: #22c55e;  /* 成功色 - 绿色 */
   --warning: #f59e0b;  /* 警告色 - 橙黄色 */
+  --danger: #ef4444;   /* 危险色 - 红色 */
 }
 
 /* ==================== 暗色主题 (Dark Theme) ==================== */
@@ -160,4 +162,9 @@
   /* ---------- 轮廓色 (Outline) ---------- */
   --md-sys-color-outline: #79747E;
   --md-sys-color-outline-variant: #CAC4D0;
+
+  /* ---------- 语义色 ---------- */
+  --success: #22c55e;  /* 成功色 - 绿色 */
+  --warning: #f59e0b;  /* 警告色 - 橙黄色 */
+  --danger: #ef4444;   /* 危险色 - 红色 */
 }

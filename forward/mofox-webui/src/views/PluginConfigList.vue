@@ -267,6 +267,7 @@ onMounted(() => {
 
 .plugin-path {
   font-size: 12px;
+  font-family: 'Roboto Mono', 'Noto Sans SC', monospace;
   color: var(--md-sys-color-on-surface-variant);
   margin: 0;
   white-space: nowrap;

@@ -502,7 +502,7 @@ function showToast(msg: string, type: 'success' | 'error' = 'success') {
   gap: 8px;
   font-size: 13px;
   color: var(--md-sys-color-on-surface-variant);
-  font-family: monospace;
+  font-family: 'Roboto Mono', 'Noto Sans SC', monospace;
 }
 
 .file-path .material-symbols-rounded {

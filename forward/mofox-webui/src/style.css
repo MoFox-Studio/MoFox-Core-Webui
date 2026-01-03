@@ -19,16 +19,15 @@
 /* Material Design 3 组件样式（按钮、卡片等） */
 @import './styles/m3-components.css';
 
-/* ==================== 字体导入 ==================== */
+/* ==================== 字体说明 ==================== */
 
-/* Roboto - Material Design 官方推荐英文字体 */
-@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
-
-/* Roboto Mono - 等宽字体，用于代码和输入框 */
-@import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@300;400;500;700&display=swap');
-
-/* Noto Sans SC - 思源黑体，中文显示 */
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+/*
+ * 字体已在 index.html 中通过 <link> 标签加载，使用 display=swap 避免阻塞渲染
+ * - Roboto: Material Design 官方推荐英文字体
+ * - Roboto Mono: 等宽字体，用于代码和输入框
+ * - Noto Sans SC: 思源黑体，中文显示
+ * - Material Symbols Rounded: Material Design 图标字体
+ */
 
 /* ==================== 输入框字体覆盖 ==================== */
 

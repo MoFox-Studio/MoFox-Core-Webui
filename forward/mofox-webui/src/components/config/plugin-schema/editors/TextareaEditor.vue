@@ -26,7 +26,7 @@
     <div class="textarea-footer">
       <span v-if="lineCount > 1" class="line-count">
         <span class="material-symbols-rounded">format_list_numbered</span>
-        {{ lineCount }} �?
+        {{ lineCount }} 行
       </span>
       <span class="char-counter" v-if="field.max_length">
         {{ charCount }} / {{ field.max_length }}
