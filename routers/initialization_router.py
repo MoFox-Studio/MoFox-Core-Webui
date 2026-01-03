@@ -124,10 +124,10 @@ def save_bot_config(config: BotConfigRequest) -> None:
     
     if BOT_CONFIG_PATH.exists():
         # 已存在配置文件，更新现有配置
-        logger.info("配置文件已存在，更新现有配置")
         create_backup(BOT_CONFIG_PATH)
         with open(BOT_CONFIG_PATH, "r", encoding="utf-8") as f:
-            doc = tomlkit.load(f)
+            raw_content = f.read()
+        doc = tomlkit.parse(raw_content)
     else:
         # 配置文件不存在，从模板创建
         logger.info("配置文件不存在，从模板创建")
@@ -168,10 +168,9 @@ def save_bot_config(config: BotConfigRequest) -> None:
             doc["security"] = tomlkit.table()
         doc["security"]["master_users"] = config.master_users
     
-    # 保存
-    logger.info(f"保存配置到文件: {BOT_CONFIG_PATH}")
+    output_content = tomlkit.dumps(doc)
     with open(BOT_CONFIG_PATH, "w", encoding="utf-8") as f:
-        tomlkit.dump(doc, f)
+        f.write(output_content)
     
     logger.info("✓ 机器人配置已成功保存")
 
@@ -179,14 +178,13 @@ def save_bot_config(config: BotConfigRequest) -> None:
 def save_model_config(config: ModelConfigRequest) -> None:
     """保存模型配置"""
     
-    logger.info(f"开始保存模型配置，目标 provider: {config.provider_name}")
-    logger.info(f"模型配置文件路径: {MODEL_CONFIG_PATH}")
     
     if MODEL_CONFIG_PATH.exists():
         logger.info("模型配置文件已存在，更新现有配置")
         create_backup(MODEL_CONFIG_PATH)
         with open(MODEL_CONFIG_PATH, "r", encoding="utf-8") as f:
-            doc = tomlkit.load(f)
+            raw_content = f.read()
+        doc = tomlkit.parse(raw_content)
         logger.debug("已读取现有模型配置")
     
     # 查找或创建 SiliconFlow provider
@@ -224,9 +222,10 @@ def save_model_config(config: ModelConfigRequest) -> None:
     doc["api_providers"] = providers
     
     # 保存
-    logger.info(f"保存模型配置到文件: {MODEL_CONFIG_PATH}")
+    logger.debug(f"保存模型配置到文件: {MODEL_CONFIG_PATH}")
+    output_content = tomlkit.dumps(doc)
     with open(MODEL_CONFIG_PATH, "w", encoding="utf-8") as f:
-        tomlkit.dump(doc, f)
+        f.write(output_content)
     
     logger.info("✓ 模型配置已成功保存")
 
