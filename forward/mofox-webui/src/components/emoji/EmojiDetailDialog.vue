@@ -167,6 +167,7 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 import { useEmojiStore } from '@/stores/emojiStore'
+import { showConfirm, showAlert } from '@/utils/dialog'
 import type { EmojiDetail } from '@/api/emoji'
 
 const props = defineProps<{
@@ -302,13 +303,25 @@ const handleSave = async () => {
     handleClose()
   } catch (error) {
     console.error('保存失败:', error)
-    alert('保存失败，请重试')
+    await showAlert({
+      title: '错误',
+      message: '保存失败，请重试',
+      type: 'danger'
+    })
   }
 }
 
 const handleDelete = async () => {
   if (!emojiDetail.value) return
-  if (!confirm(`确定要删除表情包"${emojiDetail.value.description}"吗？`)) return
+  
+  const confirmed = await showConfirm({
+    title: '删除表情包',
+    message: `确定要删除表情包"${emojiDetail.value.description}"吗？`,
+    type: 'danger',
+    confirmText: '删除'
+  })
+  
+  if (!confirmed) return
 
   try {
     await emojiStore.deleteEmoji(emojiDetail.value.hash)
@@ -316,7 +329,11 @@ const handleDelete = async () => {
     handleClose()
   } catch (error) {
     console.error('删除失败:', error)
-    alert('删除失败，请重试')
+    await showAlert({
+      title: '错误',
+      message: '删除失败，请重试',
+      type: 'danger'
+    })
   }
 }
 
