@@ -179,25 +179,22 @@ const addFiles = (files: File[]) => {
   const maxSize = 10 * 1024 * 1024 // 10MB
 
   for (const file of files) {
-    // 检查文件类型
-    if (!validTypes.includes(file.type)) {
-      alert(`文件 ${file.name} 格式不支持`)
-      continue
-    }
-
-    // 检查文件大小
-    if (file.size > maxSize) {
-      alert(`文件 ${file.name} 超过大小限制（10MB）`)
-      continue
-    }
-
     // 检查重复
     if (fileList.value.some(f => f.name === file.name && f.size === file.size)) {
       continue
     }
 
-    // 创建预览
-    const reader = new FileReader()
+    let error: string | null = null
+
+    // 检查文件类型
+    if (!validTypes.includes(file.type)) {
+      error = '格式不支持'
+    }
+    // 检查文件大小
+    else if (file.size > maxSize) {
+      error = '超过大小限制（10MB）'
+    }
+
     const fileItem: FileItem = {
       name: file.name,
       size: file.size,
@@ -205,16 +202,22 @@ const addFiles = (files: File[]) => {
       preview: null,
       uploading: false,
       success: false,
-      error: null,
+      error,
       progress: 0,
     }
 
-    reader.onload = (e) => {
-      fileItem.preview = e.target?.result as string
-    }
-    reader.readAsDataURL(file)
+    // 先加入列表，获取响应式对象
+    const newLength = fileList.value.push(fileItem)
+    const reactiveItem = fileList.value[newLength - 1]
 
-    fileList.value.push(fileItem)
+    // 只有在没有错误的情况下才生成预览
+    if (!error) {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        reactiveItem.preview = e.target?.result as string
+      }
+      reader.readAsDataURL(file)
+    }
   }
 }
 
