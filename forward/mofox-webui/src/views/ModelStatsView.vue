@@ -726,17 +726,22 @@ const renderCostByModelChart = () => {
       },
       formatter: '{b}: ${c}'
     },
+    grid: {
+      containLabel: true,
+      left: '3%',
+      right: '4%',
+      bottom: '3%'
+    },
     xAxis: {
+      type: 'value',
+      name: '成本 ($)'
+    },
+    yAxis: {
       type: 'category',
       data: data.labels || [],
       axisLabel: {
-        rotate: 45,
         interval: 0
       }
-    },
-    yAxis: {
-      type: 'value',
-      name: '成本 ($)'
     },
     series: [
       {
@@ -744,7 +749,7 @@ const renderCostByModelChart = () => {
         type: 'bar',
         data: data.data || [],
         itemStyle: {
-          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+          color: new echarts.graphic.LinearGradient(1, 0, 0, 0, [
             { offset: 0, color: '#83bff6' },
             { offset: 0.5, color: '#188df0' },
             { offset: 1, color: '#188df0' }
@@ -771,17 +776,22 @@ const renderAvgResponseTimeChart = () => {
       },
       formatter: '{b}: {c}s'
     },
+    grid: {
+      containLabel: true,
+      left: '3%',
+      right: '4%',
+      bottom: '3%'
+    },
     xAxis: {
+      type: 'value',
+      name: '响应时间 (秒)'
+    },
+    yAxis: {
       type: 'category',
       data: data.labels || [],
       axisLabel: {
-        rotate: 45,
         interval: 0
       }
-    },
-    yAxis: {
-      type: 'value',
-      name: '响应时间 (秒)'
     },
     series: [
       {
@@ -789,7 +799,7 @@ const renderAvgResponseTimeChart = () => {
         type: 'bar',
         data: data.data || [],
         itemStyle: {
-          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+          color: new echarts.graphic.LinearGradient(1, 0, 0, 0, [
             { offset: 0, color: '#f093fb' },
             { offset: 0.5, color: '#f5576c' },
             { offset: 1, color: '#f5576c' }
