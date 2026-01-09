@@ -63,7 +63,6 @@ def open_initialization_page(host: str, port: int) -> None:
         logger.warning(f"自动打开浏览器失败: {e}")
         logger.info(f"请手动打开浏览器访问: {init_url}")
 
-
 class WebUIStartupHandler(BaseEventHandler):
     """
     WebUI启动事件处理器

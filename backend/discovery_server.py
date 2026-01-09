@@ -166,11 +166,11 @@ def create_discovery_app(main_host: str, main_port: int) -> FastAPI:
             )
     
     # 🌟 WebSocket 代理：将 WebSocket 连接转发到主程序
-    @app.websocket("/plugins/{path:path}")
+    @app.websocket("/ws/plugins/{path:path}")
     async def websocket_proxy(websocket: WebSocket, path: str):
         """
         将 WebSocket 连接代理到主程序
-        前端连接 ws://hostname:12138/plugins/webui_backend/log_viewer/realtime
+        前端连接 ws://hostname:12138/ws/plugins/webui_backend/log_viewer/realtime
         """
         await websocket.accept()
         

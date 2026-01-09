@@ -178,7 +178,7 @@ export async function createWebSocketUrl(): Promise<string> {
   // 使用相对路径，自动通过代理服务器转发（开发环境走Vite代理，生产环境走发现服务器代理）
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
   const token = localStorage.getItem('mofox_token') || ''
-  return `${protocol}//${window.location.host}/plugins/webui_backend/live_chat/realtime?token=${encodeURIComponent(token)}`
+  return `${protocol}//${window.location.host}/ws/plugins/webui_backend/live_chat/realtime?token=${encodeURIComponent(token)}`
 }
 
 /**

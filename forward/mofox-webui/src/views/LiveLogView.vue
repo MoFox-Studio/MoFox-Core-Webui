@@ -349,7 +349,7 @@ const connectWebSocket = async () => {
   try {
     // 使用相对路径，自动通过代理服务器转发（开发环境走Vite代理，生产环境走发现服务器代理）
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const wsUrl = `${protocol}//${window.location.host}/plugins/webui_backend/log_viewer/realtime`
+    const wsUrl = `${protocol}//${window.location.host}/ws/plugins/webui_backend/log_viewer/realtime`
     
     console.log('正在连接WebSocket:', wsUrl)
     websocket.value = new WebSocket(wsUrl)
