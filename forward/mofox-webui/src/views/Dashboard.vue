@@ -18,6 +18,19 @@
 -->
 <template>
   <div class="dashboard-wrapper">
+    <!-- 壁纸层 -->
+    <div class="wallpaper-layer">
+      <video 
+        v-if="themeStore.wallpaper && themeStore.wallpaperType === 'video'"
+        class="wallpaper-video"
+        :src="themeStore.wallpaper"
+        autoplay
+        loop
+        muted
+        playsinline
+      />
+    </div>
+    
     <!-- 侧边栏导航组件 -->
     <Sidebar />
     <!-- 主布局区域 -->
@@ -37,12 +50,14 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useThemeStore } from '@/stores/theme'
 import Sidebar from '@/components/Sidebar.vue'
 import FloatingDoc from '@/components/FloatingDoc.vue'
 import { checkInitStatus } from '@/router'
 
 const router = useRouter()
 const route = useRoute()
+const themeStore = useThemeStore()
 
 // 完全非阻塞式初始化状态检查
 // 使用 requestIdleCallback 或 setTimeout 延迟执行，确保不阻塞首屏渲染
@@ -78,14 +93,24 @@ onMounted(() => {
 <style scoped>
 .dashboard-wrapper {
   height: 100vh;
-  background-color: transparent;
+  background-color: var(--md-sys-color-background);
   display: flex;
   overflow: hidden;
   position: relative;
   z-index: 0;
 }
 
-.dashboard-wrapper::before {
+.wallpaper-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  overflow: hidden;
+}
+
+.wallpaper-layer::before {
   content: "";
   position: absolute;
   top: 0;
@@ -98,7 +123,17 @@ onMounted(() => {
   background-repeat: no-repeat;
   filter: blur(var(--app-wallpaper-blur, 20px));
   opacity: var(--app-wallpaper-opacity, 0.5);
-  z-index: -1;
+}
+
+.wallpaper-video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(var(--app-wallpaper-blur, 20px));
+  opacity: var(--app-wallpaper-opacity, 0.5);
 }
 
 .main-layout {
@@ -108,22 +143,6 @@ onMounted(() => {
   overflow: hidden;
   min-width: 0;
   background-color: transparent;
-}
-
-.main-layout::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-image: var(--app-wallpaper);
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  filter: blur(var(--app-wallpaper-blur, 20px));
-  opacity: var(--app-wallpaper-opacity, 0.5);
-  z-index: -1;
 }
 
 .dashboard-content {

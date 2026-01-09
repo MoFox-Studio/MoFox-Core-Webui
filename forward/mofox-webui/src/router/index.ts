@@ -5,7 +5,9 @@ import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 
 // 核心页面（首屏需要，保持同步加载）
 import Login from '@/views/Login.vue'
-import Dashboard from '@/views/Dashboard.vue'
+
+// 仪表盘（改为懒加载以避免循环依赖）
+const Dashboard = () => import('@/views/Dashboard.vue')
 
 // 仪表盘子页面（懒加载）
 const DashboardHome = () => import('@/views/DashboardHome.vue')

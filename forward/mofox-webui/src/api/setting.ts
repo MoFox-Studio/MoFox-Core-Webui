@@ -4,11 +4,11 @@ import { api, getPluginBaseUrl } from './index'
  * 上传壁纸
  * @param file 壁纸文件
  */
-export async function uploadWallpaper(file: File): Promise<{ success: boolean; url: string; message?: string }> {
+export async function uploadWallpaper(file: File): Promise<{ success: boolean; url: string; type: string; message?: string }> {
   const formData = new FormData()
   formData.append('file', file)
 
-  const result = await api.request<{ url: string; message?: string }>('setting/wallpaper', {
+  const result = await api.request<{ url: string; type: string; message?: string }>('setting/wallpaper', {
     method: 'POST',
     body: formData
   })
@@ -17,6 +17,7 @@ export async function uploadWallpaper(file: File): Promise<{ success: boolean; u
     return {
       success: true,
       url: result.data.url,
+      type: result.data.type,
       message: result.data.message
     }
   } else {

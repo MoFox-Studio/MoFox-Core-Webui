@@ -69,7 +69,16 @@
               <span class="material-symbols-rounded">image</span>
               <span>暂无壁纸</span>
             </div>
-            <button v-else class="remove-btn" @click="removeWallpaper" title="移除壁纸">
+            <video 
+              v-else-if="themeStore.wallpaperType === 'video'"
+              class="preview-video"
+              :src="themeStore.wallpaper"
+              autoplay
+              loop
+              muted
+              playsinline
+            />
+            <button v-if="themeStore.wallpaper" class="remove-btn" @click="removeWallpaper" title="移除壁纸">
               <span class="material-symbols-rounded">close</span>
             </button>
           </div>
@@ -77,7 +86,7 @@
             <input 
               type="file" 
               ref="fileInput" 
-              accept="image/*" 
+              accept="image/*,video/mp4,video/webm" 
               style="display: none" 
               @change="handleWallpaperUpload"
             >
@@ -85,7 +94,8 @@
               <span class="material-symbols-rounded">upload</span>
               上传壁纸
             </button>
-            <p class="hint">上传壁纸后将自动提取主题色</p>
+            <p class="hint">支持图片（JPG/PNG）和视频（MP4/WebM），视频文件需小于50MB</p>
+            <p class="hint">上传后将自动从图片或视频第一帧提取主题色</p>
           </div>
         </div>
         
@@ -150,11 +160,11 @@
         </div>
       </div>
 
-      <div class="config-section" v-if="extractedColors.length > 0">
+      <div class="config-section" v-if="themeStore.extractedColors.length > 0">
         <h2>图片取色</h2>
         <div class="color-presets">
           <button
-            v-for="color in extractedColors"
+            v-for="color in themeStore.extractedColors"
             :key="color"
             class="preset-item"
             :class="{ active: themeStore.sourceColor.toLowerCase() === color.toLowerCase() }"
@@ -316,6 +326,7 @@
 <script setup lang="ts">
 import { ref, computed, reactive, onMounted, onUnmounted } from 'vue'
 import { useThemeStore } from '@/stores/theme'
+import { showToast } from '@/utils/updateChecker'
 import { 
   argbFromHex, 
   themeFromSourceColor, 
@@ -326,7 +337,6 @@ import {
 } from '@material/material-color-utilities'
 
 const themeStore = useThemeStore()
-const extractedColors = ref<string[]>([])
 
 const extractColorsFromImage = (img: HTMLImageElement) => {
   const canvas = document.createElement('canvas')
@@ -359,10 +369,76 @@ const extractColorsFromImage = (img: HTMLImageElement) => {
       const result = QuantizerCelebi.quantize(pixelArray, 128)
       const ranked = Score.score(result)
       const topColors = ranked.slice(0, 4).map(c => hexFromArgb(c))
-      extractedColors.value = topColors
+      themeStore.setExtractedColors(topColors)
       return topColors
   }
   return []
+}
+
+const extractColorFromVideo = async (file: File): Promise<string[]> => {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement('video')
+    const canvas = document.createElement('canvas')
+    const context = canvas.getContext('2d')
+    
+    // 设置视频源
+    video.src = URL.createObjectURL(file)
+    video.muted = true
+    video.playsInline = true
+    
+    // 等待元数据加载
+    video.addEventListener('loadedmetadata', () => {
+      // 跳转到第一帧（0.1秒，确保有画面）
+      video.currentTime = 0.1
+    })
+    
+    // 当帧准备好时提取颜色
+    video.addEventListener('seeked', () => {
+      try {
+        // 设置 Canvas 尺寸
+        const maxDimension = 128
+        const scale = Math.min(maxDimension / video.videoWidth, maxDimension / video.videoHeight)
+        canvas.width = Math.floor(video.videoWidth * scale)
+        canvas.height = Math.floor(video.videoHeight * scale)
+        
+        // 绘制视频帧
+        context!.drawImage(video, 0, 0, canvas.width, canvas.height)
+        
+        // 获取像素数据
+        const imageData = context!.getImageData(0, 0, canvas.width, canvas.height)
+        const pixels = imageData.data
+        
+        // 提取颜色（复用现有的提取逻辑）
+        const pixelArray = []
+        for (let i = 0; i < pixels.length; i += 4) {
+          const r = pixels[i]
+          const g = pixels[i + 1]
+          const b = pixels[i + 2]
+          const a = pixels[i + 3]
+          if (a < 255) continue
+          const argb = argbFromRgb(r, g, b)
+          pixelArray.push(argb)
+        }
+        
+        const result = QuantizerCelebi.quantize(pixelArray, 128)
+        const ranked = Score.score(result)
+        const topColors = ranked.slice(0, 4).map(c => hexFromArgb(c))
+        
+        // 清理资源
+        URL.revokeObjectURL(video.src)
+        
+        resolve(topColors)
+      } catch (error) {
+        URL.revokeObjectURL(video.src)
+        reject(error)
+      }
+    })
+    
+    video.addEventListener('error', () => {
+      URL.revokeObjectURL(video.src)
+      reject(new Error('视频加载失败'))
+    })
+  })
 }
 
 // Wallpaper Logic
@@ -377,41 +453,70 @@ const handleWallpaperUpload = async (event: Event) => {
   if (input.files && input.files[0]) {
     const file = input.files[0]
     
-    // Upload wallpaper
-    await themeStore.setWallpaper(file)
+    // 检查文件类型
+    const isImage = file.type.startsWith('image/')
+    const isVideo = file.type.startsWith('video/')
     
-    // Extract color
-    const reader = new FileReader()
-    reader.onload = async (e) => {
-      const result = e.target?.result as string
-      const img = new Image()
-      img.src = result
-      await new Promise((resolve) => {
-        img.onload = resolve
-      })
-      
-      // Extract multiple colors
-      const topColors = extractColorsFromImage(img)
-      
-      if (topColors.length > 0) {
-         themeStore.setSourceColor(topColors[0])
-      }
+    if (!isImage && !isVideo) {
+      showToast('请上传图片或视频文件', 'error')
+      return
     }
     
-    reader.readAsDataURL(file)
+    // 检查视频文件大小（50MB）
+    if (isVideo && file.size > 50 * 1024 * 1024) {
+      showToast('视频文件过大，请上传小于 50MB 的文件', 'error')
+      return
+    }
+    
+    try {
+      // 上传壁纸
+      await themeStore.setWallpaper(file)
+      
+      // 提取颜色
+      let topColors: string[] = []
+      
+      if (isVideo) {
+        // 从视频第一帧提取颜色
+        topColors = await extractColorFromVideo(file)
+      } else {
+        // 从图片提取颜色
+        const reader = new FileReader()
+        topColors = await new Promise((resolve, reject) => {
+          reader.onload = async (e) => {
+            const result = e.target?.result as string
+            const img = new Image()
+            img.src = result
+            await new Promise((res) => {
+              img.onload = res
+            })
+            resolve(extractColorsFromImage(img))
+          }
+          reader.onerror = reject
+          reader.readAsDataURL(file)
+        })
+      }
+      
+      themeStore.setExtractedColors(topColors)
+      
+      if (topColors.length > 0) {
+        themeStore.setSourceColor(topColors[0])
+      }
+    } catch (error) {
+      console.error('处理壁纸失败:', error)
+      showToast('处理壁纸失败，请重试', 'error')
+    }
   }
 }
 
 const removeWallpaper = () => {
   themeStore.setWallpaper(null)
-  extractedColors.value = []
   if (fileInput.value) {
     fileInput.value.value = ''
   }
 }
 
 const wallpaperPreviewStyle = computed(() => {
-  if (themeStore.wallpaper) {
+  if (themeStore.wallpaper && themeStore.wallpaperType === 'image') {
     return {
       backgroundImage: `url(${themeStore.wallpaper})`,
       backgroundSize: 'cover',
@@ -619,31 +724,13 @@ const onMouseMove = (e: MouseEvent | TouchEvent) => {
   if (isDraggingHue.value) handleHueDrag(e)
 }
 
-onMounted(async () => {
+onMounted(() => {
   window.addEventListener('mousemove', onMouseMove)
   window.addEventListener('mouseup', stopDrag)
   window.addEventListener('touchmove', onMouseMove)
   window.addEventListener('touchend', stopDrag)
   
-  // 每次进入页面时，如果有壁纸就提取颜色
-  if (themeStore.wallpaper) {
-      try {
-        const img = new Image()
-        img.crossOrigin = "Anonymous"
-        img.src = themeStore.wallpaper
-        
-        // 等待图片加载完成
-        await new Promise((resolve, reject) => {
-          img.onload = resolve
-          img.onerror = reject
-        })
-        
-        // 提取颜色
-        extractColorsFromImage(img)
-      } catch (error) {
-        console.error('提取壁纸颜色失败:', error)
-      }
-  }
+  // 提取的颜色已经从 localStorage 加载到 themeStore.extractedColors 中，无需重新提取
 })
 
 onUnmounted(() => {
@@ -1315,6 +1402,15 @@ const getPresetStyle = (preset: any) => {
 
 .wallpaper-preview .placeholder .material-symbols-rounded {
   font-size: 32px;
+}
+
+.preview-video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .wallpaper-preview .remove-btn {

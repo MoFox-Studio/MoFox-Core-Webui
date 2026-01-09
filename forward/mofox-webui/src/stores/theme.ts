@@ -13,8 +13,10 @@ export const useThemeStore = defineStore('theme', () => {
   const theme = ref(localStorage.getItem('theme') || 'light')
   const sourceColor = ref(localStorage.getItem('sourceColor') || '#6750A4')
   const wallpaper = ref(localStorage.getItem('wallpaper') || '')
+  const wallpaperType = ref<'image' | 'video' | null>(localStorage.getItem('wallpaperType') as 'image' | 'video' | null)
   const wallpaperOpacity = ref(Number(localStorage.getItem('wallpaperOpacity')) || 0.5)
   const wallpaperBlur = ref(Number(localStorage.getItem('wallpaperBlur')) || 20)
+  const extractedColors = ref<string[]>(JSON.parse(localStorage.getItem('extractedColors') || '[]'))
 
   const toggleTheme = () => {
     theme.value = theme.value === 'light' ? 'dark' : 'light'
@@ -36,6 +38,11 @@ export const useThemeStore = defineStore('theme', () => {
     applyWallpaper()
   }
 
+  const setExtractedColors = (colors: string[]) => {
+    extractedColors.value = colors
+    localStorage.setItem('extractedColors', JSON.stringify(colors))
+  }
+
   const setWallpaper = async (file: File | null) => {
     try {
       if (file) {
@@ -44,12 +51,18 @@ export const useThemeStore = defineStore('theme', () => {
           // 获取完整的URL
           const url = await getWallpaperUrl()
           wallpaper.value = url
+          wallpaperType.value = res.type as 'image' | 'video'
           localStorage.setItem('wallpaper', url)
+          localStorage.setItem('wallpaperType', res.type)
         }
       } else {
         await apiDeleteWallpaper()
         wallpaper.value = ''
+        wallpaperType.value = null
+        extractedColors.value = []
         localStorage.removeItem('wallpaper')
+        localStorage.removeItem('wallpaperType')
+        localStorage.removeItem('extractedColors')
       }
       applyWallpaper()
     } catch (e) {
@@ -179,13 +192,16 @@ export const useThemeStore = defineStore('theme', () => {
     theme,
     sourceColor,
     wallpaper,
+    wallpaperType,
     wallpaperOpacity,
     wallpaperBlur,
+    extractedColors,
     isDark,
     toggleTheme,
     setSourceColor,
     setWallpaper,
     setWallpaperOpacity,
-    setWallpaperBlur
+    setWallpaperBlur,
+    setExtractedColors
   }
 })
