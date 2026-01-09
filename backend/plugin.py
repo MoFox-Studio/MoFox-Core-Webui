@@ -64,7 +64,7 @@ class WebUIAuthPlugin(BasePlugin):
     # 插件配置
     enable_plugin: bool = True
     dependencies: list[str] = []
-    python_dependencies: list[str] = ["uvicorn", "fastapi", "psutil"]
+    python_dependencies: list[str] = ["uvicorn", "fastapi", "psutil", "websockets"]
     config_file_name: str = "config.toml"
 
     # 配置模式定义

@@ -11,10 +11,12 @@ from typing import Optional
 
 import httpx
 import uvicorn
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+import websockets
+from websockets.exceptions import ConnectionClosed
 
 from src.common.logger import get_logger
 
@@ -162,6 +164,64 @@ def create_discovery_app(main_host: str, main_port: int) -> FastAPI:
                 status_code=500,
                 media_type="application/json"
             )
+    
+    # 🌟 WebSocket 代理：将 WebSocket 连接转发到主程序
+    @app.websocket("/plugins/{path:path}")
+    async def websocket_proxy(websocket: WebSocket, path: str):
+        """
+        将 WebSocket 连接代理到主程序
+        前端连接 ws://hostname:12138/plugins/webui_backend/log_viewer/realtime
+        """
+        await websocket.accept()
+        
+        # 构建目标 WebSocket URL
+        target_url = f"ws://{main_host}:{main_port}/plugins/{path}"
+        
+        # 获取查询参数
+        query_string = websocket.scope.get("query_string", b"").decode()
+        if query_string:
+            target_url += f"?{query_string}"
+        
+        logger.debug(f"代理 WebSocket 连接: {target_url}")
+        
+        try:
+            # 连接到主程序的 WebSocket
+            async with websockets.connect(target_url) as backend_ws:
+                # 创建两个任务：前端->后端 和 后端->前端
+                async def forward_to_backend():
+                    """转发前端消息到后端"""
+                    try:
+                        while True:
+                            data = await websocket.receive_text()
+                            await backend_ws.send(data)
+                    except (WebSocketDisconnect, ConnectionClosed):
+                        pass
+                    except Exception as e:
+                        logger.debug(f"WebSocket 前端->后端转发错误: {e}")
+                
+                async def forward_to_frontend():
+                    """转发后端消息到前端"""
+                    try:
+                        async for message in backend_ws:
+                            await websocket.send_text(message)
+                    except (WebSocketDisconnect, ConnectionClosed):
+                        pass
+                    except Exception as e:
+                        logger.debug(f"WebSocket 后端->前端转发错误: {e}")
+                
+                # 并发运行两个转发任务
+                await asyncio.gather(
+                    forward_to_backend(),
+                    forward_to_frontend(),
+                    return_exceptions=True
+                )
+                
+        except Exception as e:
+            logger.error(f"WebSocket 代理连接失败 [{target_url}]: {e}")
+            try:
+                await websocket.close(code=1011, reason=f"后端连接失败: {str(e)}")
+            except Exception:
+                pass
     
     # 最后挂载静态文件，避免拦截API路由
     # 检查是否存在编译好的前端静态文件

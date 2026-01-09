@@ -347,9 +347,9 @@ const connectWebSocket = async () => {
 
   connecting.value = true
   try {
-    // 动态获取服务器信息
-    const serverInfo = await getServerInfo()
-    const wsUrl = `ws://${serverInfo.host}:${serverInfo.port}/plugins/webui_backend/log_viewer/realtime`
+    // 使用相对路径，自动通过代理服务器转发（开发环境走Vite代理，生产环境走发现服务器代理）
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const wsUrl = `${protocol}//${window.location.host}/plugins/webui_backend/log_viewer/realtime`
     
     console.log('正在连接WebSocket:', wsUrl)
     websocket.value = new WebSocket(wsUrl)
