@@ -845,9 +845,15 @@ const getPresetStyle = (preset: any) => {
   gap: 48px;
 }
 
+.config-section {
+  background: var(--md-sys-color-surface-container);
+  border-radius: 32px;
+  padding: 24px;
+}
+
 .config-section h2 {
   font-size: 20px;
-  font-weight: 400;
+  font-weight: 500;
   color: var(--text-primary);
   margin: 0 0 24px 0;
 }
@@ -862,11 +868,11 @@ const getPresetStyle = (preset: any) => {
 .preview-card {
   width: 300px;
   height: 200px;
-  background: var(--md-sys-color-surface);
-  border-radius: 16px;
-  border: 1px solid var(--border-color);
+  background: var(--md-sys-color-surface-container);
+  border-radius: 32px;
+  /* border: 1px solid var(--border-color); Removed border for cleaner look */
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+  box-shadow: none; /* Flat style */
   display: flex;
   flex-direction: column;
 }
@@ -1382,8 +1388,8 @@ const getPresetStyle = (preset: any) => {
 .wallpaper-preview {
   width: 240px;
   height: 135px;
-  background-color: var(--md-sys-color-surface-container);
-  border-radius: 12px;
+  background-color: var(--md-sys-color-surface-container-high);
+  border-radius: 20px;
   overflow: hidden;
   position: relative;
   display: flex;

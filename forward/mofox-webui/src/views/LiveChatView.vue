@@ -21,7 +21,7 @@
 <template>
   <div class="live-chat-view">
     <!-- 左侧：聊天流列表 -->
-    <aside class="stream-panel m3-card">
+    <aside class="stream-panel">
       <div class="panel-header">
         <div class="header-content">
           <span class="material-symbols-rounded">forum</span>
@@ -97,7 +97,7 @@
     <!-- 右侧：聊天区域 -->
     <main class="chat-panel">
       <!-- 顶部栏 -->
-      <header class="chat-header m3-card">
+      <header class="chat-header">
         <div v-if="selectedStream" class="header-content">
           <div class="stream-icon large">
             <span class="material-symbols-rounded">
@@ -205,7 +205,7 @@
       </div>
 
       <!-- 消息输入区域 -->
-      <div v-if="selectedStream" class="input-area m3-card">
+      <div v-if="selectedStream" class="input-area">
         <div class="input-toolbar">
           <button class="m3-icon-button" @click="showImageUpload = true" title="发送图片">
             <span class="material-symbols-rounded">image</span>
@@ -616,15 +616,15 @@ watch(selectedStream, (newStream) => {
 <style scoped>
 /* Global Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
   background: var(--md-sys-color-outline-variant);
-  border-radius: 4px;
+  border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--md-sys-color-outline);
@@ -633,12 +633,13 @@ watch(selectedStream, (newStream) => {
 .live-chat-view {
   display: flex;
   height: 100%;
-  gap: 16px;
-  padding: 16px;
-  background-color: var(--md-sys-color-background);
+  width: 100%;
+  background-color: transparent; /* Changed from surface to transparent to show wallpaper if any */
   box-sizing: border-box;
-  border-radius: 28px;
   overflow: hidden;
+  border-radius: 0;
+  gap: 16px; /* Restore gap */
+  padding: 0; /* Remove padding if we want it to fit in the layout container, see Dashboard.vue padding */
 }
 
 /* 左侧面板 */
@@ -647,19 +648,18 @@ watch(selectedStream, (newStream) => {
   min-width: 280px;
   display: flex;
   flex-direction: column;
-  background: var(--md-sys-color-surface);
-  border-radius: 24px;
+  background: var(--md-sys-color-surface-container); 
+  border-radius: 32px; /* Card style */
+  box-shadow: none; /* Flat style as per dashboard */
+  border: none;
   overflow: hidden;
-  border: 1px solid var(--md-sys-color-outline-variant);
-  box-shadow: var(--md-sys-elevation-1);
 }
 
 .panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 24px;
-  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+  padding: 24px;
 }
 
 .header-content {
@@ -670,8 +670,8 @@ watch(selectedStream, (newStream) => {
 
 .header-content h2 {
   margin: 0;
-  font-size: 22px;
-  font-weight: 400;
+  font-size: 20px;
+  font-weight: 600;
   color: var(--md-sys-color-on-surface);
 }
 
@@ -679,15 +679,16 @@ watch(selectedStream, (newStream) => {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 16px;
-  background: var(--md-sys-color-surface-variant);
-  margin: 16px;
-  border-radius: 28px;
-  transition: box-shadow 0.2s;
+  padding: 10px 16px;
+  background: var(--md-sys-color-surface-container-high);
+  margin: 0 16px 16px;
+  border-radius: 24px;
+  transition: all 0.2s;
 }
 
 .search-box:focus-within {
-  box-shadow: 0 0 0 2px var(--md-sys-color-primary);
+  background: var(--md-sys-color-surface-container-highest);
+  box-shadow: none; /* Removed glow, using background change */
 }
 
 .search-box input {
@@ -695,81 +696,87 @@ watch(selectedStream, (newStream) => {
   border: none;
   background: none;
   outline: none;
-  font-size: 16px;
+  font-size: 14px;
   color: var(--md-sys-color-on-surface-variant);
 }
 
 .platform-filter {
   display: flex;
   gap: 8px;
-  padding: 0 16px 16px;
+  padding: 0 16px 12px;
   flex-wrap: wrap;
 }
 
 .filter-chip {
-  padding: 6px 16px;
-  border: 1px solid var(--md-sys-color-outline);
+  padding: 6px 12px;
+  border: 1px solid var(--md-sys-color-outline-variant);
   border-radius: 8px;
   background: transparent;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--md-sys-color-on-surface-variant);
   transition: all 0.2s;
 }
 
 .filter-chip:hover {
-  background: var(--md-sys-color-surface-variant);
+  background: var(--md-sys-color-surface-container-high);
 }
 
 .filter-chip.active {
-  background: var(--md-sys-color-secondary-container);
-  color: var(--md-sys-color-on-secondary-container);
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
   border-color: transparent;
 }
 
 .stream-list {
   flex: 1;
   overflow-y: auto;
-  padding: 8px 16px;
+  padding: 8px; /* Reduced padding */
 }
 
 .stream-item {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 12px 16px;
-  border-radius: 16px;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
   cursor: pointer;
   transition: background-color 0.2s;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .stream-item:hover {
-  background-color: var(--md-sys-color-surface-variant);
+  background-color: var(--md-sys-color-surface-container-high);
 }
 
 .stream-item.active {
-  background-color: var(--md-sys-color-secondary-container);
-  color: var(--md-sys-color-on-secondary-container);
+  background-color: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
 }
 
 .stream-icon {
-  width: 48px;
-  height: 48px;
+  width: 42px;
+  height: 42px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--md-sys-color-primary-container);
-  color: var(--md-sys-color-on-primary-container);
+  background: var(--md-sys-color-surface-container-highest);
+  color: var(--md-sys-color-primary);
   border-radius: 50%;
-  font-size: 24px;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.stream-item.active .stream-icon {
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
 }
 
 .stream-icon.large {
-  width: 56px;
-  height: 56px;
-  font-size: 28px;
+  width: 48px;
+  height: 48px;
+  font-size: 24px;
 }
 
 .stream-info {
@@ -777,7 +784,7 @@ watch(selectedStream, (newStream) => {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .stream-header-row {
@@ -788,7 +795,7 @@ watch(selectedStream, (newStream) => {
 }
 
 .stream-name {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
@@ -813,31 +820,46 @@ watch(selectedStream, (newStream) => {
 
 .platform-badge {
   padding: 2px 6px;
-  background: var(--md-sys-color-tertiary-container);
-  color: var(--md-sys-color-on-tertiary-container);
+  background: var(--md-sys-color-surface-container-highest);
+  color: var(--md-sys-color-on-surface-variant);
   border-radius: 4px;
-  font-size: 11px;
-  font-weight: 500;
+  font-size: 10px;
+  font-weight: 600;
   text-transform: uppercase;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   max-width: 100%;
 }
 
 .unread-badge {
-  min-width: 24px;
-  height: 24px;
+  min-width: 20px;
+  height: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--md-sys-color-error);
   color: var(--md-sys-color-on-error);
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
-  padding: 0 6px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 0 5px;
 }
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: var(--md-sys-color-on-surface-variant);
+  opacity: 0.7;
+}
+
+.empty-state .material-symbols-rounded {
+   font-size: 48px;
+   margin-bottom: 8px;
+   opacity: 0.5;
+}
+
 
 /* 右侧聊天面板 */
 .chat-panel {
@@ -845,18 +867,22 @@ watch(selectedStream, (newStream) => {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  gap: 16px;
+  background: var(--md-sys-color-surface-container); /* Match card background */
+  border-radius: 32px; /* Card style */
+  overflow: hidden;
 }
 
 .chat-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 24px;
-  background: var(--md-sys-color-surface);
-  border-radius: 24px;
-  border: 1px solid var(--md-sys-color-outline-variant);
-  box-shadow: var(--md-sys-elevation-1);
+  padding: 24px;
+  background: transparent;
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: 0;
+  box-shadow: none;
+  height: 80px; /* Slightly taller header */
+  box-sizing: border-box;
 }
 
 .chat-header .stream-id {
@@ -869,7 +895,8 @@ watch(selectedStream, (newStream) => {
   display: flex;
   align-items: center;
   gap: 12px;
-  font-size: 22px;
+  font-size: 18px;
+  font-weight: 600;
   color: var(--md-sys-color-on-surface);
 }
 
@@ -883,8 +910,8 @@ watch(selectedStream, (newStream) => {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
-  border-radius: 16px;
+  padding: 4px 10px;
+  border-radius: 100px;
   font-size: 12px;
   font-weight: 500;
   background: var(--md-sys-color-error-container);
@@ -900,11 +927,11 @@ watch(selectedStream, (newStream) => {
 .messages-container {
   flex: 1;
   overflow-y: auto;
-  background: var(--md-sys-color-surface);
-  border-radius: 24px;
-  padding: 24px;
-  border: 1px solid var(--md-sys-color-outline-variant);
-  box-shadow: var(--md-sys-elevation-1);
+  background: transparent;
+  padding: 24px 48px; /* More padding */
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .welcome-state,
@@ -922,21 +949,31 @@ watch(selectedStream, (newStream) => {
 .welcome-state .material-symbols-rounded,
 .empty-messages .material-symbols-rounded {
   font-size: 64px;
-  opacity: 0.3;
+  opacity: 0.1; /* More subtle */
+  color: var(--md-sys-color-on-surface);
+}
+
+.welcome-state h3 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 500;
+    color: var(--md-sys-color-on-surface);
 }
 
 .messages-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px; /* Increased gap for better reading */
+  padding-bottom: 20px;
 }
 
 .message {
   max-width: 70%;
-  padding: 12px 16px;
+  padding: 12px 18px;
   border-radius: 20px;
   position: relative;
   animation: fadeIn 0.3s ease-out;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05); /* Subtle shadow */
 }
 
 @keyframes fadeIn {
@@ -946,8 +983,8 @@ watch(selectedStream, (newStream) => {
 
 .message.is-incoming {
   align-self: flex-start;
-  background: var(--md-sys-color-surface-variant);
-  color: var(--md-sys-color-on-surface-variant);
+  background: var(--md-sys-color-surface-container-low); /* Distinct from background */
+  color: var(--md-sys-color-on-surface);
   border-bottom-left-radius: 4px;
 }
 
@@ -959,26 +996,26 @@ watch(selectedStream, (newStream) => {
 }
 
 .message.is-bot {
-  background: var(--md-sys-color-tertiary-container);
-  color: var(--md-sys-color-on-tertiary-container);
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
 }
 
 .message.is-webui {
-  background: var(--md-sys-color-secondary-container);
-  color: var(--md-sys-color-on-secondary-container);
+  background: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
 }
 
 .message-header {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
   font-size: 12px;
   opacity: 0.8;
 }
 
 .user-name {
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .sender-badge {
@@ -989,13 +1026,13 @@ watch(selectedStream, (newStream) => {
 }
 
 .sender-badge.bot {
-  background: var(--md-sys-color-tertiary);
-  color: var(--md-sys-color-on-tertiary);
+  background: var(--md-sys-color-secondary);
+  color: var(--md-sys-color-on-secondary);
 }
 
 .sender-badge.webui {
-  background: var(--md-sys-color-secondary);
-  color: var(--md-sys-color-on-secondary);
+  background: var(--md-sys-color-tertiary);
+  color: var(--md-sys-color-on-tertiary);
 }
 
 .message-time {
@@ -1028,15 +1065,15 @@ watch(selectedStream, (newStream) => {
   gap: 8px;
   padding: 8px 12px;
   margin-bottom: 8px;
-  background: rgba(0, 0, 0, 0.1);
-  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
   font-size: 13px;
   cursor: pointer;
   border-left: 3px solid currentColor;
 }
 
 .reply-preview:hover {
-  background: rgba(0, 0, 0, 0.15);
+  background: rgba(0, 0, 0, 0.1);
 }
 
 /* 输入区域 */
@@ -1044,64 +1081,81 @@ watch(selectedStream, (newStream) => {
   display: flex;
   align-items: flex-end;
   gap: 12px;
-  padding: 16px 24px;
-  background: var(--md-sys-color-surface);
-  border-radius: 24px;
-  border: 1px solid var(--md-sys-color-outline-variant);
-  box-shadow: var(--md-sys-elevation-2);
-}
-
-.input-toolbar {
-  display: flex;
-  gap: 8px;
-  padding-bottom: 4px;
+  padding: 24px;
+  background: transparent;
+  border-top: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: 0;
+  box-shadow: none;
+  /* Ensure it stays at bottom and full width */
+  margin-top: auto; 
 }
 
 .input-wrapper {
   flex: 1;
+  background: var(--md-sys-color-surface-container-high);
+  border-radius: 28px;
+  padding: 4px;
+  display: flex;
+  align-items: center;
 }
 
 .input-wrapper textarea {
   width: 100%;
   border: none;
-  background: var(--md-sys-color-surface-variant);
+  background: transparent;
   border-radius: 20px;
   padding: 12px 16px;
   resize: none;
   outline: none;
-  font-size: 16px;
+  font-size: 15px;
   font-family: inherit;
-  color: var(--md-sys-color-on-surface-variant);
+  color: var(--md-sys-color-on-surface);
   max-height: 150px;
   overflow-y: hidden;
-  transition: background-color 0.2s;
 }
 
 .input-wrapper textarea:focus {
-  background: var(--md-sys-color-surface-container-high);
+  background: transparent;
 }
 
 .send-button {
-  border-radius: 24px;
-  width: 56px;
-  height: 56px;
+  border-radius: 28px;
+  width: 48px;
+  height: 48px;
   padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: var(--md-sys-elevation-1);
-  transition: transform 0.1s, box-shadow 0.2s;
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  box-shadow: none;
+  transition: transform 0.1s, background-color 0.2s;
+  border: none;
+  cursor: pointer;
+}
+
+.send-button:hover {
+  background: var(--md-sys-color-primary-container); /* Check if this is darker or lighter, usually lighter/different */
+  color: var(--md-sys-color-on-primary-container);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 }
 
 .send-button:active {
   transform: scale(0.95);
 }
 
+.send-button:disabled {
+  background: var(--md-sys-color-surface-variant);
+  color: var(--md-sys-color-on-surface-variant);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
 /* 加载动画 */
 .spinner {
   width: 48px;
   height: 48px;
-  border: 4px solid var(--md-sys-color-surface-variant);
+  border: 4px solid var(--md-sys-color-surface-container-high);
   border-top-color: var(--md-sys-color-primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -1117,14 +1171,14 @@ watch(selectedStream, (newStream) => {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 10px 24px;
+  padding: 8px 16px;
   border: none;
-  border-radius: 100px;
+  border-radius: 20px;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
-  height: 40px;
+  height: 36px;
 }
 
 .m3-button.filled {
@@ -1133,7 +1187,7 @@ watch(selectedStream, (newStream) => {
 }
 
 .m3-button.filled:hover {
-  box-shadow: var(--md-sys-elevation-1);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
 .m3-button.filled:disabled {
@@ -1154,7 +1208,7 @@ watch(selectedStream, (newStream) => {
 }
 
 .m3-button.icon-only:hover {
-  background: var(--md-sys-color-surface-variant);
+  background: var(--md-sys-color-surface-container-high);
   color: var(--md-sys-color-on-surface);
 }
 
@@ -1174,11 +1228,11 @@ watch(selectedStream, (newStream) => {
 }
 
 .m3-icon-button:hover {
-  background: var(--md-sys-color-surface-variant);
+  background: var(--md-sys-color-surface-container-high);
   color: var(--md-sys-color-on-surface);
 }
 
 .m3-card {
-  /* Base card style, overridden by specific classes */
+  /* Base card style, kept for compatibility if used elsewhere */
 }
 </style>
