@@ -1855,7 +1855,7 @@ function getSectionIcon(sectionName: string): string {
 /* ==================== 卡片样式 ==================== */
 .m3-card {
   background: var(--md-sys-color-surface-container);
-  border-radius: 16px;
+  border-radius: 32px;
   box-shadow: var(--md-sys-elevation-0);
 }
 

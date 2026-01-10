@@ -371,6 +371,7 @@ function showToast(msg: string, type: 'success' | 'error' = 'success') {
   display: flex;
   flex-direction: column;
   height: 100%;
+  padding: 16px; /* Added padding */
   gap: 16px;
   animation: fadeIn 0.4s cubic-bezier(0.2, 0, 0, 1);
 }
@@ -387,7 +388,7 @@ function showToast(msg: string, type: 'success' | 'error' = 'success') {
   justify-content: space-between;
   padding: 24px;
   background: var(--md-sys-color-surface-container);
-  border-radius: 24px;
+  border-radius: 32px;
 }
 
 .header-left {
@@ -474,8 +475,8 @@ function showToast(msg: string, type: 'success' | 'error' = 'success') {
 /* 编辑器区域 */
 .visual-editor, .source-editor {
   flex: 1;
-  background: var(--md-sys-color-surface-container-low);
-  border-radius: 24px;
+  background: var(--md-sys-color-surface-container);
+  border-radius: 32px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -492,7 +493,7 @@ function showToast(msg: string, type: 'success' | 'error' = 'success') {
   align-items: center;
   justify-content: space-between;
   padding: 12px 24px;
-  background: var(--md-sys-color-surface-container);
+  background: transparent;
   border-bottom: 1px solid var(--md-sys-color-outline-variant);
 }
 

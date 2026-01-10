@@ -411,6 +411,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   animation: fadeIn 0.3s ease;
+  padding: 16px; /* Global padding like dashboard */
 }
 
 @keyframes fadeIn {
@@ -432,10 +433,10 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px;
-  background: var(--md-sys-color-surface);
-  border-radius: 16px;
-  margin: 16px 16px 0 16px;
+  padding: 24px;
+  background: var(--md-sys-color-surface-container);
+  border-radius: 32px;
+  margin: 0; /* Align with dashboard grid */
 }
 
 .header-left {
@@ -517,9 +518,9 @@ onMounted(() => {
   flex: 1;
   overflow: auto;
   padding: 24px;
-  background: var(--md-sys-color-surface-container-low);
-  border-radius: 16px;
-  margin: 16px;
+  background: var(--md-sys-color-surface-container);
+  border-radius: 32px;
+  margin: 16px 0 0 0; /* Align with dashboard grid */
 }
 
 /* 源码编辑器 */
@@ -528,10 +529,10 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  margin: 16px;
-  background: var(--md-sys-color-surface-container-low);
-  border-radius: 16px;
-  border: 1px solid var(--md-sys-color-outline-variant);
+  margin: 16px 0 0 0;
+  background: var(--md-sys-color-surface-container);
+  border-radius: 32px;
+  border: none; /* Removed border */
 }
 
 .source-toolbar {
