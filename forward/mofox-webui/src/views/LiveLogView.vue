@@ -595,22 +595,34 @@ onUnmounted(() => {
 
 <style scoped>
 .live-log-view {
-  height: 100%;
   display: flex;
   flex-direction: column;
+  height: 100%;
+  padding: 16px;
+  gap: 16px;
+  animation: fadeIn 0.4s cubic-bezier(0.2, 0, 0, 1);
   background: var(--md-sys-color-surface);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* 页面标题 */
 .page-header {
-  background: transparent;
-  border-bottom: none;
-  padding: 24px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px;
+  background: var(--md-sys-color-surface-container);
+  border-radius: 32px;
+  flex-shrink: 0;
 }
 
 .header-content {
-  max-width: 1400px;
-  margin: 0 auto;
+  width: 100%;
+  margin: 0;
 }
 
 .title-group {
@@ -678,25 +690,23 @@ onUnmounted(() => {
 .content-wrapper {
   flex: 1;
   overflow: hidden;
-  padding: 24px 32px;
+  padding: 0;
   display: flex;
   flex-direction: column;
   min-height: 0;
 }
 
 .log-container {
-  max-width: 1400px;
-  margin: 0 auto;
   width: 100%;
   height: 100%;
-  max-height: calc(100vh - 220px);
+  max-height: none;
   display: flex;
   flex-direction: column;
-  background: var(--md-sys-color-surface-container-low);
-  border-radius: 16px;
-  border: 1px solid var(--md-sys-color-outline-variant);
+  background: var(--md-sys-color-surface-container);
+  border-radius: 32px;
+  border: none;
   overflow: hidden;
-  box-shadow: var(--md-sys-elevation-2);
+  box-shadow: none;
 }
 
 /* 工具栏 */

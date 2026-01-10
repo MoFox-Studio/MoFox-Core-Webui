@@ -570,9 +570,10 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 24px;
-  padding: 8px;
+  padding: 16px;
   animation: fadeIn 0.4s cubic-bezier(0.2, 0, 0, 1);
   overflow-y: auto;
+  background: var(--md-sys-color-surface);
 }
 
 @keyframes fadeIn {
@@ -587,7 +588,7 @@ onMounted(() => {
   align-items: center;
   padding: 24px;
   background: var(--md-sys-color-surface-container);
-  border-radius: 24px;
+  border-radius: 32px;
 }
 
 .header-content h1 {
@@ -621,6 +622,7 @@ onMounted(() => {
   align-items: center;
   gap: 16px;
   border: none;
+  border-radius: 24px;
 }
 
 .stat-card.primary-container {
@@ -800,6 +802,7 @@ onMounted(() => {
   transition: all 0.2s;
   cursor: pointer;
   border: 1px solid transparent;
+  border-radius: 24px;
 }
 
 .plugin-card:hover {

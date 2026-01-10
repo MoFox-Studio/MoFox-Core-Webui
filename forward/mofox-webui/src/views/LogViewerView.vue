@@ -497,8 +497,10 @@ onMounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
+  padding: 16px;
   gap: 16px;
   animation: fadeIn 0.4s cubic-bezier(0.2, 0, 0, 1);
+  background: var(--md-sys-color-surface);
 }
 
 @keyframes fadeIn {
@@ -508,10 +510,17 @@ onMounted(() => {
 
 /* 页面标题 */
 .page-header {
-  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px;
+  background: var(--md-sys-color-surface-container);
+  border-radius: 32px;
+  flex-shrink: 0;
 }
 
 .header-content {
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -575,6 +584,10 @@ onMounted(() => {
   overflow: hidden;
   height: 100%;
   padding: 0;
+  background: var(--md-sys-color-surface-container);
+  border-radius: 32px;
+  border: none;
+  box-shadow: none;
 }
 
 .panel-header {
@@ -654,6 +667,10 @@ onMounted(() => {
   overflow: hidden;
   height: 100%;
   padding: 0;
+  background: var(--md-sys-color-surface-container);
+  border-radius: 32px;
+  border: none;
+  box-shadow: none;
 }
 
 /* 工具栏 */

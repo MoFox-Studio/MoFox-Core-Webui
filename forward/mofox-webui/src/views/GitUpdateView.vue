@@ -145,14 +145,15 @@ onMounted(() => {
 
 <style scoped>
 .update-view {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 32px 24px;
+  width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  min-height: 100vh;
+  padding: 16px;
+  gap: 16px;
   animation: fadeIn 0.3s ease;
+  background: var(--md-sys-color-surface);
+  overflow-y: auto;
 }
 
 @keyframes fadeIn {
@@ -168,7 +169,8 @@ onMounted(() => {
   gap: 20px;
   padding: 24px;
   background: var(--md-sys-color-surface-container);
-  border-radius: 24px;
+  border-radius: 32px;
+  flex-shrink: 0;
 }
 
 .header-content {
@@ -212,7 +214,8 @@ onMounted(() => {
   gap: 8px;
   padding: 8px;
   background: var(--md-sys-color-surface-container-low);
-  border-radius: 16px;
+  border-radius: 32px;
+  flex-shrink: 0;
 }
 
 .tab-item {
@@ -223,7 +226,7 @@ onMounted(() => {
   gap: 8px;
   padding: 12px 16px;
   border: none;
-  border-radius: 12px;
+  border-radius: 24px;
   background: transparent;
   color: var(--md-sys-color-on-surface-variant);
   font-size: 14px;
