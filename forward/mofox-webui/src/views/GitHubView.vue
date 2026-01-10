@@ -349,15 +349,19 @@ onMounted(() => {
 
 <style scoped>
 .github-view {
-  padding: 2rem;
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
+  height: 100%;
+  padding: 16px;
+  overflow-y: auto;
+  background: var(--md-sys-color-surface);
 }
 
 .github-container {
   display: flex;
   flex-direction: column;
   gap: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .github-header {
@@ -436,13 +440,13 @@ onMounted(() => {
 
 .github-card {
   background: var(--md-sys-color-surface-container);
-  border-radius: 1.5rem;
+  border-radius: 2rem;
   padding: 3rem;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: none;
   position: relative;
   overflow: hidden;
 }
