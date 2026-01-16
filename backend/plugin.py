@@ -73,20 +73,8 @@ class WebUIAuthPlugin(BasePlugin):
             "enable": ConfigField(type=bool, default=True, description="是否启用插件"),
         },
         "discovery": {
-            "port": ConfigField(type=int, default=12138, description="发现服务器端口（固定端口，供前端发现主程序）"),
-            "host": ConfigField(type=str, default="0.0.0.0", description="发现服务器绑定地址"),
-        },
-        "auth": {
-            "api_keys": ConfigField(
-                type=list, default=["mofox-default-key"], description="有效的API Key列表，用于验证前端请求"
-            ),
-            "session_timeout_minutes": ConfigField(
-                type=int, default=1440, description="会话超时时间（分钟），默认24小时"
-            ),
-        },
-        "main_server": {
-            "host": ConfigField(type=str, default="127.0.0.1", description="主程序HTTP服务器地址"),
-            "port": ConfigField(type=int, default=8000, description="主程序HTTP服务器端口"),
+            "port": ConfigField(type=int, default=12138, description="WebUI发现服务器端口"),
+            "host": ConfigField(type=str, default="0.0.0.0", description="WebUI发现服务器绑定地址"),
         },
     }
 
@@ -98,10 +86,7 @@ class WebUIAuthPlugin(BasePlugin):
         """插件加载完成后的回调"""
         logger.info("WebUI认证插件已加载")
         logger.info(
-            f"发现服务器配置: {self.get_config('discovery.host', '0.0.0.0')}:{self.get_config('discovery.port', 12138)}"
-        )
-        logger.info(
-            f"主程序配置: {self.get_config('main_server.host', '127.0.0.1')}:{self.get_config('main_server.port', 8000)}"
+            f"WebUI发现服务器配置: {self.get_config('discovery.host', '0.0.0.0')}:{self.get_config('discovery.port', 12138)}"
         )
 
     def get_plugin_components(self) -> List:

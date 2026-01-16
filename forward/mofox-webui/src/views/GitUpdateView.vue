@@ -81,7 +81,7 @@ import UIUpdateTab from '@/components/update/UIUpdateTab.vue'
 import MainUpdateTab from '@/components/update/MainUpdateTab.vue'
 import GitSettingsTab from '@/components/update/GitSettingsTab.vue'
 import RestartDialog from '@/components/update/RestartDialog.vue'
-import { restartBot } from '@/api'
+import { restartBot } from '@/api/dashboard'
 
 // 标签页配置
 const tabs = [
@@ -92,11 +92,6 @@ const tabs = [
 
 // 当前激活的标签页
 const activeTab = ref('ui')
-
-// 组件引用
-const uiUpdateTabRef = ref<InstanceType<typeof UIUpdateTab> | null>(null)
-const mainUpdateTabRef = ref<InstanceType<typeof MainUpdateTab> | null>(null)
-const gitSettingsTabRef = ref<InstanceType<typeof GitSettingsTab> | null>(null)
 
 // 重启弹窗状态
 const showRestartDialog = ref(false)
