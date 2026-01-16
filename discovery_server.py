@@ -22,9 +22,6 @@ from src.common.logger import get_logger
 
 logger = get_logger("WebUIAuth.DiscoveryServer")
 
-# 发现服务器的固定端口
-DISCOVERY_PORT = 12138
-
 # 全局变量存储服务器实例
 _server_instance: Optional[uvicorn.Server] = None
 _server_task: Optional[asyncio.Task] = None
@@ -251,7 +248,8 @@ def create_discovery_app(main_host: str, main_port: int) -> FastAPI:
 async def start_discovery_server(
     main_host: str,
     main_port: int,
-    discovery_host: str = "0.0.0.0"
+    discovery_host: str = "0.0.0.0",
+    discovery_port: int = 12138
 ) -> None:
     """
     启动发现服务器
@@ -260,6 +258,7 @@ async def start_discovery_server(
         main_host: 主程序的主机地址
         main_port: 主程序的端口
         discovery_host: 发现服务器绑定的主机地址，默认0.0.0.0（允许外部访问）
+        discovery_port: 发现服务器绑定的端口，默认12138
     """
     global _server_instance, _server_task
     
@@ -268,14 +267,14 @@ async def start_discovery_server(
     config = uvicorn.Config(
         app=app,
         host=discovery_host,
-        port=DISCOVERY_PORT,
+        port=discovery_port,
         log_level="warning",  # 减少日志输出
         access_log=False
     )
     
     _server_instance = uvicorn.Server(config)
     
-    logger.info(f"发现服务器启动在 http://{discovery_host}:{DISCOVERY_PORT}")
+    logger.info(f"发现服务器启动在 http://{discovery_host}:{discovery_port}")
     
     try:
         await _server_instance.serve()

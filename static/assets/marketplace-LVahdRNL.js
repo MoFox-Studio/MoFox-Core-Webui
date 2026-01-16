@@ -1,1 +1,0 @@
-import{ab as e}from"./index-Dz5dMUCJ.js";function l(){return e.get("marketplace/list")}function r(t){return e.get(`marketplace/detail/${encodeURIComponent(t)}`)}function o(t,a,n=!0){return e.post("marketplace/install",{plugin_id:t,repository_url:a,auto_load:n})}export{r as a,l as g,o as i};

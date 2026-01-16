@@ -3,6 +3,7 @@
 提供仪表盘统计数据API接口
 """
 
+import aiohttp
 import time
 from datetime import datetime, timedelta
 from typing import  Literal, Optional
@@ -21,6 +22,29 @@ logger = get_logger("WebUIAuth.StatsRouter")
 
 # 记录启动时间
 _start_time = time.time()
+
+# 初始化CPU使用率监控（第一次调用会返回0，之后才有准确值）
+try:
+    _process = psutil.Process()
+    _process.cpu_percent()  # 初始化调用
+except Exception:
+    _process = None
+
+# 一言API类型映射
+HITOKOTO_TYPE_MAP = {
+    "a": "动画",
+    "b": "漫画",
+    "c": "游戏",
+    "d": "文学",
+    "e": "原创",
+    "f": "来自网络",
+    "g": "其他",
+    "h": "影视",
+    "i": "诗词",
+    "j": "网易云",
+    "k": "哲学",
+    "l": "抖机灵",
+}
 
 
 # ==================== 响应模型 ====================
@@ -59,6 +83,7 @@ class SystemStatsResponse(BaseModel):
 
     uptime_seconds: float
     memory_usage_mb: float
+    total_memory_mb: float
     cpu_percent: float
 
 
@@ -110,6 +135,15 @@ class MonthlyPlanResponse(BaseModel):
     plans: list[str]
     total: int
     month: str
+
+
+class DailyQuoteResponse(BaseModel):
+    """每日名言响应"""
+
+    quote: str
+    author: str
+    category: str
+    date: str
 
 
 class LLMStatsResponse(BaseModel):
@@ -216,8 +250,9 @@ class WebUIStatsRouter(BaseRouterComponent):
                 chat_stats = chat_api.get_streams_summary()
 
                 # 获取系统统计
-                process = psutil.Process()
+                process = _process if _process else psutil.Process()
                 memory_info = process.memory_info()
+                total_memory = psutil.virtual_memory().total / (1024 * 1024)
 
                 return DashboardOverviewResponse(
                     plugins=PluginStatsResponse(
@@ -242,6 +277,7 @@ class WebUIStatsRouter(BaseRouterComponent):
                     system=SystemStatsResponse(
                         uptime_seconds=time.time() - _start_time,
                         memory_usage_mb=memory_info.rss / (1024 * 1024),
+                        total_memory_mb=total_memory,
                         cpu_percent=process.cpu_percent(),
                     ),
                 )
@@ -252,7 +288,7 @@ class WebUIStatsRouter(BaseRouterComponent):
                     plugins=PluginStatsResponse(loaded=0, registered=0, failed=0, enabled=0, disabled=0),
                     components=ComponentStatsResponse(total=0, enabled=0, disabled=0, by_type={}),
                     chats=ChatStatsResponse(total_streams=0, group_streams=0, private_streams=0, qq_streams=0),
-                    system=SystemStatsResponse(uptime_seconds=0, memory_usage_mb=0, cpu_percent=0),
+                    system=SystemStatsResponse(uptime_seconds=0, memory_usage_mb=0, total_memory_mb=0, cpu_percent=0),
                 )
 
         @self.router.get("/plugins", summary="获取插件列表", response_model=PluginListResponse)
@@ -299,13 +335,15 @@ class WebUIStatsRouter(BaseRouterComponent):
             获取系统运行状态
             """
             try:
-                process = psutil.Process()
+                process = _process if _process else psutil.Process()
                 memory_info = process.memory_info()
+                total_memory = psutil.virtual_memory().total
 
                 return {
                     "uptime_seconds": time.time() - _start_time,
                     "uptime_formatted": _format_uptime(time.time() - _start_time),
                     "memory_usage_mb": round(memory_info.rss / (1024 * 1024), 2),
+                    "total_memory_mb": round(total_memory / (1024 * 1024), 2),
                     "memory_usage_formatted": _format_memory(memory_info.rss),
                     "cpu_percent": process.cpu_percent(),
                     "threads": process.num_threads(),
@@ -316,6 +354,7 @@ class WebUIStatsRouter(BaseRouterComponent):
                     "uptime_seconds": 0,
                     "uptime_formatted": "0秒",
                     "memory_usage_mb": 0,
+                    "total_memory_mb": 0,
                     "memory_usage_formatted": "0 MB",
                     "cpu_percent": 0,
                     "threads": 0,
@@ -415,6 +454,68 @@ class WebUIStatsRouter(BaseRouterComponent):
                 logger.error(f"获取日程失败: {e}")
                 return ScheduleResponse(
                     date=date or datetime.now().strftime("%Y-%m-%d"), activities=[], current_activity=None
+                )
+
+        @self.router.get("/daily-quote", summary="获取每日名言", response_model=DailyQuoteResponse)
+        async def get_daily_quote(_=VerifiedDep):
+            """
+            获取每日名言（通过网络API）
+
+            使用一言API获取每日名言，如果失败则使用备用API或返回默认名言
+            """
+            try:
+                today = datetime.now().strftime("%Y-%m-%d")
+                
+                # 尝试从一言API获取
+                async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as client:
+                    try:
+                        # 使用一言API (hitokoto.cn)
+                        response = await client.get("https://v1.hitokoto.cn/", params={
+                            "encode": "json"
+                        })
+                        
+                        if response.status == 200:
+                            data = await response.json()
+                            # 获取类型并映射为中文
+                            type_code = data.get("type", "g")
+                            category = HITOKOTO_TYPE_MAP.get(type_code, "其他")
+                            return DailyQuoteResponse(
+                                quote=data.get("hitokoto", "Stay hungry, stay foolish."),
+                                author=data.get("from_who") or data.get("from", "Unknown"),
+                                category=category,
+                                date=today
+                            )
+                    except Exception as e:
+                        logger.warning(f"一言API调用失败: {e}")
+                        
+                    # 备用：尝试金山词霸每日一句
+                    try:
+                        response = await client.get("https://open.iciba.com/dsapi/")
+                        if response.status == 200:
+                            data = await response.json()
+                            return DailyQuoteResponse(
+                                quote=data.get("content", "Stay hungry, stay foolish."),
+                                author=data.get("note", "金山词霸"),
+                                category="励志",
+                                date=today
+                            )
+                    except Exception as e:
+                        logger.warning(f"金山词霸API调用失败: {e}")
+                
+                # 如果所有API都失败，返回默认名言
+                return DailyQuoteResponse(
+                    quote="Stay hungry, stay foolish.",
+                    author="Steve Jobs",
+                    category="励志",
+                    date=today,
+                )
+            except Exception as e:
+                logger.error(f"获取每日名言失败: {e}")
+                return DailyQuoteResponse(
+                    quote="Stay hungry, stay foolish.",
+                    author="Steve Jobs",
+                    category="励志",
+                    date=datetime.now().strftime("%Y-%m-%d"),
                 )
 
         @self.router.get("/monthly-plans", summary="获取月度计划")

@@ -14,7 +14,7 @@ from src.plugin_system import BaseEventHandler, EventType
 from src.plugin_system.base.base_event import HandlerResult
 from src.common.server import get_global_server
 
-from ..discovery_server import start_discovery_server, DISCOVERY_PORT
+from ..discovery_server import start_discovery_server
 
 # 导入后端存储管理
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -71,7 +71,7 @@ class WebUIStartupHandler(BaseEventHandler):
 
     handler_name = "webui_startup_handler"
     handler_description = "在系统启动时启动WebUI发现服务器"
-    weight = 10  # 权重，确保在其他处理器之前执行
+    weight = 0  # 权重，确保在其他处理器之前执行
     intercept_message = False  # 不拦截消息
     init_subscribe = [EventType.ON_START]  # 订阅启动事件
 
@@ -86,20 +86,30 @@ class WebUIStartupHandler(BaseEventHandler):
             HandlerResult: 处理结果
         """
         try:
-            # 从环境变量或配置获取主程序的地址
-            # 这些值应该与主程序的配置一致
+            # 从全局server获取主程序的地址
             server = get_global_server()
             main_host = server.host
             main_port = server.port
+            
+            # 从插件配置读取发现服务器的地址
+            discovery_host = self.get_config('discovery.host', '0.0.0.0')
+            # 确保 discovery_port 为 int（配置可能返回 str、dict 或 None）
+            try:
+                discovery_port = int(self.get_config('discovery.port', 12138)) # type: ignore
+            except (TypeError, ValueError):
+                discovery_port = 12138
 
             logger.info("准备启动发现服务器...")
             logger.info(f"主程序配置: {main_host}:{main_port}")
-            logger.info(f"发现服务器端口: {DISCOVERY_PORT}") 
+            logger.info(f"发现服务器配置: {discovery_host}:{discovery_port}") 
 
             # 创建后台任务启动发现服务器
             task = asyncio.create_task(
                 start_discovery_server(
-                    main_host=main_host, main_port=main_port, discovery_host="0.0.0.0"
+                    main_host=main_host,
+                    main_port=main_port,
+                    discovery_host=discovery_host, # pyright: ignore[reportArgumentType]
+                    discovery_port=discovery_port
                 )
             )
 
@@ -127,14 +137,14 @@ class WebUIStartupHandler(BaseEventHandler):
 
                 # 延迟一小段时间后打开浏览器，确保服务器已启动
                 await asyncio.sleep(2)
-                open_initialization_page(main_host, DISCOVERY_PORT)
+                open_initialization_page(discovery_host, discovery_port) # pyright: ignore[reportArgumentType]
             else:
                 logger.info("✓ 系统已完成初始化配置")
 
             return HandlerResult(
                 success=True,
                 continue_process=True,
-                message=f"WebUI发现服务器已启动在端口 {DISCOVERY_PORT}",
+                message=f"WebUI发现服务器已启动在 {discovery_host}:{discovery_port}",
                 handler_name=self.handler_name,
             )
 
