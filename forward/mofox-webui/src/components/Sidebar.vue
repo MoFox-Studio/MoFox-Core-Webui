@@ -183,7 +183,7 @@ import { ref, reactive } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useUIStore } from '@/stores/ui'
-import { restartBot, shutdownBot } from '@/api'
+import { restartBot, shutdownBot } from '@/api/dashboard'
 import { showConfirm, showSuccess, showError } from '@/utils/dialog'
 
 interface MenuItem {

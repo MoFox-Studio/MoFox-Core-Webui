@@ -1,28 +1,17 @@
 <!--
   @file DashboardHome.vue
-  @description 仪表盘首页视图
+  @description 仪表盘首页视图 - 全新设计
   
   功能说明：
-  1. 系统概览 - 显示系统运行状态和关键指标
-  2. 统计卡片 - LLM调用、聊天会话、插件系统、组件系统等
-  3. 消息统计图表 - 可视化显示消息收发趋势
-  4. 月度计划 - 显示当月计划列表
-  5. 今日日程 - 显示当日活动安排
-  
-  数据来源：
-  - getDashboardOverview: 获取系统概览数据
-  - getTodaySchedule: 获取今日日程
-  - getMonthlyPlans: 获取月度计划
-  - getLLMStats: 获取 LLM 统计
-  - getMessageStats: 获取消息统计
-  
-  交互功能：
-  - 点击统计卡片可查看详情弹窗
-  - 支持切换消息统计的时间范围
+  1. 每日名言 - 励志名言展示
+  2. 快捷功能入口 - 8个常用功能快捷访问
+  3. 系统状态概览 - CPU、内存、运行时长等
+  4. 今日日程 - 显示当日活动安排
+  5. 消息统计图表 - 可视化消息收发趋势
 -->
 <template>
-  <div class="dashboard-home">
-    <!-- 连接错误弹窗：当后端服务不可用时显示 -->
+  <div class="dashboard-home-new">
+    <!-- 连接错误弹窗 -->
     <ConnectionError 
       :visible="showConnectionError"
       :message="connectionErrorMsg"
@@ -30,210 +19,59 @@
       @retry="fetchAllData"
     />
 
-    <!-- 主要内容区：消息统计、月度计划、今日日程 -->
-    <section class="main-section">
+    <!-- 每日名言 -->
+    <DailyQuote />
+
+    <!-- 快捷功能入口 -->
+    <QuickActions />
+
+    <!-- 系统状态 + 今日日程 -->
+    <section class="main-content">
       <div class="content-grid">
-        <!-- 左侧列：消息统计 -->
-        <div class="grid-column chart-column">
-          <div class="m3-card chart-card">
-            <div class="card-header">
-              <div class="header-title">
-                <span class="material-symbols-rounded">bar_chart</span>
-                <h3>消息统计</h3>
-              </div>
-              <div class="header-actions">
-                <M3Select 
-                  v-model="messageStatsPeriod" 
-                  :options="messageStatsOptions"
-                  @change="fetchMessageStats"
-                />
-              </div>
-            </div>
-            <div class="card-body chart-body">
-              <div v-if="chartLoading" class="loading-overlay">
-                <span class="material-symbols-rounded spinning">refresh</span>
-              </div>
-              <v-chart class="chart" :option="messageChartOption" autoresize />
-            </div>
-          </div>
-        </div>
+        <!-- 左侧：系统状态 -->
+        <SystemStatus 
+          :overview="overview" 
+          :is-refreshing="isRefreshingOverview"
+          @refresh="handleRefreshOverview"
+        />
 
-        <!-- 右侧列：月度计划 & 日程 -->
-        <div class="grid-column plans-column">
-          <!-- 月度计划 -->
-          <div class="m3-card plans-card">
-            <div class="card-header">
-              <div class="header-title">
-                <span class="material-symbols-rounded">track_changes</span>
-                <h3>月度计划</h3>
-              </div>
-              <span class="m3-badge tertiary" v-if="monthlyPlans">
-                {{ monthlyPlans.total }} 项
-              </span>
-            </div>
-            <div class="card-body">
-              <div v-if="monthlyPlans?.plans?.length" class="plans-list">
-                <div class="plan-item" v-for="(plan, index) in monthlyPlans.plans.slice(0, 3)" :key="index">
-                  <span class="material-symbols-rounded plan-check">check_box</span>
-                  <span class="plan-text">{{ plan }}</span>
-                </div>
-              </div>
-              <div v-else class="empty-state">
-                <span class="material-symbols-rounded empty-icon">assignment</span>
-                <p>暂无月度计划</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- 今日日程 -->
-          <div class="m3-card schedule-card">
-            <div class="card-header">
-              <div class="header-title">
-                <span class="material-symbols-rounded">calendar_today</span>
-                <h3>今日日程</h3>
-              </div>
-              <span class="m3-badge secondary">{{ schedule?.date || '加载中...' }}</span>
-            </div>
-            <div class="card-body">
-              <!-- 当前活动 -->
-              <div v-if="schedule?.current_activity" class="current-activity">
-                <div class="activity-label">
-                  <span class="material-symbols-rounded">play_circle</span>
-                  当前活动
-                </div>
-                <div class="activity-content">
-                  <span class="activity-time">{{ schedule.current_activity.time_range }}</span>
-                  <span class="activity-text">{{ schedule.current_activity.activity }}</span>
-                </div>
-              </div>
-              
-              <!-- 日程列表 -->
-              <div v-if="schedule?.activities?.length" class="schedule-list">
-                <div 
-                  class="schedule-item" 
-                  v-for="(item, index) in schedule.activities" 
-                  :key="index"
-                  :class="{ 'is-current': isCurrentActivity(item) }"
-                >
-                  <div class="item-time">{{ item.time_range }}</div>
-                  <div class="item-content">{{ item.activity }}</div>
-                </div>
-              </div>
-              <div v-else class="empty-state">
-                <span class="material-symbols-rounded empty-icon">event_busy</span>
-                <p>暂无日程安排</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        <!-- 右侧：今日日程 -->
+        <TodaySchedule 
+          :schedule="schedule" 
+          :monthly-plans="monthlyPlans"
+        />
       </div>
     </section>
 
-    <!-- 统计卡片 -->
-    <section class="stats-section">
-      <div class="stats-grid">
-        <div 
-          class="m3-card stat-card" 
-          v-for="stat in statsData" 
-          :key="stat.label"
-          :class="{ 'clickable': !!stat.action }"
-          @click="stat.action && stat.action()"
-        >
-          <div class="stat-icon-container" :style="{ backgroundColor: stat.bgColor, color: stat.color }">
-            <span class="material-symbols-rounded stat-icon">{{ stat.icon }}</span>
+    <!-- 消息统计图表 -->
+    <section class="chart-section">
+      <div class="m3-card chart-card">
+        <div class="card-header">
+          <div class="header-title">
+            <span class="material-symbols-rounded">bar_chart</span>
+            <h3>消息统计</h3>
           </div>
-          <div class="stat-content">
-            <div class="stat-value-row">
-              <span class="stat-value">{{ stat.value }}</span>
-            </div>
-            <span class="stat-label">{{ stat.label }}</span>
+          <div class="header-actions">
+            <M3Select 
+              v-model="messageStatsPeriod" 
+              :options="messageStatsOptions"
+              @change="fetchMessageStats"
+            />
           </div>
-          <div v-if="stat.subValue" class="stat-sub">
-            <span class="material-symbols-rounded sub-icon">info</span>
-            <span>{{ stat.subValue }}</span>
+        </div>
+        <div class="card-body chart-body">
+          <div v-if="chartLoading" class="loading-overlay">
+            <span class="material-symbols-rounded spinning">refresh</span>
           </div>
+          <v-chart class="chart" :option="messageChartOption" autoresize />
         </div>
       </div>
     </section>
-
-    <!-- 插件列表弹窗 -->
-    <div class="m3-dialog-overlay" v-if="showPluginList" @click="showPluginList = false">
-      <div class="m3-dialog" @click.stop>
-        <div class="dialog-header">
-          <h3>{{ pluginListTitle }}</h3>
-          <button class="m3-icon-button" @click="showPluginList = false">
-            <span class="material-symbols-rounded">close</span>
-          </button>
-        </div>
-        <div class="dialog-content">
-          <div v-if="pluginListLoading" class="loading-state">
-            <span class="material-symbols-rounded spinning">refresh</span>
-            加载中...
-          </div>
-          <div v-else-if="filteredPluginList.length" class="plugin-list">
-            <div class="plugin-item" v-for="plugin in filteredPluginList" :key="plugin.name">
-              <div class="plugin-item-header">
-                <span class="plugin-name">{{ plugin.name }}</span>
-                <span class="plugin-version">v{{ plugin.version }}</span>
-              </div>
-              <div class="plugin-item-info">
-                <span>{{ plugin.author }}</span>
-                <span>{{ plugin.display_name }}</span>
-              </div>
-              <div v-if="plugin.error" class="plugin-error">
-                <span class="material-symbols-rounded">error</span>
-                <span>{{ plugin.error }}</span>
-              </div>
-            </div>
-          </div>
-          <div v-else class="empty-state">
-            <p>暂无数据</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 组件列表弹窗 -->
-    <div class="m3-dialog-overlay" v-if="showComponentDetail" @click="showComponentDetail = false">
-      <div class="m3-dialog" @click.stop>
-        <div class="dialog-header">
-          <h3>组件列表</h3>
-          <button class="m3-icon-button" @click="showComponentDetail = false">
-            <span class="material-symbols-rounded">close</span>
-          </button>
-        </div>
-        <div class="dialog-content">
-          <div v-if="componentListLoading" class="loading-state">
-            <span class="material-symbols-rounded spinning">refresh</span>
-            加载中...
-          </div>
-          <div v-else-if="componentList.length" class="component-list">
-            <div class="component-item" v-for="comp in componentList" :key="comp.name">
-              <div class="component-item-header">
-                <span class="material-symbols-rounded component-icon">{{ getComponentTypeIcon(currentComponentType) }}</span>
-                <span class="component-name">{{ comp.name }}</span>
-                <span class="component-status" :class="comp.enabled ? 'enabled' : 'disabled'">
-                  {{ comp.enabled ? '已启用' : '已禁用' }}
-                </span>
-              </div>
-              <div class="component-item-desc">{{ comp.description }}</div>
-              <div class="component-item-plugin">
-                <span class="material-symbols-rounded">extension</span>
-                {{ comp.plugin_name }}
-              </div>
-            </div>
-          </div>
-          <div v-else class="empty-state">
-            <p>暂无数据</p>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { LineChart } from 'echarts/charts'
@@ -242,24 +80,19 @@ import VChart from 'vue-echarts'
 import { 
   getDashboardOverview, 
   getTodaySchedule, 
-  getMonthlyPlans,
-  getLLMStats,
   getMessageStats,
-  getPluginsByStatus,
-  getComponentsByType
-} from '@/api'
-import type { 
-  DashboardOverview, 
-  ScheduleResponse, 
-  ScheduleActivity,
-  MonthlyPlanResponse,
-  LLMStatsResponse,
-  MessageStatsResponse,
-  PluginListItem,
-  ComponentItem
-} from '@/api'
+  getMonthlyPlans,
+  type DashboardOverview, 
+  type ScheduleResponse, 
+  type MessageStatsResponse,
+  type MonthlyPlanResponse,
+} from '@/api/dashboard'
 import ConnectionError from '@/components/ConnectionError.vue'
 import M3Select from '@/components/M3Select.vue'
+import DailyQuote from '@/components/dashboard/DailyQuote.vue'
+import QuickActions from '@/components/dashboard/QuickActions.vue'
+import SystemStatus from '@/components/dashboard/SystemStatus.vue'
+import TodaySchedule from '@/components/dashboard/TodaySchedule.vue'
 import { useThemeStore } from '@/stores/theme'
 
 // 注册 ECharts 组件
@@ -272,9 +105,12 @@ const chartLoading = ref(false)
 const overview = ref<DashboardOverview | null>(null)
 const schedule = ref<ScheduleResponse | null>(null)
 const monthlyPlans = ref<MonthlyPlanResponse | null>(null)
-const llmStats = ref<LLMStatsResponse | null>(null)
 const messageStats = ref<MessageStatsResponse | null>(null)
 const messageStatsPeriod = ref<'last_hour' | 'last_24_hours' | 'last_7_days' | 'last_30_days'>('last_24_hours')
+const isRefreshingOverview = ref(false)
+
+// 自动刷新定时器
+let autoRefreshTimer: number | null = null
 
 const messageStatsOptions = [
   { label: '最近1小时', value: 'last_hour' },
@@ -283,23 +119,60 @@ const messageStatsOptions = [
   { label: '最近30天', value: 'last_30_days' }
 ]
 
-// 弹窗状态
-const showPluginList = ref(false)
-const showComponentDetail = ref(false)
-
-// 插件列表相关
-const pluginListLoading = ref(false)
-const pluginListType = ref<'loaded' | 'enabled' | 'disabled' | 'failed'>('loaded')
-const pluginListData = ref<{ loaded: PluginListItem[], failed: PluginListItem[] }>({ loaded: [], failed: [] })
-
-// 组件列表相关
-const componentListLoading = ref(false)
-const currentComponentType = ref('')
-const componentList = ref<ComponentItem[]>([])
-
 // 连接错误状态
 const showConnectionError = ref(false)
 const connectionErrorMsg = ref('')
+
+// 手动刷新overview
+async function handleRefreshOverview() {
+  isRefreshingOverview.value = true
+  const startTime = Date.now()
+  try {
+    const overviewRes = await getDashboardOverview()
+    if (overviewRes.success && overviewRes.data) {
+      overview.value = overviewRes.data
+    }
+  } catch (error) {
+    console.error('刷新系统状态失败:', error)
+  } finally {
+    // 确保至少显示 800ms 的加载动画
+    const elapsed = Date.now() - startTime
+    const minDelay = 800
+    if (elapsed < minDelay) {
+      await new Promise(resolve => setTimeout(resolve, minDelay - elapsed))
+    }
+    isRefreshingOverview.value = false
+  }
+}
+
+// 自动刷新overview（仅更新overview数据，不刷新其他）
+async function autoRefreshOverview() {
+  try {
+    const overviewRes = await getDashboardOverview()
+    if (overviewRes.success && overviewRes.data) {
+      overview.value = overviewRes.data
+    }
+  } catch (error) {
+    // 静默失败，不影响用户体验
+    console.debug('自动刷新失败:', error)
+  }
+}
+
+// 启动自动刷新
+function startAutoRefresh() {
+  if (autoRefreshTimer) return
+  autoRefreshTimer = window.setInterval(() => {
+    autoRefreshOverview()
+  }, 5000) // 每5秒刷新一次
+}
+
+// 停止自动刷新
+function stopAutoRefresh() {
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer)
+    autoRefreshTimer = null
+  }
+}
 
 // 获取所有数据
 async function fetchAllData() {
@@ -308,11 +181,10 @@ async function fetchAllData() {
   
   try {
     // 并行获取所有数据
-    const [overviewRes, scheduleRes, plansRes, llmRes] = await Promise.all([
+    const [overviewRes, scheduleRes, plansRes] = await Promise.all([
       getDashboardOverview(),
       getTodaySchedule(),
       getMonthlyPlans(),
-      getLLMStats('last_24_hours')
     ])
     
     // 检查是否全部失败（连接问题）
@@ -329,13 +201,9 @@ async function fetchAllData() {
     if (scheduleRes.success && scheduleRes.data) {
       schedule.value = scheduleRes.data
     }
-    
+
     if (plansRes.success && plansRes.data) {
       monthlyPlans.value = plansRes.data
-    }
-    
-    if (llmRes.success && llmRes.data) {
-      llmStats.value = llmRes.data
     }
     
     // 获取消息统计
@@ -364,191 +232,14 @@ async function fetchMessageStats() {
   }
 }
 
-// 判断是否为当前活动
-function isCurrentActivity(item: ScheduleActivity): boolean {
-  if (!schedule.value?.current_activity) return false
-  return item.time_range === schedule.value.current_activity.time_range
-}
-
-// 格式化运行时间
-function formatUptime(seconds: number): string {
-  if (!seconds) return '-'
-  const days = Math.floor(seconds / 86400)
-  const hours = Math.floor((seconds % 86400) / 3600)
-  const minutes = Math.floor((seconds % 3600) / 60)
-  
-  if (days > 0) return `${days}天${hours}时`
-  if (hours > 0) return `${hours}时${minutes}分`
-  return `${minutes}分钟`
-}
-
-// 格式化内存
-function formatMemory(mb: number): string {
-  if (!mb) return '-'
-  if (mb >= 1024) return `${(mb / 1024).toFixed(1)}GB`
-  return `${mb.toFixed(0)}MB`
-}
-
-// 格式化 Token 数量
-function formatTokens(tokens: number): string {
-  if (!tokens) return '0'
-  if (tokens >= 1000000) return `${(tokens / 1000000).toFixed(1)}M`
-  if (tokens >= 1000) return `${(tokens / 1000).toFixed(1)}K`
-  return tokens.toString()
-}
-
-// 顶部统计卡片数据
-const statsData = computed(() => [
-  { 
-    label: 'LLM调用', 
-    value: llmStats.value?.total_requests ?? '-', 
-    subValue: `${formatTokens(llmStats.value?.total_tokens ?? 0)} tokens`,
-    icon: 'psychology', 
-    color: 'var(--md-sys-color-primary)', 
-    bgColor: 'var(--md-sys-color-primary-container)',
-  },
-  { 
-    label: '聊天会话', 
-    value: overview.value?.chats.total_streams ?? '-', 
-    subValue: `群聊 ${overview.value?.chats.group_streams ?? 0} / 私聊 ${overview.value?.chats.private_streams ?? 0}`,
-    icon: 'chat', 
-    color: 'var(--md-sys-color-tertiary)', 
-    bgColor: 'var(--md-sys-color-tertiary-container)',
-  },
-  { 
-    label: '插件系统',
-    value: overview.value?.plugins.loaded ?? '-',
-    subValue: `失败 ${overview.value?.plugins.failed ?? 0}`,
-    icon: 'extension',
-    color: '#8ab4f8',
-    bgColor: 'rgba(138, 180, 248, 0.15)',
-    action: () => showPluginListModal('loaded')
-  },
-  { 
-    label: '组件系统',
-    value: overview.value?.components.total ?? '-',
-    subValue: `启用 ${overview.value?.components.enabled ?? 0}`,
-    icon: 'widgets',
-    color: '#f28b82',
-    bgColor: 'rgba(242, 139, 130, 0.15)',
-    action: () => showComponentDetailModal('all')
-  },
-  { 
-    label: '内存占用', 
-    value: formatMemory(overview.value?.system.memory_usage_mb ?? 0), 
-    subValue: `CPU ${overview.value?.system.cpu_percent ?? 0}%`,
-    icon: 'memory', 
-    color: 'var(--md-sys-color-error)', 
-    bgColor: 'var(--md-sys-color-error-container)',
-  },
-  { 
-    label: '运行时长', 
-    value: formatUptime(overview.value?.system.uptime_seconds ?? 0), 
-    icon: 'schedule', 
-    color: 'var(--md-sys-color-secondary)', 
-    bgColor: 'var(--md-sys-color-secondary-container)',
-  },
-])
-
-// 插件列表标题
-const pluginListTitle = computed(() => {
-  const titles: Record<string, string> = {
-    'loaded': '已加载的插件',
-    'enabled': '已启用的插件',
-    'disabled': '已禁用的插件',
-    'failed': '加载失败的插件'
-  }
-  return titles[pluginListType.value] || '插件列表'
-})
-
-// 筛选后的插件列表
-const filteredPluginList = computed(() => {
-  const { loaded, failed } = pluginListData.value
-  switch (pluginListType.value) {
-    case 'loaded':
-      return loaded
-    case 'enabled':
-      return loaded.filter(p => p.enabled)
-    case 'disabled':
-      return loaded.filter(p => !p.enabled)
-    case 'failed':
-      return failed
-    default:
-      return []
-  }
-})
-
-// 显示插件列表弹窗
-async function showPluginListModal(type: 'loaded' | 'enabled' | 'disabled' | 'failed') {
-  pluginListType.value = type
-  showPluginList.value = true
-  pluginListLoading.value = true
-  
-  try {
-    const res = await getPluginsByStatus()
-    if (res.success && res.data) {
-      pluginListData.value = res.data
-    }
-  } catch (error) {
-    console.error('获取插件列表失败:', error)
-  } finally {
-    pluginListLoading.value = false
-  }
-}
-
-// 显示组件详情弹窗
-async function showComponentDetailModal(type: string) {
-  currentComponentType.value = type
-  showComponentDetail.value = true
-  componentListLoading.value = true
-  
-  try {
-    const res = await getComponentsByType(type, false)
-    if (res.success && res.data) {
-      componentList.value = res.data.components
-    }
-  } catch (error) {
-    console.error('获取组件列表失败:', error)
-  } finally {
-    componentListLoading.value = false
-  }
-}
-
-// 组件类型图标映射
-function getComponentTypeIcon(type: string): string {
-  const iconMap: Record<string, string> = {
-    'handler': 'bolt',
-    'event_handler': 'bolt',
-    'tool': 'build',
-    'generator': 'auto_awesome',
-    'text_generator': 'auto_awesome',
-    'chatter': 'chat_bubble',
-    'router': 'alt_route',
-    'http_router': 'alt_route',
-    'scheduler': 'update',
-    'scheduled_task': 'update',
-    'middleware': 'layers',
-    'willing_modifier': 'tune',
-    'prompt_builder': 'description',
-    'thought_chain': 'account_tree',
-    'action': 'play_arrow',
-    'command': 'terminal',
-    'plus_command': 'add_box',
-    'interest_calculator': 'calculate',
-    'prompt': 'chat',
-    'adapter': 'power',
-  }
-  return iconMap[type.toLowerCase()] || 'extension'
-}
-
 // 消息统计图表配置
 const messageChartOption = computed(() => {
   const dataPoints = messageStats.value?.data_points || []
-  // 依赖 themeStore.theme 以便在主题切换时重新计算
+  
   // 获取 CSS 变量值的辅助函数
   const getColor = (name: string) => {
     const val = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
-    return val || (themeStore.isDark ? '#ffffff' : '#000000') // Fallback
+    return val || (themeStore.isDark ? '#ffffff' : '#000000')
   }
 
   return {
@@ -615,7 +306,7 @@ const messageChartOption = computed(() => {
         smooth: true,
         data: dataPoints.map(p => p.received),
         itemStyle: {
-          color: '#10b981' // 保持原有颜色或使用主题色
+          color: '#10b981'
         },
         areaStyle: {
           color: {
@@ -659,45 +350,38 @@ const messageChartOption = computed(() => {
 
 onMounted(() => {
   fetchAllData()
+  startAutoRefresh()
+})
+
+onUnmounted(() => {
+  stopAutoRefresh()
 })
 </script>
 
 <style scoped>
-.dashboard-home {
+.dashboard-home-new {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 0;
   padding-bottom: 40px;
   max-width: 1600px;
   margin: 0 auto;
   width: 100%;
 }
 
-@keyframes slideUpFade {
-  from { 
-    opacity: 0; 
-    transform: translateY(30px); 
-  }
-  to { 
-    opacity: 1; 
-    transform: translateY(0); 
-  }
+.main-content {
+  margin-bottom: 24px;
 }
 
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-.spinning {
-  animation: spin 1s linear infinite;
-}
-
-/* 统计卡片区 */
-.stats-grid {
+.content-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.chart-section {
+  animation: slideIn 0.5s cubic-bezier(0.2, 0, 0, 1) 0.4s backwards;
 }
 
 .m3-card {
@@ -706,174 +390,14 @@ onMounted(() => {
   padding: 24px;
   transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
   border: 1px solid rgba(255, 255, 255, 0.05);
-  
-  /* 初始动画状态 */
-  opacity: 0;
-  animation: slideUpFade 0.6s cubic-bezier(0.2, 0, 0, 1) forwards;
 }
 
-/* 统计卡片交错动画 */
-.stats-grid .m3-card:nth-child(1) { animation-delay: 0.1s; }
-.stats-grid .m3-card:nth-child(2) { animation-delay: 0.2s; }
-.stats-grid .m3-card:nth-child(3) { animation-delay: 0.3s; }
-.stats-grid .m3-card:nth-child(4) { animation-delay: 0.4s; }
-
-/* 内容区卡片交错动画 */
-.content-grid .grid-column:nth-child(1) .m3-card:nth-child(1) { animation-delay: 0.5s; }
-.content-grid .grid-column:nth-child(1) .m3-card:nth-child(2) { animation-delay: 0.6s; }
-.content-grid .grid-column:nth-child(2) .m3-card:nth-child(1) { animation-delay: 0.7s; }
-.content-grid .grid-column:nth-child(2) .m3-card:nth-child(2) { animation-delay: 0.8s; }
-
-.stat-card {
-  display: flex;
-  align-items: flex-start;
-  gap: 20px;
-  position: relative;
-  overflow: hidden;
-}
-
-.stat-card:hover {
-  background: var(--md-sys-color-surface-container-high);
-  transform: translateY(-4px);
-  box-shadow: var(--md-sys-elevation-3);
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-.stat-card.clickable {
-  cursor: pointer;
-}
-
-.stat-card.clickable:active {
-  transform: translateY(-2px);
-  box-shadow: var(--md-sys-elevation-1);
-}
-
-.stat-icon-container {
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.3s ease;
-}
-
-.stat-card:hover .stat-icon-container {
-  transform: scale(1.1) rotate(5deg);
-}
-
-.stat-icon {
-  font-size: 28px;
-}
-
-.stat-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-height: 56px;
-}
-
-.stat-value {
-  font-size: 32px;
-  font-weight: 700;
-  color: var(--md-sys-color-on-surface);
-  line-height: 1.2;
-  letter-spacing: -0.5px;
-  min-width: 60px; /* 防止数字未加载时塌陷 */
-  display: inline-block;
-}
-
-.stat-label {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--md-sys-color-on-surface-variant);
-  margin-top: 4px;
-  white-space: nowrap;
-}
-
-.stat-sub {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--md-sys-color-on-surface-variant);
-  background: var(--md-sys-color-surface-container-highest);
-  padding: 6px 10px;
-  border-radius: 10px;
-  transition: all 0.2s;
-}
-
-.stat-card:hover .stat-sub {
-  background: var(--md-sys-color-secondary-container);
-  color: var(--md-sys-color-on-secondary-container);
-}
-
-.sub-icon {
-  font-size: 16px;
-}
-
-/* 主内容网格 */
-.content-grid {
-  display: grid;
-  grid-template-columns: 1.4fr 1fr;
-  gap: 24px;
-  align-items: stretch;
-  margin-bottom: 24px;
-}
-
-.chart-column {
-  display: flex;
-  flex-direction: column;
-  /* 移除固定高度，允许内容自适应 */
-  min-height: 500px;
-}
-
-.plans-column {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  /* 移除固定高度，允许内容自适应 */
-  min-height: 500px;
-}
-
-.plans-column .plans-card {
-  flex: 0 0 auto;
-}
-
-.plans-column .schedule-card {
-  flex: 1;
-  min-height: 0;
+.chart-card {
+  min-height: 400px;
   display: flex;
   flex-direction: column;
 }
 
-.plans-column .schedule-card .card-body {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-/* 响应式调整 */
-@media (max-width: 1024px) {
-  .content-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.grid-column {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-/* 卡片通用 */
 .card-header {
   display: flex;
   align-items: center;
@@ -898,417 +422,69 @@ onMounted(() => {
   color: var(--md-sys-color-primary);
 }
 
-.m3-badge {
-  font-size: 12px;
-  padding: 4px 12px;
-  border-radius: 100px;
-  font-weight: 500;
-}
-
-.m3-badge.secondary {
-  background: var(--md-sys-color-secondary-container);
-  color: var(--md-sys-color-on-secondary-container);
-}
-
-.m3-badge.tertiary {
-  background: var(--md-sys-color-tertiary-container);
-  color: var(--md-sys-color-on-tertiary-container);
-}
-
-/* 日程卡片 */
-.current-activity {
-  background: var(--md-sys-color-primary-container);
-  color: var(--md-sys-color-on-primary-container);
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 20px;
-}
-
-.activity-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  font-weight: 500;
-  margin-bottom: 8px;
-  opacity: 0.8;
-}
-
-.activity-content {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.activity-time {
-  font-size: 14px;
-  opacity: 0.9;
-}
-
-.activity-text {
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.schedule-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  flex: 1;
-  overflow-y: auto;
-  padding-right: 8px;
-}
-
-.schedule-list::-webkit-scrollbar {
-  width: 6px;
-}
-
-.schedule-list::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.schedule-list::-webkit-scrollbar-thumb {
-  background-color: var(--md-sys-color-outline-variant);
-  border-radius: 3px;
-}
-
-.schedule-item {
-  display: flex;
-  align-items: center;
-  padding: 12px;
-  border-radius: 8px;
-  background: var(--md-sys-color-surface-container-low);
-  border-left: 3px solid transparent;
-}
-
-.schedule-item.is-current {
-  background: var(--md-sys-color-surface-container-highest);
-  border-left-color: var(--md-sys-color-primary);
-}
-
-.item-time {
-  width: 100px;
-  font-size: 13px;
-  color: var(--md-sys-color-on-surface-variant);
-  font-variant-numeric: tabular-nums;
-}
-
-.item-content {
-  flex: 1;
-  font-size: 14px;
-  color: var(--md-sys-color-on-surface);
-}
-
-/* 计划列表 */
-.plans-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  height: auto;
-  overflow-y: hidden;
-  padding-right: 8px;
-}
-
-.plans-list::-webkit-scrollbar {
-  width: 6px;
-}
-
-.plans-list::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.plans-list::-webkit-scrollbar-thumb {
-  background-color: var(--md-sys-color-outline-variant);
-  border-radius: 3px;
-}
-
-.plan-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 12px;
-  background: var(--md-sys-color-surface-container-low);
-  border-radius: 8px;
-}
-
-.plan-check {
-  color: var(--md-sys-color-primary);
-  font-size: 20px;
-}
-
-.plan-text {
-  flex: 1;
-  font-size: 14px;
-  color: var(--md-sys-color-on-surface);
-  line-height: 1.5;
-}
-
-/* 迷你卡片 */
-.mini-cards-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-
-.mini-card {
-  padding: 16px;
-  cursor: pointer;
-}
-
-.mini-card:hover {
-  background: var(--md-sys-color-surface-container-high);
-}
-
-.mini-card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-
-.mini-card-title {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--md-sys-color-on-surface);
-}
-
-.arrow-icon {
-  font-size: 20px;
-  color: var(--md-sys-color-on-surface-variant);
-}
-
-.mini-card-stats {
-  display: flex;
-  gap: 16px;
-}
-
-.mini-stat {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.mini-value {
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--md-sys-color-on-surface);
-}
-
-.mini-value.error { color: var(--md-sys-color-error); }
-.mini-value.success { color: var(--md-sys-color-primary); }
-
-.mini-label {
-  font-size: 11px;
-  color: var(--md-sys-color-on-surface-variant);
-}
-
-/* 图表卡片 */
-.chart-card {
-  min-height: 350px;
-  flex: 1; /* 填充剩余空间 */
-  display: flex;
-  flex-direction: column;
-  overflow: hidden; /* 确保圆角 */
-}
-
-.chart-card .card-header {
-  background: linear-gradient(90deg, var(--md-sys-color-primary-container), var(--md-sys-color-surface-container-high));
-  margin: -24px -24px 24px -24px;
-  padding: 20px 24px;
-  border-bottom: 1px solid var(--md-sys-color-outline-variant);
-}
-
-.chart-card .header-title .material-symbols-rounded {
-  color: var(--md-sys-color-primary);
-  background: var(--md-sys-color-surface);
-  padding: 8px;
-  border-radius: 12px;
-}
-
 .chart-body {
   flex: 1;
   position: relative;
-  min-height: 180px;
+  min-height: 300px;
 }
 
 .chart {
   width: 100%;
   height: 100%;
+  min-height: 300px;
 }
 
-
-
-/* 弹窗样式 */
-.m3-dialog-overlay {
-  position: fixed;
+.loading-overlay {
+  position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
-  backdrop-filter: blur(4px);
-}
-
-.m3-dialog {
   background: var(--md-sys-color-surface-container);
-  width: 90%;
-  max-width: 500px;
-  max-height: 80vh;
-  border-radius: 28px;
-  display: flex;
-  flex-direction: column;
-  box-shadow: var(--md-sys-elevation-3);
-  animation: dialogIn 0.3s cubic-bezier(0.2, 0, 0, 1);
+  z-index: 10;
 }
 
-@keyframes dialogIn {
-  from { opacity: 0; transform: scale(0.9); }
-  to { opacity: 1; transform: scale(1); }
+.spinning {
+  animation: spin 1s linear infinite;
+  font-size: 36px;
+  color: var(--md-sys-color-primary);
 }
 
-.dialog-header {
-  padding: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
-.dialog-header h3 {
-  margin: 0;
-  font-size: 22px;
-  color: var(--md-sys-color-on-surface);
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
-
-.m3-icon-button {
-  background: transparent;
-  border: none;
-  color: var(--md-sys-color-on-surface-variant);
-  cursor: pointer;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.2s;
-}
-
-.m3-icon-button:hover {
-  background: var(--md-sys-color-surface-container-highest);
-}
-
-.dialog-content {
-  padding: 24px;
-  overflow-y: auto;
-}
-
-/* 列表项样式 */
-.plugin-list, .component-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.plugin-item, .component-item {
-  background: var(--md-sys-color-surface-container-low);
-  padding: 16px;
-  border-radius: 12px;
-}
-
-.plugin-item-header, .component-item-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 8px;
-}
-
-.plugin-name, .component-name {
-  font-weight: 600;
-  color: var(--md-sys-color-on-surface);
-  flex: 1;
-}
-
-.plugin-version {
-  font-size: 12px;
-  background: var(--md-sys-color-surface-container-highest);
-  padding: 2px 8px;
-  border-radius: 4px;
-}
-
-.plugin-item-info {
-  font-size: 13px;
-  color: var(--md-sys-color-on-surface-variant);
-  display: flex;
-  gap: 12px;
-}
-
-.component-status {
-  font-size: 12px;
-  padding: 2px 8px;
-  border-radius: 4px;
-}
-
-.component-status.enabled {
-  background: rgba(16, 185, 129, 0.1);
-  color: #10b981;
-}
-
-.component-status.disabled {
-  background: rgba(245, 158, 11, 0.1);
-  color: #f59e0b;
-}
-
-.component-item-desc {
-  font-size: 13px;
-  color: var(--md-sys-color-on-surface-variant);
-  margin-bottom: 8px;
-}
-
-.component-item-plugin {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--md-sys-color-on-surface-variant);
-  opacity: 0.8;
-}
-
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 40px;
-  color: var(--md-sys-color-on-surface-variant);
-  gap: 12px;
-}
-
-.empty-icon {
-  font-size: 48px;
-  opacity: 0.5;
-}
-
-.empty-hint {
-  font-size: 12px;
-  color: var(--md-sys-color-on-surface-variant);
-  opacity: 0.7;
-}
-
-
 
 /* 响应式 */
 @media (max-width: 1024px) {
   .content-grid {
     grid-template-columns: 1fr;
   }
-  
-  .mini-cards-grid {
-    grid-template-columns: 1fr;
+}
+
+@media (max-width: 768px) {
+  .m3-card {
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .chart-body,
+  .chart {
+    min-height: 250px;
   }
 }
 </style>
