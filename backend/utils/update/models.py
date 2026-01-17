@@ -38,7 +38,6 @@ class GitUpdateRequest(BaseModel):
     """更新请求"""
 
     force: bool = False
-    stash_local: bool = True
     create_backup: bool = True
 
 

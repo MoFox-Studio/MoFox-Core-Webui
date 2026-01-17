@@ -54,7 +54,6 @@ class GitUpdateRequest(BaseModel):
     """更新请求"""
 
     force: bool = False
-    stash_local: bool = True
     create_backup: bool = True
 
 
@@ -884,7 +883,7 @@ class GitUpdater:
             logger.error(f"检查更新失败: {e}")
             return {"success": False, "error": str(e)}
 
-    async def pull_updates(self, force: bool = False, stash_local: bool = True) -> dict:
+    async def pull_updates(self, force: bool = False) -> dict:
         """拉取更新"""
         try:
             updated_files = []
@@ -899,25 +898,15 @@ class GitUpdater:
                         "success": False,
                         "error": "本地有未提交的修改，请先提交或使用强制更新",
                     }
-
-                if stash_local:
-                    logger.info("暂存本地修改...")
-                    stash_result = self._run_git_command(
-                        "stash", "push", "-m", "Auto stash before update"
-                    )
-                    if stash_result.returncode != 0:
-                        return {
-                            "success": False,
-                            "error": f"暂存本地修改失败: {stash_result.stderr}",
-                        }
-                else:
-                    logger.info("重置本地修改...")
-                    reset_result = self._run_git_command("reset", "--hard", "HEAD")
-                    if reset_result.returncode != 0:
-                        return {
+                # 强制模式：直接使用 reset --hard，避免文件占用问题
+                logger.info("强制模式：重置本地修改...")
+                reset_result = self._run_git_command("reset", "--hard", "HEAD")
+                if reset_result.returncode != 0:
+                    return {
                             "success": False,
                             "error": f"重置本地修改失败: {reset_result.stderr}",
                         }
+                logger.info("本地修改已重置")
 
             # 拉取更新
             logger.info(f"正在拉取 {self.branch} 分支的最新代码...")
@@ -1433,7 +1422,7 @@ class GitUpdateRouterComponent(BaseRouterComponent):
 
                 # 执行更新
                 result = await updater.pull_updates(
-                    force=request.force, stash_local=request.stash_local
+                    force=request.force
                 )
 
                 if result["success"]:

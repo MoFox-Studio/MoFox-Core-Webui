@@ -141,8 +141,18 @@
             </ul>
           </div>
 
-          <!-- 更新按钮 -->
+          <!-- 更新选项和按钮 -->
           <div class="update-actions">
+            <label 
+              class="force-update-checkbox"
+              :class="{ disabled: updating }"
+              @click="!updating && (forceUpdate = !forceUpdate)"
+            >
+              <div class="custom-checkbox" :class="{ checked: forceUpdate }">
+                <span v-if="forceUpdate" class="material-symbols-rounded check-icon">check</span>
+              </div>
+              <span class="checkbox-label">强制更新（覆盖本地修改）</span>
+            </label>
             <button 
               class="m3-button filled"
               @click="handleUpdate"
@@ -338,6 +348,7 @@ const rolling = ref(false)
 const loadingBackups = ref(false)
 const loadingDetail = ref(false)
 const error = ref('')
+const forceUpdate = ref(false)  // 是否强制更新
 
 // 详情弹窗状态
 const showDetailDialog = ref(false)
@@ -456,9 +467,13 @@ async function handleCheckUpdate() {
 
 // 执行更新
 async function handleUpdate() {
+  const message = forceUpdate.value 
+    ? '强制更新将覆盖所有本地修改，更新后需要重启才能生效，是否继续？'
+    : '更新主程序后需要重启才能生效，是否继续？'
+  
   const confirmed = await showConfirm({
     title: '确认更新',
-    message: '更新主程序后需要重启才能生效，是否继续？',
+    message: message,
     confirmText: '更新'
   })
   
@@ -468,9 +483,13 @@ async function handleUpdate() {
   error.value = ''
   
   try {
-    const result = await updateMainProgram(true, true, true)
+    const result = await updateMainProgram(forceUpdate.value, true)
     if (result.success && result.data?.success) {
       showSuccess(result.data.message || '更新成功')
+      // 清除更新信息，避免继续显示有更新
+      updateInfo.value = null
+      // 重新加载状态
+      await loadStatus()
       emit('update-complete', true)
       // 更新后刷新历史版本列表
       loadBackups()
@@ -872,7 +891,73 @@ defineExpose({
 
 .update-actions {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.force-update-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  user-select: none;
+  padding: 8px 12px;
+  border-radius: 12px;
+  transition: background 0.2s;
+}
+
+.force-update-checkbox:hover:not(.disabled) {
+  background: var(--md-sys-color-surface-container-high);
+}
+
+.force-update-checkbox.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.custom-checkbox {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--md-sys-color-outline);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+}
+
+.custom-checkbox.checked {
+  background: var(--md-sys-color-primary);
+  border-color: var(--md-sys-color-primary);
+}
+
+.custom-checkbox .check-icon {
+  font-size: 16px;
+  color: var(--md-sys-color-on-primary);
+  animation: checkmark 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes checkmark {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.checkbox-label {
+  font-size: 14px;
+  color: var(--md-sys-color-on-surface);
+  font-weight: 400;
 }
 
 /* 已是最新 */

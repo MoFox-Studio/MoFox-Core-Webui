@@ -53,10 +53,9 @@ export function checkUpdates() {
 /**
  * 执行更新
  */
-export function updateMainProgram(force = false, stashLocal = true, createBackup = true) {
+export function updateMainProgram(force = false, createBackup = true) {
   return api.post<UpdateResult>('git_update/update', {
     force,
-    stash_local: stashLocal,
     create_backup: createBackup
   })
 }
