@@ -1849,6 +1849,8 @@ const isSearchFocused = ref(false)
 }
 
 .person-card {
+  display: flex;
+  flex-direction: column;
   padding: 0;
   overflow: hidden;
   transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
@@ -1906,6 +1908,7 @@ const isSearchFocused = ref(false)
 }
 
 .card-body-mini {
+  flex: 1;
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -1976,7 +1979,7 @@ const isSearchFocused = ref(false)
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-top: 4px;
+  margin-top: auto;
   padding-top: 12px;
   border-top: 1px solid var(--md-sys-color-outline-variant);
 }
