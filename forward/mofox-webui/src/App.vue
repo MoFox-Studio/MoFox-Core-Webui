@@ -9,6 +9,9 @@
   4. 启动/停止后台更新检查器
 -->
 <template>
+  <!-- 外网访问警告卡片 -->
+  <ExternalAccessWarning />
+
   <!-- 路由视图：根据当前路由渲染对应的页面组件 -->
   <router-view />
   
@@ -36,6 +39,7 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useThemeStore } from '@/stores/theme'  // 主题状态管理
 import { startUpdateChecker, stopUpdateChecker, setToastCallback } from '@/utils/updateChecker'  // 更新检查工具
+import ExternalAccessWarning from '@/components/ExternalAccessWarning.vue'  // 外网访问警告组件
 
 // ==================== 主题初始化 ====================
 // 调用 useThemeStore 会自动应用保存的主题设置
