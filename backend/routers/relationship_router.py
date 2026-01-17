@@ -33,8 +33,9 @@ class UpdateRelationshipRequest(BaseModel):
 class UpdateImpressionRequest(BaseModel):
     """更新印象请求"""
 
-    impression: Optional[str] = Field(None, description="详细印象")
-    short_impression: Optional[str] = Field(None, description="简短印象")
+    impression_text: Optional[str] = Field(None, description="长期印象（自然叙事）")
+    preference_keywords: Optional[str] = Field(None, description="用户偏好关键词")
+    relationship_stage: Optional[str] = Field(None, description="关系阶段")
 
 
 # ==================== 响应模型 ====================
@@ -60,7 +61,9 @@ class PersonCardResponse(BaseModel):
     nickname: Optional[str] = None
     relationship_score: float = 0.0
     relationship_text: Optional[str] = None
+    relationship_stage: Optional[str] = None
     short_impression: Optional[str] = None
+    preference_keywords: Optional[str] = None
     know_times: int = 0
     last_know: Optional[str] = None
 
@@ -72,6 +75,11 @@ class PersonRelationshipResponse(BaseModel):
     person_name: str
     relationship_score: float
     relationship_text: Optional[str] = None
+    impression_text: Optional[str] = None
+    preference_keywords: Optional[str] = None
+    relationship_stage: Optional[str] = None
+    first_met_time: Optional[float] = None
+    last_impression_update: Optional[float] = None
 
 
 class PersonDetailResponse(BaseModel):
@@ -159,12 +167,10 @@ class RelationshipRouterComponent(BaseRouterComponent):
                 logger.info(f"[get_person_list] 查询偏移量: offset={offset}, limit={page_size}")
                 async with get_db_session() as session:
                     stmt = select(PersonInfo).order_by(PersonInfo.last_know.desc())
-                    stmt = stmt.where(
-                        (PersonInfo.platform != "webui_chatroom") | (PersonInfo.platform.is_(None))
-                    )
-                    stmt = stmt.where(
-                        (PersonInfo.platform != "ui_chatroom") | (PersonInfo.platform.is_(None))
-                    )
+                    # 过滤掉所有UI聊天室相关的用户
+                    stmt = stmt.where(PersonInfo.platform != "webui_chatroom")
+                    stmt = stmt.where(PersonInfo.platform != "ui_chatroom")
+                    stmt = stmt.where(PersonInfo.platform.isnot(None))  # 过滤掉 platform 为 None 的记录
                     
                     # 如果指定了平台，添加筛选条件
                     if platform:
@@ -189,10 +195,14 @@ class RelationshipRouterComponent(BaseRouterComponent):
                 # 构建响应
                 persons = []
                 for person in persons_data:
-                    # 从关系映射中获取关系分数
+                    # 从关系映射中获取关系数据
                     user_rel = relationship_map.get(person.user_id)
                     relationship_score = user_rel.relationship_score if user_rel else 0.0
-                    relationship_text = person.relation_value if hasattr(person, 'relation_value') else None
+                    relationship_text = user_rel.relationship_text if user_rel else None
+                    relationship_stage = user_rel.relationship_stage if user_rel else None
+                    preference_keywords = user_rel.preference_keywords if user_rel else None
+                    # impression_text 作为 short_impression 显示
+                    short_impression = user_rel.impression_text if user_rel else None
                     
                     persons.append(PersonCardResponse(
                         person_id=person.person_id,
@@ -200,7 +210,9 @@ class RelationshipRouterComponent(BaseRouterComponent):
                         nickname=person.nickname,
                         relationship_score=relationship_score,
                         relationship_text=relationship_text,
-                        short_impression=person.short_impression,
+                        relationship_stage=relationship_stage,
+                        short_impression=short_impression,
+                        preference_keywords=preference_keywords,
                         know_times=int(person.know_times or 0),
                         last_know=str(person.last_know) if person.last_know else None
                     ))
@@ -242,10 +254,36 @@ class RelationshipRouterComponent(BaseRouterComponent):
                     logger.warning(f"[get_person_detail] 未找到用户: person_id={person_id}")
                     raise HTTPException(status_code=404, detail="用户不存在")
                 
-                logger.info(f"[get_person_detail] 找到用户: name={person.person_name}, platform={person.platform}, user_id={person.user_id},person.impression={person.impression},short={person.short_impression},{person.points}")
+                logger.info(f"[get_person_detail] 找到用户: name={person.person_name}, platform={person.platform}, user_id={person.user_id}")
 
-                # 获取印象（返回原始值，让前端决定如何显示）
-                impression = person.impression or ""
+                # 从 UserRelationships 获取关系数据
+                relationship_score = 0.0
+                relationship_text = None
+                impression_text = None
+                preference_keywords = None
+                relationship_stage = None
+                first_met_time = None
+                last_impression_update = None
+                
+                async with get_db_session() as session:
+                    stmt_rel = select(UserRelationships).where(UserRelationships.user_id == person.user_id)
+                    result_rel = await session.execute(stmt_rel)
+                    user_rel = result_rel.scalar_one_or_none()
+                    
+                    if user_rel:
+                        relationship_score = user_rel.relationship_score
+                        relationship_text = user_rel.relationship_text
+                        impression_text = user_rel.impression_text
+                        preference_keywords = user_rel.preference_keywords
+                        relationship_stage = user_rel.relationship_stage
+                        first_met_time = user_rel.first_met_time
+                        last_impression_update = user_rel.last_impression_update
+                        logger.debug(f"[get_person_detail] 找到关系数据: score={relationship_score}, stage={relationship_stage}")
+                    else:
+                        logger.debug(f"[get_person_detail] 未找到关系数据: user_id={person.user_id}")
+
+                # 获取印象（从 UserRelationships，如果没有则使用 PersonInfo 的旧数据）
+                impression = impression_text or person.impression or ""
                 short_impression = person.short_impression or ""
 
                 # 解析记忆点
@@ -268,22 +306,6 @@ class RelationshipRouterComponent(BaseRouterComponent):
                     except Exception as e:
                         logger.warning(f"解析记忆点失败: {e}")
 
-                # 从UserRelationships获取关系数据
-                relationship_score = 0.0
-                relationship_text = None
-                
-                async with get_db_session() as session:
-                    # 构建user_id: platform:user_id
-                    stmt_rel = select(UserRelationships).where(UserRelationships.user_id == person.user_id)
-                    result_rel = await session.execute(stmt_rel)
-                    user_rel = result_rel.scalar_one_or_none()
-                    
-                    if user_rel:
-                        relationship_score = user_rel.relationship_score
-                        logger.debug(f"[get_person_detail] 找到关系数据: score={relationship_score}, text={relationship_text}")
-                    else:
-                        logger.debug(f"[get_person_detail] 未找到关系数据: user_id={person.user_id}")
-
                 return PersonDetailResponse(
                     basic_info=PersonBasicInfoResponse(
                         person_id=person_id,
@@ -298,7 +320,13 @@ class RelationshipRouterComponent(BaseRouterComponent):
                         person_id=person_id,
                         person_name=person.person_name or "未知用户",
                         relationship_score=relationship_score,
-                        relationship_text=person.relation_value if hasattr(person, 'relation_value') else None                    ),
+                        relationship_text=relationship_text,
+                        impression_text=impression_text,
+                        preference_keywords=preference_keywords,
+                        relationship_stage=relationship_stage,
+                        first_met_time=first_met_time,
+                        last_impression_update=last_impression_update
+                    ),
                     impression=impression,
                     short_impression=short_impression,
                     memory_points=memory_points,
@@ -364,11 +392,12 @@ class RelationshipRouterComponent(BaseRouterComponent):
             "/person/{person_id}/impression",
             response_model=UpdateRelationshipResponse,
             summary="更新用户印象",
-            description="更新指定用户的详细印象和简短印象",
+            description="更新指定用户的长期印象、偏好关键词、关系阶段等",
         )
         async def update_person_impression(person_id: str, request: UpdateImpressionRequest, _=VerifiedDep):
             """更新用户印象"""
             try:
+                import time
                 from src.common.database.core.models import PersonInfo
                 from src.common.database.core.session import get_db_session
                 from sqlalchemy import select
@@ -382,12 +411,31 @@ class RelationshipRouterComponent(BaseRouterComponent):
                     if not person:
                         return UpdateRelationshipResponse(success=False, message="用户不存在")
                     
-                    # 更新印象
-                    if request.impression is not None:
-                        person.impression = request.impression
-                    if request.short_impression is not None:
-                        person.short_impression = request.short_impression
+                    # 查找或创建 UserRelationships 记录
+                    stmt_rel = select(UserRelationships).where(UserRelationships.user_id == person.user_id)
+                    result_rel = await session.execute(stmt_rel)
+                    user_rel = result_rel.scalar_one_or_none()
                     
+                    if not user_rel:
+                        # 创建新记录
+                        user_rel = UserRelationships(
+                            user_id=person.user_id,
+                            user_name=person.person_name,
+                            relationship_score=0.3,
+                            last_updated=time.time()
+                        )
+                        session.add(user_rel)
+                    
+                    # 更新印象和相关字段到 UserRelationships
+                    if request.impression_text is not None:
+                        user_rel.impression_text = request.impression_text
+                        user_rel.last_impression_update = time.time()
+                    if request.preference_keywords is not None:
+                        user_rel.preference_keywords = request.preference_keywords
+                    if request.relationship_stage is not None:
+                        user_rel.relationship_stage = request.relationship_stage
+                    
+                    user_rel.last_updated = time.time()
                     await session.commit()
                 
                 logger.info(f"用户 {person_id} 的印象更新成功")
@@ -536,7 +584,7 @@ class RelationshipRouterComponent(BaseRouterComponent):
         )
         async def get_platforms(_=VerifiedDep):
             """获取平台列表"""
-            logger.info(f"[get_platforms] 请求获取平台列表")
+            logger.info("[get_platforms] 请求获取平台列表")
             try:
                 from sqlalchemy import func
                 
@@ -550,6 +598,9 @@ class RelationshipRouterComponent(BaseRouterComponent):
                         .group_by(PersonInfo.platform)
                         .order_by(func.count(PersonInfo.id).desc())
                     )
+                    stmt = stmt.where(PersonInfo.platform != "webui_chatroom")
+                    stmt = stmt.where(PersonInfo.platform != "ui_chatroom")
+                    stmt = stmt.where(PersonInfo.platform.isnot(None))  # 过滤掉 platform 为 None 的记录
                     result = await session.execute(stmt)
                     platforms_data = result.all()
                     

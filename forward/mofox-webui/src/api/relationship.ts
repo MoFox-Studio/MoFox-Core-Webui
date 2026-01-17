@@ -26,7 +26,9 @@ export interface PersonCard {
   nickname?: string
   relationship_score: number
   relationship_text?: string
+  relationship_stage?: string
   short_impression?: string
+  preference_keywords?: string
   know_times: number
   last_know?: string
 }
@@ -50,6 +52,11 @@ export interface PersonRelationship {
   person_name: string
   relationship_score: number
   relationship_text?: string
+  impression_text?: string
+  preference_keywords?: string
+  relationship_stage?: string
+  first_met_time?: number
+  last_impression_update?: number
 }
 
 /**
@@ -177,14 +184,16 @@ export async function searchPerson(query: string) {
  */
 export async function updatePersonImpression(
   personId: string,
-  impression?: string,
-  shortImpression?: string
+  impressionText?: string,
+  preferenceKeywords?: string,
+  relationshipStage?: string
 ) {
   return await api.put<{ success: boolean; message: string }>(
     `relationship/person/${personId}/impression`,
     {
-      impression: impression || null,
-      short_impression: shortImpression || null
+      impression_text: impressionText || null,
+      preference_keywords: preferenceKeywords || null,
+      relationship_stage: relationshipStage || null
     }
   )
 }

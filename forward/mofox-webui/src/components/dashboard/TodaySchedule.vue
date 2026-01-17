@@ -243,7 +243,7 @@ function isCurrentActivity(item: ScheduleActivity): boolean {
   gap: 12px;
   overflow-y: auto;
   padding-right: 8px;
-  max-height: 400px;
+  max-height: 300px;
   min-height: 0;
 }
 

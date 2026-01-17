@@ -142,6 +142,18 @@
             <label>关系描述</label>
             <p>{{ personDetail.relationship.relationship_text || '暂无描述' }}</p>
           </div>
+          <div class="relationship-stage" v-if="personDetail.relationship.relationship_stage">
+            <label>关系阶段</label>
+            <p>{{ getStageText(personDetail.relationship.relationship_stage) }}</p>
+          </div>
+          <div class="preference-keywords" v-if="personDetail.relationship.preference_keywords">
+            <label>用户偏好</label>
+            <p>{{ personDetail.relationship.preference_keywords }}</p>
+          </div>
+          <div class="impression-text" v-if="personDetail.relationship.impression_text">
+            <label>长期印象</label>
+            <p>{{ personDetail.relationship.impression_text }}</p>
+          </div>
         </div>
       </div>
 
@@ -307,9 +319,19 @@
               <span class="text-truncate">{{ person.relationship_text }}</span>
             </div>
 
+            <div v-if="person.relationship_stage" class="relation-stage-mini">
+              <span class="material-symbols-rounded mini-icon">trending_up</span>
+              <span class="text-truncate">{{ getStageText(person.relationship_stage) }}</span>
+            </div>
+
             <div v-if="person.short_impression" class="impression-mini">
               <span class="material-symbols-rounded mini-icon">auto_awesome</span>
               <span class="text-truncate">{{ person.short_impression }}</span>
+            </div>
+
+            <div v-if="person.preference_keywords" class="keywords-mini">
+              <span class="material-symbols-rounded mini-icon">label</span>
+              <span class="text-truncate">{{ person.preference_keywords }}</span>
             </div>
 
             <div class="card-footer-mini">
@@ -468,32 +490,43 @@
                 <div class="form-group">
                   <label class="m3-label">
                     <span class="material-symbols-rounded label-icon">article</span>
-                    <span>详细印象</span>
+                    <span>长期印象（自然叙事）</span>
                   </label>
                   <textarea 
-                    v-model="editForm.impression" 
+                    v-model="editForm.impressionText" 
                     class="m3-textarea"
                     rows="6"
-                    placeholder="详细描述你对这个用户的印象..."
+                    placeholder="用自然的叙述方式描述你对这个用户的长期印象..."
                   ></textarea>
                   <div class="char-count">
-                    {{ editForm.impression.length }} 字符
+                    {{ editForm.impressionText.length }} 字符
                   </div>
                 </div>
                 <div class="form-group">
                   <label class="m3-label">
-                    <span class="material-symbols-rounded label-icon">sentiment_satisfied</span>
-                    <span>简短印象</span>
+                    <span class="material-symbols-rounded label-icon">label</span>
+                    <span>用户偏好关键词</span>
                   </label>
-                  <textarea 
-                    v-model="editForm.shortImpression" 
-                    class="m3-textarea short"
-                    rows="3"
-                    placeholder="用简短的话概括你的印象..."
-                  ></textarea>
-                  <div class="char-count" :class="{ warning: editForm.shortImpression.length > 100 }">
-                    {{ editForm.shortImpression.length }} / 100
-                  </div>
+                  <input 
+                    v-model="editForm.preferenceKeywords" 
+                    type="text"
+                    class="m3-input"
+                    placeholder="例如：游戏,动漫,编程（逗号分隔）"
+                  />
+                </div>
+                <div class="form-group">
+                  <label class="m3-label">
+                    <span class="material-symbols-rounded label-icon">trending_up</span>
+                    <span>关系阶段</span>
+                  </label>
+                  <select v-model="editForm.relationshipStage" class="m3-select">
+                    <option value="">未设置</option>
+                    <option value="stranger">陌生人</option>
+                    <option value="acquaintance">认识的人</option>
+                    <option value="friend">朋友</option>
+                    <option value="close_friend">好友</option>
+                    <option value="bestie">挚友</option>
+                  </select>
                 </div>
               </div>
             </div>
@@ -659,7 +692,11 @@ const editForm = reactive({
   text: '',
   impression: '',
   shortImpression: '',
-  memoryPoints: [] as Array<{ content: string; weight: number; timestamp: string }>
+  memoryPoints: [] as Array<{ content: string; weight: number; timestamp: string }>,
+  // 新增字段
+  impressionText: '',
+  preferenceKeywords: '',
+  relationshipStage: ''
 })
 
 // 加载用户列表
@@ -835,6 +872,9 @@ const openEditImpressionDialog = () => {
   // 初始化表单数据
   editForm.impression = personDetail.value.impression || ''
   editForm.shortImpression = personDetail.value.short_impression || ''
+  editForm.impressionText = personDetail.value.relationship.impression_text || ''
+  editForm.preferenceKeywords = personDetail.value.relationship.preference_keywords || ''
+  editForm.relationshipStage = personDetail.value.relationship.relationship_stage || ''
   
   showEditImpressionDialog.value = true
 }
@@ -917,8 +957,9 @@ const saveImpression = async () => {
 
   console.log('[RelationshipView] 开始保存印象, personId:', currentPersonId.value)
   console.log('[RelationshipView] 提交数据:', {
-    impression: editForm.impression,
-    short_impression: editForm.shortImpression
+    impression_text: editForm.impressionText,
+    preference_keywords: editForm.preferenceKeywords,
+    relationship_stage: editForm.relationshipStage
   })
   saving.value = true
 
@@ -928,8 +969,9 @@ const saveImpression = async () => {
     
     const result = await updatePersonImpression(
       currentPersonId.value,
-      editForm.impression,
-      editForm.shortImpression
+      editForm.impressionText,
+      editForm.preferenceKeywords,
+      editForm.relationshipStage
     )
 
     console.log('[RelationshipView] 保存印象响应:', result)
@@ -1036,6 +1078,18 @@ const getScoreDescription = (score: number) => {
   if (score >= 30) return '🤔 初步认识'
   if (score >= 20) return '👋 刚刚见面'
   return '❓ 陌生人'
+}
+
+// 获取关系阶段文本
+const getStageText = (stage?: string) => {
+  const stageMap: Record<string, string> = {
+    'stranger': '🚶 陌生人',
+    'acquaintance': '👋 认识的人',
+    'friend': '😊 朋友',
+    'close_friend': '💖 好友',
+    'bestie': '🌟 挚友'
+  }
+  return stage ? (stageMap[stage] || stage) : '未设置'
 }
 
 const isSearchFocused = ref(false)
