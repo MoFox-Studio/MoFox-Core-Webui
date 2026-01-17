@@ -562,7 +562,10 @@ class ChatroomRouterComponent(BaseRouterComponent):
             """获取可复制的用户列表"""
             try:
                 async with get_db_session() as session:
+                    # 排除 webui_chatroom/ui_chatroom 平台（WebUI 聊天室）
                     stmt = select(PersonInfo).where(PersonInfo.platform != "web_ui_chatroom")
+                    stmt = stmt.where(PersonInfo.platform != "webui_chatroom")
+                    stmt = stmt.where(PersonInfo.platform != "ui_chatroom")
                     if platform:
                         stmt = stmt.where(PersonInfo.platform == platform)
                     

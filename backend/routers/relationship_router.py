@@ -159,6 +159,12 @@ class RelationshipRouterComponent(BaseRouterComponent):
                 logger.info(f"[get_person_list] 查询偏移量: offset={offset}, limit={page_size}")
                 async with get_db_session() as session:
                     stmt = select(PersonInfo).order_by(PersonInfo.last_know.desc())
+                    stmt = stmt.where(
+                        (PersonInfo.platform != "webui_chatroom") | (PersonInfo.platform.is_(None))
+                    )
+                    stmt = stmt.where(
+                        (PersonInfo.platform != "ui_chatroom") | (PersonInfo.platform.is_(None))
+                    )
                     
                     # 如果指定了平台，添加筛选条件
                     if platform:

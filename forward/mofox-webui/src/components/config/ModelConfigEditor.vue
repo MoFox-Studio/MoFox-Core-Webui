@@ -16,7 +16,7 @@
         </button>
       </div>
       <div class="nav-actions">
-        <div class="search-box" v-if="activeTab !== 'providers'">
+        <div class="search-box" v-if="activeTab === 'models'">
           <Icon icon="lucide:search" />
           <input 
             type="text" 
@@ -29,7 +29,7 @@
           </button>
         </div>
         <button 
-          v-if="activeTab !== 'tasks'"
+          v-if="activeTab === 'models' || activeTab === 'providers'"
           class="add-btn" 
           @click="activeTab === 'providers' ? showAddProviderModal = true : showAddModelModal = true"
           :title="activeTab === 'providers' ? '添加提供商' : '添加模型'"
@@ -537,6 +537,243 @@
               </div>
             </div>
           </Transition>
+        </div>
+      </div>
+    </div>
+
+    <!-- 模型选择器配置面板 -->
+    <div v-show="activeTab === 'selector'" class="tab-panel">
+      <div class="selector-config">
+        <div class="config-section">
+          <div class="section-header">
+            <div class="section-icon">
+              <Icon icon="lucide:gauge" />
+            </div>
+            <div class="section-info">
+              <h3>负载均衡配置</h3>
+              <p>调整模型选择器的负载均衡策略和惩罚机制</p>
+            </div>
+          </div>
+          
+          <div class="detail-grid">
+            <div class="form-group">
+              <label>
+                严重错误惩罚乘数
+                <span class="field-hint" title="网络错误、服务器错误等严重错误的惩罚倍数">
+                  <Icon icon="lucide:help-circle" />
+                </span>
+              </label>
+              <div class="number-input-wrapper">
+                <button 
+                  class="number-btn" 
+                  @click="updateSelectorConfig('critical_penalty_multiplier', Math.max(0, (modelSelector.critical_penalty_multiplier ?? 5.0) - 0.5))"
+                  :disabled="(modelSelector.critical_penalty_multiplier ?? 5.0) <= 0"
+                >
+                  <Icon icon="lucide:minus" />
+                </button>
+                <input 
+                  type="number" 
+                  class="form-input number-center" 
+                  :value="modelSelector.critical_penalty_multiplier ?? 5.0"
+                  @input="updateSelectorConfig('critical_penalty_multiplier', parseFloat(($event.target as HTMLInputElement).value))"
+                  min="0" max="20" step="0.5"
+                />
+                <button 
+                  class="number-btn" 
+                  @click="updateSelectorConfig('critical_penalty_multiplier', Math.min(20, (modelSelector.critical_penalty_multiplier ?? 5.0) + 0.5))"
+                  :disabled="(modelSelector.critical_penalty_multiplier ?? 5.0) >= 20"
+                >
+                  <Icon icon="lucide:plus" />
+                </button>
+              </div>
+              <p class="field-hint">当模型发生严重错误时，其失败惩罚值会乘以此倍数（推荐: 3.0-10.0）</p>
+            </div>
+
+            <div class="form-group">
+              <label>
+                默认惩罚增量
+                <span class="field-hint" title="普通错误的惩罚增量">
+                  <Icon icon="lucide:help-circle" />
+                </span>
+              </label>
+              <div class="number-input-wrapper">
+                <button 
+                  class="number-btn" 
+                  @click="updateSelectorConfig('default_penalty_increment', Math.max(0, (modelSelector.default_penalty_increment ?? 1.0) - 0.1))"
+                  :disabled="(modelSelector.default_penalty_increment ?? 1.0) <= 0"
+                >
+                  <Icon icon="lucide:minus" />
+                </button>
+                <input 
+                  type="number" 
+                  class="form-input number-center" 
+                  :value="modelSelector.default_penalty_increment ?? 1.0"
+                  @input="updateSelectorConfig('default_penalty_increment', parseFloat(($event.target as HTMLInputElement).value))"
+                  min="0" max="5" step="0.1"
+                />
+                <button 
+                  class="number-btn" 
+                  @click="updateSelectorConfig('default_penalty_increment', Math.min(5, (modelSelector.default_penalty_increment ?? 1.0) + 0.1))"
+                  :disabled="(modelSelector.default_penalty_increment ?? 1.0) >= 5"
+                >
+                  <Icon icon="lucide:plus" />
+                </button>
+              </div>
+              <p class="field-hint">当模型发生一般错误时，其失败惩罚值会增加此数值（推荐: 0.5-2.0）</p>
+            </div>
+
+            <div class="form-group">
+              <label>
+                延迟权重
+                <span class="field-hint" title="模型延迟在负载均衡中的影响权重">
+                  <Icon icon="lucide:help-circle" />
+                </span>
+              </label>
+              <div class="number-input-wrapper">
+                <button 
+                  class="number-btn" 
+                  @click="updateSelectorConfig('latency_weight', Math.max(0, (modelSelector.latency_weight ?? 200.0) - 10))"
+                  :disabled="(modelSelector.latency_weight ?? 200.0) <= 0"
+                >
+                  <Icon icon="lucide:minus" />
+                </button>
+                <input 
+                  type="number" 
+                  class="form-input number-center" 
+                  :value="modelSelector.latency_weight ?? 200.0"
+                  @input="updateSelectorConfig('latency_weight', parseFloat(($event.target as HTMLInputElement).value))"
+                  min="0" max="1000" step="10"
+                />
+                <button 
+                  class="number-btn" 
+                  @click="updateSelectorConfig('latency_weight', Math.min(1000, (modelSelector.latency_weight ?? 200.0) + 10))"
+                  :disabled="(modelSelector.latency_weight ?? 200.0) >= 1000"
+                >
+                  <Icon icon="lucide:plus" />
+                </button>
+              </div>
+              <p class="field-hint">权重越高，选择器越倾向于选择低延迟模型（推荐: 50-500）</p>
+            </div>
+
+            <div class="form-group">
+              <label>
+                失败惩罚权重
+                <span class="field-hint" title="模型失败次数在负载均衡中的影响权重">
+                  <Icon icon="lucide:help-circle" />
+                </span>
+              </label>
+              <div class="number-input-wrapper">
+                <button 
+                  class="number-btn" 
+                  @click="updateSelectorConfig('penalty_weight', Math.max(0, (modelSelector.penalty_weight ?? 300.0) - 10))"
+                  :disabled="(modelSelector.penalty_weight ?? 300.0) <= 0"
+                >
+                  <Icon icon="lucide:minus" />
+                </button>
+                <input 
+                  type="number" 
+                  class="form-input number-center" 
+                  :value="modelSelector.penalty_weight ?? 300.0"
+                  @input="updateSelectorConfig('penalty_weight', parseFloat(($event.target as HTMLInputElement).value))"
+                  min="0" max="1000" step="10"
+                />
+                <button 
+                  class="number-btn" 
+                  @click="updateSelectorConfig('penalty_weight', Math.min(1000, (modelSelector.penalty_weight ?? 300.0) + 10))"
+                  :disabled="(modelSelector.penalty_weight ?? 300.0) >= 1000"
+                >
+                  <Icon icon="lucide:plus" />
+                </button>
+              </div>
+              <p class="field-hint">权重越高，有失败记录的模型越难被选中（推荐: 100-500）</p>
+            </div>
+
+            <div class="form-group">
+              <label>
+                使用惩罚权重
+                <span class="field-hint" title="短期使用频率在负载均衡中的影响权重">
+                  <Icon icon="lucide:help-circle" />
+                </span>
+              </label>
+              <div class="number-input-wrapper">
+                <button 
+                  class="number-btn" 
+                  @click="updateSelectorConfig('usage_penalty_weight', Math.max(0, (modelSelector.usage_penalty_weight ?? 1000.0) - 50))"
+                  :disabled="(modelSelector.usage_penalty_weight ?? 1000.0) <= 0"
+                >
+                  <Icon icon="lucide:minus" />
+                </button>
+                <input 
+                  type="number" 
+                  class="form-input number-center" 
+                  :value="modelSelector.usage_penalty_weight ?? 1000.0"
+                  @input="updateSelectorConfig('usage_penalty_weight', parseFloat(($event.target as HTMLInputElement).value))"
+                  min="0" max="3000" step="50"
+                />
+                <button 
+                  class="number-btn" 
+                  @click="updateSelectorConfig('usage_penalty_weight', Math.min(3000, (modelSelector.usage_penalty_weight ?? 1000.0) + 50))"
+                  :disabled="(modelSelector.usage_penalty_weight ?? 1000.0) >= 3000"
+                >
+                  <Icon icon="lucide:plus" />
+                </button>
+              </div>
+              <p class="field-hint">权重越高，负载均衡越均匀（轮询所有模型）（推荐: 500-2000）</p>
+            </div>
+          </div>
+
+          <!-- 场景预设 -->
+          <div class="preset-section">
+            <h4>快速预设</h4>
+            <p class="section-desc">一键应用常见场景的优化配置</p>
+            <div class="preset-grid">
+              <button class="preset-card" @click="applySelectorPreset('production')">
+                <div class="preset-icon">
+                  <Icon icon="lucide:shield-check" />
+                </div>
+                <div class="preset-info">
+                  <h5>生产环境</h5>
+                  <p>稳定性优先</p>
+                </div>
+              </button>
+              <button class="preset-card" @click="applySelectorPreset('realtime')">
+                <div class="preset-icon">
+                  <Icon icon="lucide:zap" />
+                </div>
+                <div class="preset-info">
+                  <h5>实时交互</h5>
+                  <p>响应速度优先</p>
+                </div>
+              </button>
+              <button class="preset-card" @click="applySelectorPreset('development')">
+                <div class="preset-icon">
+                  <Icon icon="lucide:code" />
+                </div>
+                <div class="preset-info">
+                  <h5>开发测试</h5>
+                  <p>快速试错</p>
+                </div>
+              </button>
+              <button class="preset-card" @click="applySelectorPreset('batch')">
+                <div class="preset-icon">
+                  <Icon icon="lucide:layers" />
+                </div>
+                <div class="preset-info">
+                  <h5>批量处理</h5>
+                  <p>成本优先</p>
+                </div>
+              </button>
+              <button class="preset-card" @click="applySelectorPreset('performance')">
+                <div class="preset-icon">
+                  <Icon icon="lucide:rocket" />
+                </div>
+                <div class="preset-info">
+                  <h5>性能优先</h5>
+                  <p>单模型优化</p>
+                </div>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -1285,7 +1522,7 @@ const emit = defineEmits<{
 }>()
 
 // 导航状态
-const activeTab = ref<'providers' | 'models' | 'tasks'>('providers')
+const activeTab = ref<'providers' | 'models' | 'selector' | 'tasks'>('providers')
 const searchQuery = ref('')
 const selectedProvider = ref<number | null>(0)
 const selectedModel = ref<number | null>(null)
@@ -1295,6 +1532,7 @@ const activeTaskCategory = ref('core')
 const tabs = computed(() => [
   { key: 'providers' as const, name: '提供商', icon: 'lucide:cloud', count: apiProviders.value.length },
   { key: 'models' as const, name: '模型', icon: 'lucide:cpu', count: models.value.length },
+  { key: 'selector' as const, name: '选择器', icon: 'lucide:settings-2', count: undefined },
   { key: 'tasks' as const, name: '任务配置', icon: 'lucide:list-checks', count: undefined }
 ])
 
@@ -1447,6 +1685,24 @@ const models = computed(() => {
   return []
 })
 
+// 计算模型选择器配置
+const modelSelector = computed(() => {
+  if (props.editedValues && 'model_selector' in props.editedValues) {
+    return props.editedValues['model_selector'] as Record<string, number>
+  }
+  const data = props.parsedData
+  if (data.model_selector && typeof data.model_selector === 'object') {
+    return data.model_selector as Record<string, number>
+  }
+  return {
+    critical_penalty_multiplier: 5.0,
+    default_penalty_increment: 1.0,
+    latency_weight: 200.0,
+    penalty_weight: 300.0,
+    usage_penalty_weight: 1000.0
+  }
+})
+
 // 过滤后的模型列表
 const filteredModels = computed(() => {
   if (!searchQuery.value) return models.value
@@ -1520,6 +1776,58 @@ function updateProvider(index: number, key: string, value: unknown) {
   const newProviders = [...apiProviders.value]
   newProviders[index] = updatedProvider
   emit('update', 'api_providers', newProviders)
+}
+
+// 更新模型选择器配置
+function updateSelectorConfig(key: string, value: number) {
+  const updatedSelector = { ...modelSelector.value, [key]: value }
+  emit('update', 'model_selector', updatedSelector)
+}
+
+// 应用模型选择器预设配置
+function applySelectorPreset(preset: string) {
+  const presets: Record<string, Record<string, number>> = {
+    production: {
+      critical_penalty_multiplier: 8.0,
+      default_penalty_increment: 2.0,
+      latency_weight: 300.0,
+      penalty_weight: 500.0,
+      usage_penalty_weight: 1000.0
+    },
+    realtime: {
+      critical_penalty_multiplier: 5.0,
+      default_penalty_increment: 1.0,
+      latency_weight: 500.0,
+      penalty_weight: 200.0,
+      usage_penalty_weight: 800.0
+    },
+    development: {
+      critical_penalty_multiplier: 2.0,
+      default_penalty_increment: 0.5,
+      latency_weight: 150.0,
+      penalty_weight: 150.0,
+      usage_penalty_weight: 1200.0
+    },
+    batch: {
+      critical_penalty_multiplier: 5.0,
+      default_penalty_increment: 1.0,
+      latency_weight: 50.0,
+      penalty_weight: 300.0,
+      usage_penalty_weight: 1500.0
+    },
+    performance: {
+      critical_penalty_multiplier: 5.0,
+      default_penalty_increment: 1.0,
+      latency_weight: 200.0,
+      penalty_weight: 300.0,
+      usage_penalty_weight: 300.0
+    }
+  }
+  
+  const presetConfig = presets[preset]
+  if (presetConfig) {
+    emit('update', 'model_selector', presetConfig)
+  }
 }
 
 // 更新提供商的 extra_params 中的某个字段
@@ -4181,8 +4489,141 @@ select.input {
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
   resize: vertical;
-  transition: border-color 0.2s, box-shadow 0.2s;
 }
+
+/* 模型选择器配置样式 */
+.selector-config {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.config-section {
+  background: var(--bg-primary);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  border: 1px solid var(--border-color);
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.section-icon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-primary-alpha);
+  color: var(--color-primary);
+  border-radius: 12px;
+  font-size: 24px;
+}
+
+.section-info h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 4px 0;
+}
+
+.section-info p {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  margin: 0;
+}
+
+.preset-section {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border-color);
+}
+
+.preset-section h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 8px 0;
+}
+
+.section-desc {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  margin: 0 0 16px 0;
+}
+
+.preset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.preset-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.preset-card:hover {
+  background: var(--color-primary-alpha);
+  border-color: var(--color-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.preset-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-primary-alpha);
+  color: var(--color-primary);
+  border-radius: 8px;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.preset-card:hover .preset-icon {
+  background: var(--color-primary);
+  color: white;
+}
+
+.preset-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.preset-info h5 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 4px 0;
+}
+
+.preset-info p {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+
 
 .json-editor:focus {
   outline: none;
