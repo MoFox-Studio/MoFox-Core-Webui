@@ -39,14 +39,27 @@ class SPAStaticFiles(StaticFiles):
     对于不存在的路径，返回index.html而不是404，让前端路由处理
     """
     async def get_response(self, path: str, scope):
+        from starlette.exceptions import HTTPException as StarletteHTTPException
+
+        # 标准化：去掉前导斜杠，保证判断一致
+        normalized = (path or "").lstrip("/")
+
         try:
-            return await super().get_response(path, scope)
-        except Exception:
-            # 如果文件不存在，返回index.html
-            # 但排除API路径和插件路径
-            if path.startswith("api/") or path.startswith("plugins/"):
-                logger.debug("raise!")
+            return await super().get_response(normalized, scope)
+        except Exception as exc:
+            # 仅对“未找到”情形回退到 index.html；其它错误应原样抛出
+            is_404 = isinstance(exc, FileNotFoundError) or (
+                isinstance(exc, StarletteHTTPException) and getattr(exc, "status_code", None) == 404
+            )
+
+            # 保留 API / plugins 的原始行为（不做 SPA 回退）
+            if normalized.startswith("api/") or normalized.startswith("plugins/"):
                 raise
+
+            if not is_404:
+                # 非 404 的异常应当暴露出来以便定位问题
+                raise
+
             return await super().get_response("index.html", scope)
 
 
