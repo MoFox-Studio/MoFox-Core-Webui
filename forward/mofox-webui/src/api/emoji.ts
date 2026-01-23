@@ -137,7 +137,7 @@ export async function getEmojiList(params: GetEmojiListParams = {}) {
  * 获取表情包详情
  */
 export async function getEmojiDetail(hash: string) {
-  const response = await api.get<{ success: boolean; data: EmojiDetail }>(`/emoji/${hash}`)
+  const response = await api.get<{ success: boolean; data: EmojiDetail }>(`/emoji/detail/${hash}`)
   return response.data
 }
 
@@ -163,7 +163,7 @@ export async function uploadEmojis(files: File[]) {
  * 删除表情包
  */
 export async function deleteEmoji(hash: string) {
-  const response = await api.delete<{ success: boolean; message: string }>(`/emoji/${hash}`)
+  const response = await api.delete<{ success: boolean; message: string }>(`/emoji/delete/${hash}`)
   return response.data
 }
 
@@ -171,7 +171,7 @@ export async function deleteEmoji(hash: string) {
  * 更新表情包信息
  */
 export async function updateEmoji(hash: string, data: EmojiUpdateRequest) {
-  const response = await api.patch<{ success: boolean; data: EmojiDetail }>(`/emoji/${hash}`, data)
+  const response = await api.patch<{ success: boolean; data: EmojiDetail }>(`/emoji/update/${hash}`, data)
   return response.data
 }
 
