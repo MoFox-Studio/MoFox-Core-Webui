@@ -56,7 +56,7 @@ git clone -b webui-dist https://github.com/MoFox-Studio/MoFox-Core-Webui.git web
 
 ### 配置 API Key
 
-编辑插件配置文件 `plugins/webui_backend/config/config.toml`：
+编辑bot配置文件 `config/bot_config.toml`：
 
    ```toml
    # --- 插件API密钥认证 ---
