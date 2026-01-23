@@ -106,7 +106,7 @@ function isCurrentActivity(item: ScheduleActivity): boolean {
   animation: slideIn 0.5s cubic-bezier(0.2, 0, 0, 1) 0.3s backwards;
   display: flex;
   flex-direction: column;
-  height: 100%;
+  height: 550px;
 }
 
 .card-header {
@@ -243,7 +243,6 @@ function isCurrentActivity(item: ScheduleActivity): boolean {
   gap: 12px;
   overflow-y: auto;
   padding-right: 8px;
-  max-height: 300px;
   min-height: 0;
 }
 
@@ -323,7 +322,6 @@ function isCurrentActivity(item: ScheduleActivity): boolean {
   gap: 12px;
   overflow-y: auto;
   padding-right: 8px;
-  max-height: 400px;
   min-height: 0;
 }
 
