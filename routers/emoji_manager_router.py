@@ -283,7 +283,7 @@ class EmojiManagerRouterComponent(BaseRouterComponent):
                 logger.error(f"获取表情包列表失败: {e}")
                 raise HTTPException(status_code=500, detail=f"获取表情包列表失败: {str(e)}")
 
-        @self.router.get("/{emoji_hash}", summary="获取表情包详情", description="根据哈希值获取表情包完整信息")
+        @self.router.get("/detail/{emoji_hash}", summary="获取表情包详情", description="根据哈希值获取表情包完整信息")
         async def get_emoji_detail(emoji_hash: str,_ =  VerifiedDep ):
             """获取表情包详情"""
             try:
@@ -442,7 +442,7 @@ class EmojiManagerRouterComponent(BaseRouterComponent):
                 logger.error(f"上传表情包失败: {e}")
                 raise HTTPException(status_code=500, detail=f"上传表情包失败: {str(e)}")
 
-        @self.router.delete("/{emoji_hash}", summary="删除表情包", description="根据哈希值删除表情包")
+        @self.router.delete("/delete/{emoji_hash}", summary="删除表情包", description="根据哈希值删除表情包")
         async def delete_emoji(emoji_hash: str,_ =  VerifiedDep ):
             """删除表情包"""
             try:
@@ -457,8 +457,46 @@ class EmojiManagerRouterComponent(BaseRouterComponent):
             except Exception as e:
                 logger.error(f"删除表情包失败: {e}")
                 raise HTTPException(status_code=500, detail=f"删除表情包失败: {str(e)}")
+    
+        @self.router.get("/stats", summary="获取表情包统计", description="获取表情包的统计信息，包括总数、使用情况等")
+        async def get_emoji_stats(_ =  VerifiedDep):
+            """获取表情包统计信息"""
+            try:
+                async with get_db_session() as session:
+                    # 总数统计
+                    total_count = await session.scalar(select(func.count(Emoji.id)))
+                    registered_count = await session.scalar(
+                        select(func.count(Emoji.id)).where(Emoji.is_registered == True)
+                    )
+                    banned_count = await session.scalar(select(func.count(Emoji.id)).where(Emoji.is_banned == True))
+                    total_usage = await session.scalar(select(func.sum(Emoji.usage_count))) or 0
 
-        @self.router.patch("/{emoji_hash}", summary="更新表情包信息", description="更新表情包的描述、情感标签或禁用状态")
+                    # 最常用的表情包
+                    top_used_result = await session.execute(
+                        select(Emoji.emoji_hash, Emoji.description, Emoji.usage_count)
+                        .order_by(Emoji.usage_count.desc())
+                        .limit(10)
+                    )
+                    top_used = [
+                        {"hash": row[0], "description": row[1], "usage_count": row[2]}
+                        for row in top_used_result.all()
+                    ]
+
+                    stats = EmojiStatsResponse(
+                        total_count=total_count,
+                        registered_count=registered_count,
+                        banned_count=banned_count,
+                        total_usage=total_usage,
+                        top_used=top_used,
+                    )
+
+                    return {"success": True, "data": stats.model_dump()}
+
+            except Exception as e:
+                logger.error(f"获取统计信息失败: {e}")
+                raise HTTPException(status_code=500, detail=f"获取统计信息失败: {str(e)}")
+    
+        @self.router.patch("/update/{emoji_hash}", summary="更新表情包信息", description="更新表情包的描述、情感标签或禁用状态")
         async def update_emoji(emoji_hash: str, data: EmojiUpdateRequest,_ =  VerifiedDep):
             """更新表情包信息"""
             try:
@@ -565,41 +603,3 @@ class EmojiManagerRouterComponent(BaseRouterComponent):
             except Exception as e:
                 logger.error(f"批量操作失败: {e}")
                 raise HTTPException(status_code=500, detail=f"批量操作失败: {str(e)}")
-
-        @self.router.get("/stats", summary="获取表情包统计", description="获取表情包的统计信息，包括总数、使用情况等")
-        async def get_emoji_stats(_ =  VerifiedDep):
-            """获取表情包统计信息"""
-            try:
-                async with get_db_session() as session:
-                    # 总数统计
-                    total_count = await session.scalar(select(func.count(Emoji.id)))
-                    registered_count = await session.scalar(
-                        select(func.count(Emoji.id)).where(Emoji.is_registered == True)
-                    )
-                    banned_count = await session.scalar(select(func.count(Emoji.id)).where(Emoji.is_banned == True))
-                    total_usage = await session.scalar(select(func.sum(Emoji.usage_count))) or 0
-
-                    # 最常用的表情包
-                    top_used_result = await session.execute(
-                        select(Emoji.emoji_hash, Emoji.description, Emoji.usage_count)
-                        .order_by(Emoji.usage_count.desc())
-                        .limit(10)
-                    )
-                    top_used = [
-                        {"hash": row[0], "description": row[1], "usage_count": row[2]}
-                        for row in top_used_result.all()
-                    ]
-
-                    stats = EmojiStatsResponse(
-                        total_count=total_count,
-                        registered_count=registered_count,
-                        banned_count=banned_count,
-                        total_usage=total_usage,
-                        top_used=top_used,
-                    )
-
-                    return {"success": True, "data": stats.model_dump()}
-
-            except Exception as e:
-                logger.error(f"获取统计信息失败: {e}")
-                raise HTTPException(status_code=500, detail=f"获取统计信息失败: {str(e)}")
