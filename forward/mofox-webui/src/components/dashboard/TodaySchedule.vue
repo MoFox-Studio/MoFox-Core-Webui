@@ -106,7 +106,8 @@ function isCurrentActivity(item: ScheduleActivity): boolean {
   animation: slideIn 0.5s cubic-bezier(0.2, 0, 0, 1) 0.3s backwards;
   display: flex;
   flex-direction: column;
-  height: 550px;
+  height: 100%;
+  min-height: 500px;
 }
 
 .card-header {
