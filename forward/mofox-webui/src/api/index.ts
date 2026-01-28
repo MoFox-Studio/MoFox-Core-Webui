@@ -130,7 +130,7 @@ export async function getApiBaseUrl(): Promise<string> {
   if (import.meta.env.MODE === 'demo') {
     return ''
   }
-  
+
   // 🌟 代理模式：返回空字符串，使用相对路径
   return ''
 }
@@ -147,7 +147,7 @@ export async function getPluginBaseUrl(): Promise<string> {
   if (import.meta.env.MODE === 'demo') {
     return PLUGIN_BASE_PATH
   }
-  
+
   // 🌟 代理模式：直接返回相对路径
   return PLUGIN_BASE_PATH
 }
@@ -260,7 +260,7 @@ class ApiClient {
     // 在 Demo 模式下，不发送实际请求，而是返回 Mock 数据
     if (import.meta.env.MODE === 'demo') {
       console.log(`[Demo Mode] Request: ${endpoint}`, options)
-      
+
       // 模拟网络延迟，让 Demo 模式更真实
       await new Promise(resolve => setTimeout(resolve, 500))
 
@@ -272,7 +272,7 @@ class ApiClient {
         // 3. api.get(API_ENDPOINTS.AUTH.LOGIN) - 发送 GET 请求
         // 4. Token 自动添加到 X-API-Key 请求头
         // 5. 后端验证 X-API-Key 是否正确
-        
+
         const token = this.token
         // Demo 模式：密码固定为 'mofox'
         if (token === 'mofox') {
@@ -283,15 +283,74 @@ class ApiClient {
       }
 
       // 其他接口 Mock
-      if (endpoint === 'dashboard/overview') return { success: true, data: MOCK_DATA.overview.data as unknown as T, status: 200 }
-      if (endpoint === 'dashboard/schedule') return { success: true, data: MOCK_DATA.schedule.data as unknown as T, status: 200 }
-      if (endpoint === 'dashboard/monthly_plans') return { success: true, data: MOCK_DATA.monthlyPlans.data as unknown as T, status: 200 }
-      if (endpoint === 'stats/llm') return { success: true, data: MOCK_DATA.llmStats.data as unknown as T, status: 200 }
-      if (endpoint === 'stats/messages') return { success: true, data: MOCK_DATA.messageStats.data as unknown as T, status: 200 }
-      if (endpoint === 'plugins/list') return { success: true, data: MOCK_DATA.plugins.data as unknown as T, status: 200 }
-      if (endpoint === 'components/list') return { success: true, data: MOCK_DATA.components.data as unknown as T, status: 200 }
-      if (endpoint === 'logs/list') return { success: true, data: MOCK_DATA.logs.data as unknown as T, status: 200 }
-      
+      // 仪表盘概览
+      if (endpoint === 'stats/overview') return { success: true, data: MOCK_DATA.overview.data as unknown as T, status: 200 }
+      // 日程 (带参数)
+      if (endpoint.startsWith('stats/schedule')) return { success: true, data: MOCK_DATA.schedule.data as unknown as T, status: 200 }
+      // 月度计划 (带参数)
+      if (endpoint.startsWith('stats/monthly-plans')) return { success: true, data: MOCK_DATA.monthlyPlans.data as unknown as T, status: 200 }
+      // LLM 统计 (带参数)
+      if (endpoint.startsWith('stats/llm-stats')) return { success: true, data: MOCK_DATA.llmStats.data as unknown as T, status: 200 }
+      // 消息统计 (带参数)
+      if (endpoint.startsWith('stats/message-stats')) return { success: true, data: MOCK_DATA.messageStats.data as unknown as T, status: 200 }
+
+      // 插件列表 (按状态)
+      if (endpoint === 'stats/plugins-by-status') return { success: true, data: MOCK_DATA.plugins.data as unknown as T, status: 200 }
+
+      // 组件列表 (按类型)
+      if (endpoint.startsWith('stats/components-by-type')) return { success: true, data: MOCK_DATA.components.data as unknown as T, status: 200 }
+
+      // 日志相关
+      if (endpoint === 'log_viewer/files') return { success: true, data: { files: [{ name: 'app.log', size: 1024, size_human: '1 KB', mtime: Date.now(), mtime_human: '刚刚', compressed: false }] } as unknown as T, status: 200 }
+      if (endpoint.startsWith('log_viewer/search')) return { success: true, data: { success: true, entries: MOCK_DATA.logs.data.logs, total: MOCK_DATA.logs.data.logs.length, offset: 0, limit: 100 } as unknown as T, status: 200 }
+      if (endpoint.startsWith('log_viewer/loggers')) return { success: true, data: { success: true, loggers: [{ name: 'Core', alias: '核心', color: '#4caf50' }] } as unknown as T, status: 200 }
+      if (endpoint.startsWith('log_viewer/stats')) return { success: true, data: { success: true, total: 100, by_level: { INFO: 80, ERROR: 20 }, by_logger: { Core: 100 } } as unknown as T, status: 200 }
+
+      // 插件管理列表
+      if (endpoint === 'plugin_manager/plugins') {
+        const allPlugins = [...MOCK_DATA.plugins.data.loaded, ...MOCK_DATA.plugins.data.failed]
+        return { success: true, data: { plugins: allPlugins, total: allPlugins.length } as unknown as T, status: 200 }
+      }
+
+      // 聊天室 Mock
+      if (endpoint === 'chatroom/users') return {
+        success: true, data: {
+          users: [
+            { user_id: 'user1', nickname: 'Alice', avatar: '', created_at: Date.now(), updated_at: Date.now(), impression: 'Friendly user', memory_points: [] },
+            { user_id: 'user2', nickname: 'Bob', avatar: '', created_at: Date.now(), updated_at: Date.now(), impression: 'Tech enthusiast', memory_points: [] }
+          ]
+        } as unknown as T, status: 200
+      }
+      if (endpoint.startsWith('chatroom/messages')) return {
+        success: true, data: {
+          messages: [
+            { message_id: 'msg1', user_id: 'user1', nickname: 'Alice', content: 'Hello Robot!', timestamp: Date.now() / 1000, message_type: 'text' },
+            { message_id: 'msg2', user_id: 'mofox_bot', nickname: 'MoFox', content: 'Hi Alice! How can I help you?', timestamp: Date.now() / 1000 + 1, message_type: 'text' }
+          ]
+        } as unknown as T, status: 200
+      }
+
+      // 实时聊天 Mock
+      if (endpoint.startsWith('live_chat/streams')) return {
+        success: true, data: {
+          streams: [
+            { stream_id: 'stream1', platform: 'qq', group_name: 'Test Group', last_active_time: Date.now() / 1000, unread: 0 },
+            { stream_id: 'stream2', platform: 'telegram', user_nickname: 'John Doe', last_active_time: Date.now() / 1000, unread: 2 }
+          ]
+        } as unknown as T, status: 200
+      }
+      if (endpoint.startsWith('live_chat/messages')) return {
+        success: true, data: {
+          messages: [
+            { message_id: 'live1', stream_id: 'stream1', user_nickname: 'User A', content: 'Is this working?', timestamp: Date.now() / 1000, sender_type: 'user', direction: 'incoming' },
+            { message_id: 'live2', stream_id: 'stream1', user_nickname: 'Bot', content: 'Yes it is!', timestamp: Date.now() / 1000 + 2, sender_type: 'bot', direction: 'outgoing' }
+          ]
+        } as unknown as T, status: 200
+      }
+
+      // 配置列表
+      if (endpoint === 'config/list') return { success: true, data: { configs: [], total: 0 } as unknown as T, status: 200 }
+
       // ==================== 初始化相关 API Mock ====================
       // 初始化状态：Demo 模式下返回未初始化，让用户体验初始化配置界面
       if (endpoint === 'initialization/status') {
@@ -299,7 +358,7 @@ class ApiClient {
         const demoInitialized = localStorage.getItem('demo_initialized') === 'true'
         return { success: true, data: { is_initialized: demoInitialized } as unknown as T, status: 200 }
       }
-      
+
       // 获取机器人配置
       if (endpoint === 'initialization/bot-config') {
         return {
@@ -316,12 +375,12 @@ class ApiClient {
           status: 200
         }
       }
-      
+
       // 保存机器人配置
       if (endpoint === 'initialization/bot-config' && options.method === 'POST') {
         return { success: true, data: { success: true, message: '配置保存成功' } as unknown as T, status: 200 }
       }
-      
+
       // 获取模型配置
       if (endpoint === 'initialization/model-config') {
         return {
@@ -334,12 +393,12 @@ class ApiClient {
           status: 200
         }
       }
-      
+
       // 保存模型配置
       if (endpoint === 'initialization/model-config' && options.method === 'POST') {
         return { success: true, data: { success: true, message: '模型配置保存成功' } as unknown as T, status: 200 }
       }
-      
+
       // 获取 Git 配置
       if (endpoint === 'initialization/git-config') {
         return {
@@ -350,22 +409,22 @@ class ApiClient {
           status: 200
         }
       }
-      
+
       // 保存 Git 配置
       if (endpoint === 'initialization/git-config' && options.method === 'POST') {
         return { success: true, data: { success: true, message: 'Git配置保存成功' } as unknown as T, status: 200 }
       }
-      
+
       // 验证 API 密钥
       if (endpoint === 'initialization/validate-api-key') {
         return { success: true, data: { valid: true, message: 'API密钥验证成功 (Demo模式)' } as unknown as T, status: 200 }
       }
-      
+
       // 检测 Git 路径
       if (endpoint === 'initialization/detect-git') {
         return { success: true, data: { found: true, path: 'C:\\Program Files\\Git\\bin\\git.exe' } as unknown as T, status: 200 }
       }
-      
+
       // 完成初始化
       if (endpoint === 'initialization/complete') {
         // 在 localStorage 中标记已完成初始化
@@ -378,7 +437,7 @@ class ApiClient {
     }
 
     const url = await this.buildUrl(endpoint)
-    
+
     // 🐛 DEBUG: 打印请求详情
     console.log('[API Request]', {
       endpoint,
@@ -387,14 +446,14 @@ class ApiClient {
       hasToken: !!this.token,
       timestamp: new Date().toISOString()
     })
-    
+
     const headers = new Headers(options.headers)
-    
+
     // 添加认证头
     if (this.token) {
       headers.set('X-API-Key', this.token)
     }
-    
+
     // 设置默认 Content-Type（除非是 FormData，让浏览器自动设置）
     if (!headers.has('Content-Type') && options.body && !(options.body instanceof FormData)) {
       headers.set('Content-Type', 'application/json')
@@ -408,7 +467,7 @@ class ApiClient {
       })
 
       const status = response.status
-      
+
       // 🐛 DEBUG: 打印响应状态
       console.log('[API Response]', {
         endpoint,
@@ -462,13 +521,13 @@ class ApiClient {
           data,
           headers: Object.fromEntries(response.headers.entries())
         })
-        
+
         // 返回错误响应
         // 优先使用服务器返回的错误消息，否则使用默认消息
-        return { 
-          success: false, 
+        return {
+          success: false,
           error: (data as Record<string, unknown>)?.error as string || `请求失败: ${status}`,
-          status 
+          status
         }
       }
     } catch (error) {
@@ -482,8 +541,8 @@ class ApiClient {
           stack: error.stack
         } : error
       })
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: error instanceof Error ? error.message : '网络请求失败',
         status: 0  // 0 表示网络错误
       }
@@ -557,7 +616,7 @@ class ApiClient {
   async post<T = unknown>(endpoint: string, body?: unknown, options: RequestInit = {}) {
     // 特殊处理：FormData 不需要 JSON.stringify，浏览器会自动处理
     const requestBody = body instanceof FormData ? body : (body ? JSON.stringify(body) : undefined)
-    
+
     return this.request<T>(endpoint, {
       ...options,
       method: 'POST',
@@ -709,9 +768,9 @@ export const API_ENDPOINTS = {
     DELETE: (name: string) => `plugin_manager/plugins/${name}/delete`,
     LOAD: (name: string) => `plugin_manager/plugins/${name}/load`,
     COMPONENTS: (name: string) => `plugin_manager/plugins/${name}/components`,
-    COMPONENT_ENABLE: (pluginName: string, componentName: string, type: string) => 
+    COMPONENT_ENABLE: (pluginName: string, componentName: string, type: string) =>
       `plugin_manager/plugins/${pluginName}/components/${componentName}/enable?component_type=${type}`,
-    COMPONENT_DISABLE: (pluginName: string, componentName: string, type: string) => 
+    COMPONENT_DISABLE: (pluginName: string, componentName: string, type: string) =>
       `plugin_manager/plugins/${pluginName}/components/${componentName}/disable?component_type=${type}`,
     SCAN: 'plugin_manager/plugins/scan',
     RELOAD_ALL: 'plugin_manager/plugins/reload-all',
