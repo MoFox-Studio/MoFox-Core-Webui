@@ -41,7 +41,7 @@
   justify-content: center;
   gap: 8px;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  transition: all var(--transition-fast);
   border: none;
   outline: none;
   position: relative;
@@ -133,7 +133,7 @@
   border: none;
   background: transparent;
   color: var(--md-sys-color-on-surface-variant);
-  transition: all 0.2s;
+  transition: all var(--transition-fast);
 }
 
 .m3-icon-button:hover:not(:disabled) {
@@ -163,7 +163,7 @@
   background: var(--md-sys-color-surface-container);
   border-radius: 32px;
   padding: 24px;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
   color: var(--md-sys-color-on-surface);
 }
@@ -211,7 +211,7 @@
   padding: 0 16px;
   font-size: 16px;
   color: var(--md-sys-color-on-surface);
-  transition: all 0.2s;
+  transition: all var(--transition-fast);
 }
 
 .m3-input:focus {
@@ -262,7 +262,7 @@
   background-color: var(--md-sys-color-surface-container-highest);
   border: 2px solid var(--md-sys-color-outline);
   border-radius: 16px;
-  transition: .4s;
+  transition: background-color var(--motion-duration-normal) var(--motion-ease-gentle), border-color var(--motion-duration-normal) var(--motion-ease-gentle);
 }
 
 .m3-switch-thumb {
@@ -274,7 +274,7 @@
   bottom: 6px;
   background-color: var(--md-sys-color-outline);
   border-radius: 50%;
-  transition: .4s;
+  transition: transform var(--motion-duration-normal) var(--motion-ease-gentle), background-color var(--motion-duration-normal) var(--motion-ease-gentle), width var(--motion-duration-normal) var(--motion-ease-gentle), height var(--motion-duration-normal) var(--motion-ease-gentle), left var(--motion-duration-normal) var(--motion-ease-gentle), bottom var(--motion-duration-normal) var(--motion-ease-gentle);
 }
 
 .m3-switch input:checked + .m3-switch-track {
@@ -311,7 +311,7 @@
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--transition-fast);
 }
 
 .m3-chip:hover {

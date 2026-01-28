@@ -135,12 +135,12 @@ const handleOverlayClick = () => {
   max-height: calc(100vh - 40px);
   display: flex;
   flex-direction: column;
-  animation: dialog-bounce 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: dialog-pop var(--motion-duration-normal) var(--motion-ease-gentle);
 }
 
-@keyframes dialog-bounce {
+@keyframes dialog-pop {
   0% {
-    transform: scale(0.9);
+    transform: scale(var(--motion-scale-sm));
     opacity: 0;
   }
   100% {
@@ -228,7 +228,7 @@ const handleOverlayClick = () => {
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--transition-fast);
   min-width: 100px;
 }
 
@@ -254,8 +254,8 @@ const handleOverlayClick = () => {
 .confirm-button.primary:hover {
   background: var(--md-sys-color-primary);
   filter: brightness(0.9);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(103, 80, 164, 0.3);
+  transform: translateY(-0.5px);
+  box-shadow: 0 2px 8px rgba(103, 80, 164, 0.2);
 }
 
 .confirm-button.success {
@@ -265,8 +265,8 @@ const handleOverlayClick = () => {
 .confirm-button.success:hover {
   background: var(--md-sys-color-tertiary);
   filter: brightness(0.9);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(125, 82, 96, 0.3);
+  transform: translateY(-0.5px);
+  box-shadow: 0 2px 8px rgba(125, 82, 96, 0.2);
 }
 
 .confirm-button.warning {
@@ -276,8 +276,8 @@ const handleOverlayClick = () => {
 .confirm-button.warning:hover {
   background: var(--md-sys-color-secondary);
   filter: brightness(0.9);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(98, 91, 113, 0.3);
+  transform: translateY(-0.5px);
+  box-shadow: 0 2px 8px rgba(98, 91, 113, 0.2);
 }
 
 .confirm-button.danger {
@@ -287,14 +287,14 @@ const handleOverlayClick = () => {
 .confirm-button.danger:hover {
   background: var(--md-sys-color-error);
   filter: brightness(0.9);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(179, 38, 30, 0.3);
+  transform: translateY(-0.5px);
+  box-shadow: 0 2px 8px rgba(179, 38, 30, 0.2);
 }
 
 /* 过渡动画 */
 .dialog-fade-enter-active,
 .dialog-fade-leave-active {
-  transition: opacity 0.3s;
+  transition: opacity var(--motion-duration-normal) var(--motion-ease-standard);
 }
 
 .dialog-fade-enter-from,
@@ -303,11 +303,11 @@ const handleOverlayClick = () => {
 }
 
 .dialog-fade-enter-active .dialog-container {
-  animation: dialog-bounce 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: dialog-pop var(--motion-duration-normal) var(--motion-ease-gentle);
 }
 
 .dialog-fade-leave-active .dialog-container {
-  animation: dialog-bounce 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) reverse;
+  animation: dialog-pop var(--motion-duration-fast) var(--motion-ease-gentle) reverse;
 }
 
 /* 响应式 */

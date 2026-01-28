@@ -192,7 +192,7 @@ onMounted(() => {
   justify-content: center;
   cursor: pointer;
   color: var(--md-sys-color-on-surface-variant);
-  transition: all 0.2s;
+  transition: all var(--transition-fast);
 }
 
 .action-btn:hover {
@@ -256,12 +256,12 @@ iframe {
 /* Transition */
 .pop-enter-active,
 .pop-leave-active {
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: all var(--motion-duration-normal) var(--motion-ease-gentle);
 }
 
 .pop-enter-from,
 .pop-leave-to {
   opacity: 0;
-  transform: scale(0.9) translateY(20px);
+  transform: scale(var(--motion-scale-sm)) translateY(var(--motion-distance-sm));
 }
 </style>

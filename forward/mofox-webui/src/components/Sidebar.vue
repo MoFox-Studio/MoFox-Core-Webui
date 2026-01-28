@@ -356,7 +356,6 @@ const isGroupActive = (item: MenuItem) => {
   box-shadow: var(--md-sys-elevation-2);
   user-select: none;
   -webkit-user-drag: none;
-  flex-shrink: 0;
 }
 
 .sidebar.collapsed {

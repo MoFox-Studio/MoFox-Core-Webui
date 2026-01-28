@@ -141,14 +141,14 @@ onUnmounted(() => {
 /* 进入和离开动画的持续时间和缓动函数 */
 .toast-enter-active,
 .toast-leave-active {
-  transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);  /* M3 标准缓动 */
+  transition: all var(--motion-duration-normal) var(--motion-ease-standard);  /* 更温和的标准缓动 */
 }
 
 /* 进入前和离开后的初始/最终状态 */
 .toast-enter-from,
 .toast-leave-to {
   opacity: 0;
-  transform: translateY(20px);  /* 从下方滑入 */
+  transform: translateY(var(--motion-distance-sm));  /* 从下方轻微滑入 */
 }
 
 /* ==================== 响应式适配 ==================== */

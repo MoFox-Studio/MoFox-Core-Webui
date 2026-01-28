@@ -227,7 +227,7 @@
           <button
             class="toggle-btn"
             :class="{ active: viewMode === 'list' }"
-            @click="viewMode = 'list'"
+            @click="setViewMode('list')"
             title="列表视图"
           >
             <span class="material-symbols-rounded">view_list</span>
@@ -235,7 +235,7 @@
           <button
             class="toggle-btn"
             :class="{ active: viewMode === 'graph' }"
-            @click="viewMode = 'graph'"
+            @click="setViewMode('graph')"
             title="图谱视图"
           >
             <span class="material-symbols-rounded">account_tree</span>
@@ -698,6 +698,10 @@ const editForm = reactive({
   preferenceKeywords: '',
   relationshipStage: ''
 })
+
+const setViewMode = (mode: 'list' | 'graph') => {
+  viewMode.value = mode
+}
 
 // 加载用户列表
 const loadPersonList = async () => {

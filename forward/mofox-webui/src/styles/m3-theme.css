@@ -110,7 +110,15 @@
   --radius-lg: var(--md-sys-shape-corner-large);
   
   /* 其他 */
-  --transition-fast: 0.2s ease;
+  /* 统一动效节奏，避免过度夸张 */
+  --motion-duration-fast: 0.16s;
+  --motion-duration-normal: 0.22s;
+  --motion-duration-slow: 0.28s;
+  --motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --motion-ease-gentle: cubic-bezier(0.2, 0, 0, 0.6);
+  --motion-distance-sm: 8px;
+  --motion-scale-sm: 0.98;
+  --transition-fast: var(--motion-duration-fast) var(--motion-ease-standard);
   --success: #22c55e;  /* 成功色 - 绿色 */
   --warning: #f59e0b;  /* 警告色 - 橙黄色 */
   --danger: #ef4444;   /* 危险色 - 红色 */

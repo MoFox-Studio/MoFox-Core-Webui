@@ -19,57 +19,54 @@
       @retry="fetchAllData"
     />
 
-    <div class="dashboard-layout">
-      <!-- 左侧主要内容区域 -->
-      <div class="layout-column main-column">
-        <!-- 每日名言 (作为欢迎 Banner) -->
-        <DailyQuote />
+    <!-- 每日名言 -->
+    <DailyQuote />
 
-        <!-- 快捷功能入口 -->
-        <QuickActions />
+    <!-- 快捷功能入口 -->
+    <QuickActions />
 
-        <!-- 消息统计图表 -->
-        <section class="chart-section">
-          <div class="m3-card chart-card">
-            <div class="card-header">
-              <div class="header-title">
-                <span class="material-symbols-rounded">bar_chart</span>
-                <h3>消息统计</h3>
-              </div>
-              <div class="header-actions">
-                <M3Select 
-                  v-model="messageStatsPeriod" 
-                  :options="messageStatsOptions"
-                  @change="fetchMessageStats"
-                />
-              </div>
-            </div>
-            <div class="card-body chart-body">
-              <div v-if="chartLoading" class="loading-overlay">
-                <span class="material-symbols-rounded spinning">refresh</span>
-              </div>
-              <v-chart class="chart" :option="messageChartOption" autoresize />
-            </div>
-          </div>
-        </section>
-      </div>
-
-      <!-- 右侧侧边栏区域 -->
-      <div class="layout-column side-column">
-        <!-- 系统状态 -->
+    <!-- 系统状态 + 今日日程 -->
+    <section class="main-content">
+      <div class="content-grid">
+        <!-- 左侧：系统状态 -->
         <SystemStatus 
           :overview="overview" 
           :is-refreshing="isRefreshingOverview"
           @refresh="handleRefreshOverview"
         />
 
-        <!-- 今日日程 -->
+        <!-- 右侧：今日日程 -->
         <TodaySchedule 
           :schedule="schedule" 
           :monthly-plans="monthlyPlans"
         />
       </div>
-    </div>
+    </section>
+
+    <!-- 消息统计图表 -->
+    <section class="chart-section">
+      <div class="m3-card chart-card">
+        <div class="card-header">
+          <div class="header-title">
+            <span class="material-symbols-rounded">bar_chart</span>
+            <h3>消息统计</h3>
+          </div>
+          <div class="header-actions">
+            <M3Select 
+              v-model="messageStatsPeriod" 
+              :options="messageStatsOptions"
+              @change="fetchMessageStats"
+            />
+          </div>
+        </div>
+        <div class="card-body chart-body">
+          <div v-if="chartLoading" class="loading-overlay">
+            <span class="material-symbols-rounded spinning">refresh</span>
+          </div>
+          <v-chart class="chart" :option="messageChartOption" autoresize />
+        </div>
+      </div>
+    </section>
   </div>
 </template>
 
@@ -363,54 +360,27 @@ onUnmounted(() => {
 
 <style scoped>
 .dashboard-home-new {
-  width: 100%;
-  max-width: 1800px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding-bottom: 40px;
+  max-width: 1600px;
   margin: 0 auto;
-  padding: 0 24px 40px;
-  box-sizing: border-box;
+  width: 100%;
 }
 
-.dashboard-layout {
+.main-content {
+  margin-bottom: 24px;
+}
+
+.content-grid {
   display: grid;
-  grid-template-columns: 1fr 400px; /* Main content + Sidebar */
+  grid-template-columns: 1fr 1fr;
   gap: 24px;
-  align-items: stretch; /* Ensure columns are same height */
+  align-items: start;
 }
 
-.layout-column {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  min-width: 0;
-  height: 100%; /* Fill the grid cell */
-}
-
-/* Make the last item in the side column stretch */
-.side-column > :last-child {
-  flex: 1;
-}
-
-/* Animations */
-.main-column > * {
-  animation: slideIn 0.5s cubic-bezier(0.2, 0, 0, 1) backwards;
-}
-
-.main-column > *:nth-child(1) { animation-delay: 0.1s; }
-.main-column > *:nth-child(2) { animation-delay: 0.2s; }
-.main-column > *:nth-child(3) { animation-delay: 0.3s; }
-
-.side-column > * {
-  animation: slideInLeft 0.5s cubic-bezier(0.2, 0, 0, 1) backwards;
-}
-
-.side-column > *:nth-child(1) { animation-delay: 0.2s; }
-.side-column > *:nth-child(2) { animation-delay: 0.3s; }
-
-/* Chart Card Styles */
 .chart-section {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
   animation: slideIn 0.5s cubic-bezier(0.2, 0, 0, 1) 0.4s backwards;
 }
 
@@ -423,8 +393,7 @@ onUnmounted(() => {
 }
 
 .chart-card {
-  flex: 1; /* Stretch to fill section */
-  min-height: 480px;
+  min-height: 400px;
   display: flex;
   flex-direction: column;
 }
@@ -433,7 +402,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .header-title {
@@ -445,25 +414,24 @@ onUnmounted(() => {
 
 .header-title h3 {
   font-size: 18px;
-  font-weight: 600;
+  font-weight: 500;
   margin: 0;
-  letter-spacing: 0.5px;
 }
 
 .header-title .material-symbols-rounded {
   color: var(--md-sys-color-primary);
-  font-size: 24px;
 }
 
 .chart-body {
   flex: 1;
   position: relative;
-  min-height: 350px;
+  min-height: 300px;
 }
 
 .chart {
   width: 100%;
   height: 100%;
+  min-height: 300px;
 }
 
 .loading-overlay {
@@ -475,10 +443,8 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(var(--md-sys-color-surface-container-rgb), 0.7);
-  backdrop-filter: blur(4px);
+  background: var(--md-sys-color-surface-container);
   z-index: 10;
-  border-radius: 16px;
 }
 
 .spinning {
@@ -503,45 +469,22 @@ onUnmounted(() => {
   }
 }
 
-@keyframes slideInLeft {
-  from {
-    opacity: 0;
-    transform: translateX(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
 /* 响应式 */
-@media (max-width: 1200px) {
-  .dashboard-layout {
+@media (max-width: 1024px) {
+  .content-grid {
     grid-template-columns: 1fr;
-  }
-  
-  .side-column {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   }
 }
 
 @media (max-width: 768px) {
-  .dashboard-home-new {
-    padding: 0 16px 24px;
-  }
-  
-  .side-column {
-    grid-template-columns: 1fr;
-  }
-
   .m3-card {
     padding: 16px;
     border-radius: 16px;
   }
 
-  .chart-card {
-    min-height: 350px;
+  .chart-body,
+  .chart {
+    min-height: 250px;
   }
 }
 </style>
