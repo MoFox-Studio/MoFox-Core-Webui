@@ -73,11 +73,20 @@ function showToast(message: string, type: 'success' | 'error') {
 /**
  * 组件挂载完成后执行
  * - 设置 Toast 回调函数供其他模块调用
- * - 启动后台更新检查器
+ * - 根据配置启动后台更新检查器
  */
 onMounted(() => {
   setToastCallback(showToast)
-  startUpdateChecker()
+  
+  // 读取自动更新配置，默认启用
+  const autoUpdateEnabled = localStorage.getItem('autoUpdateEnabled')
+  const shouldStartChecker = autoUpdateEnabled !== 'false' // 默认 true，除非显式设置为 false
+  
+  if (shouldStartChecker) {
+    startUpdateChecker()
+  } else {
+    console.log('自动更新检查已禁用')
+  }
 })
 
 /**

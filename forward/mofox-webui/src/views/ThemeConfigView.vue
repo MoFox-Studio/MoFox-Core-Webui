@@ -39,6 +39,17 @@
             <div class="preview-title">预览</div>
           </div>
           <div class="preview-body">
+            <div class="preview-wallpaper" :style="previewWallpaperStyle" v-if="themeStore.wallpaper">
+              <video 
+                v-if="themeStore.wallpaperType === 'video'"
+                class="preview-wallpaper-media"
+                :src="themeStore.wallpaper"
+                autoplay
+                loop
+                muted
+                playsinline
+              />
+            </div>
             <div class="mock-ui">
               <div class="mock-sidebar">
                 <div class="mock-icon active"></div>
@@ -527,6 +538,21 @@ const wallpaperPreviewStyle = computed(() => {
   return {}
 })
 
+const previewWallpaperStyle = computed(() => {
+  const style: any = {
+    opacity: themeStore.wallpaperOpacity,
+    filter: `blur(${themeStore.wallpaperBlur}px)`,
+  }
+  
+  if (themeStore.wallpaper && themeStore.wallpaperType === 'image') {
+    style.backgroundImage = `url(${themeStore.wallpaper})`,
+    style.backgroundSize = 'cover',
+    style.backgroundPosition = 'center'
+  }
+  
+  return style
+})
+
 // Custom Color Modal Logic
 const showColorModal = ref(false)
 const tempColor = ref('#6750A4')
@@ -897,9 +923,27 @@ const getPresetStyle = (preset: any) => {
   flex: 1;
   padding: 16px;
   background: var(--md-sys-color-background);
+  position: relative;
+}
+
+.preview-wallpaper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+.preview-wallpaper-media {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .mock-ui {
+  position: relative;
+  z-index: 1;
   display: flex;
   height: 100%;
   gap: 12px;

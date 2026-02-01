@@ -1,11 +1,12 @@
 <!--
   @file GitSettingsTab.vue
-  @description Git 设置标签页组件
+  @description 更新/Git 设置标签页组件
   
   功能说明：
   1. 显示 Git 环境状态
   2. 设置自定义 Git 路径
   3. 一键安装 Git（Windows）
+  4. 自动更新检查配置
 -->
 <template>
   <div class="git-settings-tab">
@@ -96,7 +97,11 @@
           </button>
           
 
+
         </div>
+  
+
+
         
         <!-- 未检测到 Git 提示 -->
         <div class="portable-tip" v-if="!gitStatus.git_available">
@@ -105,7 +110,35 @@
         </div>
       </div>
     </div>
-
+    <!-- 自动更新配置 -->
+    <div class="m3-card update-config-card">
+      <div class="card-header">
+        <span class="material-symbols-rounded">update</span>
+        <h3>自动更新检查</h3>
+      </div>
+      
+      <div class="config-content">
+        <div class="config-item">
+          <div class="config-info">
+            <span class="config-label">启用自动更新检查</span>
+            <span class="config-desc">定期检查是否有新版本可用（每5分钟）</span>
+          </div>
+          <label class="m3-switch">
+            <input 
+              type="checkbox" 
+              v-model="autoUpdateEnabled"
+              @change="handleAutoUpdateToggle"
+            />
+            <span class="slider"></span>
+          </label>
+        </div>
+        
+        <div class="config-tip" v-if="!autoUpdateEnabled">
+          <span class="material-symbols-rounded">info</span>
+          <span>关闭后将不会自动检查更新，您可以在更新页面手动检查</span>
+        </div>
+      </div>
+    </div>
     <!-- Git 安装（仅 Windows 未安装时显示） -->
     <div 
       class="m3-card install-card" 
@@ -220,7 +253,9 @@ import {
   type GitEnvStatus,
   type GitInstallGuide
 } from '@/api/git_env'
+import { showToast } from '@/utils/updateChecker'
 import { showSuccess, showError, showConfirm } from '@/utils/dialog'
+import { startUpdateChecker, stopUpdateChecker } from '@/utils/updateChecker'
 
 // State
 const gitStatus = ref<GitEnvStatus | null>(null)
@@ -231,6 +266,7 @@ const settingPath = ref(false)
 const autoDetecting = ref(false)
 const showSetPathModal = ref(false)
 const customPath = ref('')
+const autoUpdateEnabled = ref(true) // 默认启用自动更新
 
 // 获取来源标签
 function getSourceLabel(source: string): string {
@@ -367,6 +403,20 @@ async function handleInstallGit() {
   }
 }
 
+// 处理自动更新开关
+function handleAutoUpdateToggle() {
+  const enabled = autoUpdateEnabled.value
+  localStorage.setItem('autoUpdateEnabled', enabled.toString())
+  
+  if (enabled) {
+    startUpdateChecker()
+    showToast('已启用自动更新检查')
+  } else {
+    stopUpdateChecker()
+    showToast('已关闭自动更新检查')
+  }
+}
+
 // 设置路径
 async function handleSetPath() {
   if (!customPath.value) return
@@ -392,6 +442,12 @@ async function handleSetPath() {
 // 初始化
 onMounted(() => {
   loadGitStatus()
+  
+  // 读取自动更新配置
+  const savedConfig = localStorage.getItem('autoUpdateEnabled')
+  if (savedConfig !== null) {
+    autoUpdateEnabled.value = savedConfig === 'true'
+  }
 })
 
 // 暴露刷新方法
@@ -431,6 +487,108 @@ defineExpose({
 .card-header .material-symbols-rounded {
   font-size: 24px;
   color: var(--md-sys-color-primary);
+}
+
+/* 自动更新配置 */
+.update-config-card .config-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.config-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.config-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.config-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface);
+}
+
+.config-desc {
+  font-size: 12px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.config-tip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--md-sys-color-surface-container-high);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.config-tip .material-symbols-rounded {
+  font-size: 18px;
+  color: var(--md-sys-color-primary);
+}
+
+/* M3 开关样式 */
+.m3-switch {
+  position: relative;
+  display: inline-block;
+  width: 52px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+.m3-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.m3-switch .slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--md-sys-color-surface-container-highest);
+  border: 2px solid var(--md-sys-color-outline);
+  transition: 0.3s;
+  border-radius: 16px;
+}
+
+.m3-switch .slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 6px;
+  bottom: 6px;
+  background-color: var(--md-sys-color-outline);
+  transition: 0.3s;
+  border-radius: 50%;
+}
+
+.m3-switch input:checked + .slider {
+  background-color: var(--md-sys-color-primary);
+  border-color: var(--md-sys-color-primary);
+}
+
+.m3-switch input:checked + .slider:before {
+  transform: translateX(20px);
+  background-color: var(--md-sys-color-on-primary);
+}
+
+.m3-switch input:focus + .slider {
+  box-shadow: 0 0 1px var(--md-sys-color-primary);
 }
 
 /* 状态网格 */
