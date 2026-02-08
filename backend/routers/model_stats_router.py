@@ -13,6 +13,7 @@ from src.chat.utils.statistic import StatisticOutputTask
 from src.chat.utils.statistic_keys import *  # noqa: F403
 from src.common.logger import get_logger
 from src.common.security import VerifiedDep
+from src.manager.local_store_manager import local_storage
 from src.plugin_system import BaseRouterComponent
 
 logger = get_logger("WebUIAuth.ModelStatsRouter")
@@ -89,17 +90,27 @@ class WebUIModelStatsRouter(BaseRouterComponent):
         async def get_model_usage_stats(time_range: str = "24h", _=VerifiedDep):
             """获取模型使用统计"""
             try:
-                # 将时间范围转换为timedelta
-                time_map = {
-                    "1h": timedelta(hours=1),
-                    "24h": timedelta(days=1),
-                    "7d": timedelta(days=7),
-                    "30d": timedelta(days=30)
-                }
-                
-                delta = time_map.get(time_range, timedelta(days=1))
                 now = datetime.now()
-                start_time = now - delta
+                
+                # 将时间范围转换为start_time
+                if time_range == "all":
+                    # 获取部署时间
+                    deploy_time_ts = local_storage.get("deploy_time")
+                    if deploy_time_ts:
+                        start_time = datetime.fromtimestamp(float(deploy_time_ts)) # type: ignore
+                    else:
+                        # 如果没有部署时间记录，使用一个很早的时间
+                        start_time = datetime(2000, 1, 1)
+                        local_storage["deploy_time"] = now.timestamp()
+                else:
+                    time_map = {
+                        "1h": timedelta(hours=1),
+                        "24h": timedelta(days=1),
+                        "7d": timedelta(days=7),
+                        "30d": timedelta(days=30)
+                    }
+                    delta = time_map.get(time_range, timedelta(days=1))
+                    start_time = now - delta
                 
                 stats_data = await StatisticOutputTask._collect_model_request_for_period([("custom", start_time)])
                 period_stats = stats_data.get("custom", {})
@@ -140,16 +151,24 @@ class WebUIModelStatsRouter(BaseRouterComponent):
         async def get_model_overview(time_range: str = "24h", _=VerifiedDep):
             """获取模型统计总览"""
             try:
-                time_map = {
-                    "1h": timedelta(hours=1),
-                    "24h": timedelta(days=1),
-                    "7d": timedelta(days=7),
-                    "30d": timedelta(days=30)
-                }
-                
-                delta = time_map.get(time_range, timedelta(days=1))
                 now = datetime.now()
-                start_time = now - delta
+                
+                if time_range == "all":
+                    deploy_time_ts = local_storage.get("deploy_time")
+                    if deploy_time_ts:
+                        start_time = datetime.fromtimestamp(float(deploy_time_ts)) # type: ignore # type: ignore
+                    else:
+                        start_time = datetime(2000, 1, 1)
+                        local_storage["deploy_time"] = now.timestamp()
+                else:
+                    time_map = {
+                        "1h": timedelta(hours=1),
+                        "24h": timedelta(days=1),
+                        "7d": timedelta(days=7),
+                        "30d": timedelta(days=30)
+                    }
+                    delta = time_map.get(time_range, timedelta(days=1))
+                    start_time = now - delta
                 
                 stats_data = await StatisticOutputTask._collect_model_request_for_period([("custom", start_time)])
                 period_stats = stats_data.get("custom", {})
@@ -197,16 +216,24 @@ class WebUIModelStatsRouter(BaseRouterComponent):
         async def get_model_detail(model_name: str, time_range: str = "24h", _=VerifiedDep):
             """获取指定模型的详细统计"""
             try:
-                time_map = {
-                    "1h": timedelta(hours=1),
-                    "24h": timedelta(days=1),
-                    "7d": timedelta(days=7),
-                    "30d": timedelta(days=30)
-                }
-                
-                delta = time_map.get(time_range, timedelta(days=1))
                 now = datetime.now()
-                start_time = now - delta
+                
+                if time_range == "all":
+                    deploy_time_ts = local_storage.get("deploy_time")
+                    if deploy_time_ts:
+                        start_time = datetime.fromtimestamp(float(deploy_time_ts)) # type: ignore
+                    else:
+                        start_time = datetime(2000, 1, 1)
+                        local_storage["deploy_time"] = now.timestamp()
+                else:
+                    time_map = {
+                        "1h": timedelta(hours=1),
+                        "24h": timedelta(days=1),
+                        "7d": timedelta(days=7),
+                        "30d": timedelta(days=30)
+                    }
+                    delta = time_map.get(time_range, timedelta(days=1))
+                    start_time = now - delta
                 
                 stats_data = await StatisticOutputTask._collect_model_request_for_period([("custom", start_time)])
                 period_stats = stats_data.get("custom", {})
@@ -259,16 +286,24 @@ class WebUIModelStatsRouter(BaseRouterComponent):
         async def get_provider_stats(time_range: str = "24h", _=VerifiedDep):
             """获取提供商统计数据"""
             try:
-                time_map = {
-                    "1h": timedelta(hours=1),
-                    "24h": timedelta(days=1),
-                    "7d": timedelta(days=7),
-                    "30d": timedelta(days=30)
-                }
-                
-                delta = time_map.get(time_range, timedelta(days=1))
                 now = datetime.now()
-                start_time = now - delta
+                
+                if time_range == "all":
+                    deploy_time_ts = local_storage.get("deploy_time")
+                    if deploy_time_ts:
+                        start_time = datetime.fromtimestamp(float(deploy_time_ts)) # type: ignore
+                    else:
+                        start_time = datetime(2000, 1, 1)
+                        local_storage["deploy_time"] = now.timestamp()
+                else:
+                    time_map = {
+                        "1h": timedelta(hours=1),
+                        "24h": timedelta(days=1),
+                        "7d": timedelta(days=7),
+                        "30d": timedelta(days=30)
+                    }
+                    delta = time_map.get(time_range, timedelta(days=1))
+                    start_time = now - delta
                 
                 stats_data = await StatisticOutputTask._collect_model_request_for_period([("custom", start_time)])
                 period_stats = stats_data.get("custom", {})
@@ -304,16 +339,24 @@ class WebUIModelStatsRouter(BaseRouterComponent):
         async def get_module_stats(time_range: str = "24h", _=VerifiedDep):
             """获取模块统计数据"""
             try:
-                time_map = {
-                    "1h": timedelta(hours=1),
-                    "24h": timedelta(days=1),
-                    "7d": timedelta(days=7),
-                    "30d": timedelta(days=30)
-                }
-                
-                delta = time_map.get(time_range, timedelta(days=1))
                 now = datetime.now()
-                start_time = now - delta
+                
+                if time_range == "all":
+                    deploy_time_ts = local_storage.get("deploy_time")
+                    if deploy_time_ts:
+                        start_time = datetime.fromtimestamp(float(deploy_time_ts)) # type: ignore
+                    else:
+                        start_time = datetime(2000, 1, 1)
+                        local_storage["deploy_time"] = now.timestamp()
+                else:
+                    time_map = {
+                        "1h": timedelta(hours=1),
+                        "24h": timedelta(days=1),
+                        "7d": timedelta(days=7),
+                        "30d": timedelta(days=30)
+                    }
+                    delta = time_map.get(time_range, timedelta(days=1))
+                    start_time = now - delta
                 
                 stats_data = await StatisticOutputTask._collect_model_request_for_period([("custom", start_time)])
                 period_stats = stats_data.get("custom", {})
@@ -347,16 +390,24 @@ class WebUIModelStatsRouter(BaseRouterComponent):
         async def get_chart_data(time_range: str = "24h", _=VerifiedDep):
             """获取用于前端图表展示的数据"""
             try:
-                time_map = {
-                    "1h": timedelta(hours=1),
-                    "24h": timedelta(days=1),
-                    "7d": timedelta(days=7),
-                    "30d": timedelta(days=30)
-                }
-                
-                delta = time_map.get(time_range, timedelta(days=1))
                 now = datetime.now()
-                start_time = now - delta
+                
+                if time_range == "all":
+                    deploy_time_ts = local_storage.get("deploy_time")
+                    if deploy_time_ts:
+                        start_time = datetime.fromtimestamp(float(deploy_time_ts)) # type: ignore
+                    else:
+                        start_time = datetime(2000, 1, 1)
+                        local_storage["deploy_time"] = now.timestamp()
+                else:
+                    time_map = {
+                        "1h": timedelta(hours=1),
+                        "24h": timedelta(days=1),
+                        "7d": timedelta(days=7),
+                        "30d": timedelta(days=30)
+                    }
+                    delta = time_map.get(time_range, timedelta(days=1))
+                    start_time = now - delta
                 
                 stats_data = await StatisticOutputTask._collect_model_request_for_period([("custom", start_time)])
                 period_stats = stats_data.get("custom", {})

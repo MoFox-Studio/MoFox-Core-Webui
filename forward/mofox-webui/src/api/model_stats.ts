@@ -118,55 +118,55 @@ export interface ChartDataResponse {
 
 /**
  * 获取模型使用统计
- * @param timeRange - 时间范围：'1h' | '24h' | '7d' | '30d'
+ * @param timeRange - 时间范围：'1h' | '24h' | '7d' | '30d'| 'all'
  * @returns 模型使用统计数据
  */
-export async function getModelUsageStats(timeRange: '1h' | '24h' | '7d' | '30d' = '24h') {
+export async function getModelUsageStats(timeRange: '1h' | '24h' | '7d' | '30d' | 'all' = '24h') {
   return api.get<ModelUsageStatsResponse>(`${MODEL_STATS_ENDPOINTS.MODEL_USAGE}?time_range=${timeRange}`)
 }
 
 /**
  * 获取模型统计总览
- * @param timeRange - 时间范围：'1h' | '24h' | '7d' | '30d'
+ * @param timeRange - 时间范围：'1h' | '24h' | '7d' | '30d'| 'all'
  * @returns 模型统计总览数据
  */
-export async function getModelOverview(timeRange: '1h' | '24h' | '7d' | '30d' = '24h') {
+export async function getModelOverview(timeRange: '1h' | '24h' | '7d' | '30d' | 'all' = '24h') {
   return api.get<ModelOverviewResponse>(`${MODEL_STATS_ENDPOINTS.MODEL_OVERVIEW}?time_range=${timeRange}`)
 }
 
 /**
  * 获取模型详细统计
  * @param modelName - 模型名称
- * @param timeRange - 时间范围：'1h' | '24h' | '7d' | '30d'
+ * @param timeRange - 时间范围：'1h' | '24h' | '7d' | '30d'| 'all'
  * @returns 指定模型的详细统计数据
  */
-export async function getModelDetail(modelName: string, timeRange: '1h' | '24h' | '7d' | '30d' = '24h') {
+export async function getModelDetail(modelName: string, timeRange: '1h' | '24h' | '7d' | '30d' | 'all' = '24h') {
   return api.get<ModelDetailResponse>(`${MODEL_STATS_ENDPOINTS.MODEL_DETAIL(modelName)}?time_range=${timeRange}`)
 }
 
 /**
  * 获取提供商统计
- * @param timeRange - 时间范围：'1h' | '24h' | '7d' | '30d'
+ * @param timeRange - 时间范围：'1h' | '24h' | '7d' | '30d' | 'all'
  * @returns 提供商统计数据
  */
-export async function getProviderStats(timeRange: '1h' | '24h' | '7d' | '30d' = '24h') {
+export async function getProviderStats(timeRange: '1h' | '24h' | '7d' | '30d' | 'all' = '24h') {
   return api.get<ProviderStatsResponse>(`${MODEL_STATS_ENDPOINTS.PROVIDER_STATS}?time_range=${timeRange}`)
 }
 
 /**
  * 获取模块统计
- * @param timeRange - 时间范围：'1h' | '24h' | '7d' | '30d'
+ * @param timeRange - 时间范围：'1h' | '24h' | '7d' | '30d'| 'all'
  * @returns 模块统计数据
  */
-export async function getModuleStats(timeRange: '1h' | '24h' | '7d' | '30d' = '24h') {
+export async function getModuleStats(timeRange: '1h' | '24h' | '7d' | '30d' | 'all' = '24h') {
   return api.get<ModuleStatsResponse>(`${MODEL_STATS_ENDPOINTS.MODULE_STATS}?time_range=${timeRange}`)
 }
 
 /**
  * 获取图表数据
- * @param timeRange - 时间范围：'1h' | '24h' | '7d' | '30d'
+ * @param timeRange - 时间范围：'1h' | '24h' | '7d' | '30d'| 'all'
  * @returns 用于前端图表展示的数据
  */
-export async function getChartData(timeRange: '1h' | '24h' | '7d' | '30d' = '24h') {
+export async function getChartData(timeRange: '1h' | '24h' | '7d' | '30d' | 'all' = '24h') {
   return api.get<ChartDataResponse>(`${MODEL_STATS_ENDPOINTS.CHART_DATA}?time_range=${timeRange}`)
 }

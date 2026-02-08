@@ -169,7 +169,7 @@
               <div class="stat-row">
                 <div class="stat-item">
                   <span class="label">调用次数</span>
-                  <span class="value">{{ formatNumber(stats.total_calls) }}</span>
+                  <span class="value">{{ stats.total_calls ? formatNumber(stats.total_calls) : 'N/A' }}</span>
                 </div>
                 <div class="stat-item">
                   <span class="label">平均Token</span>
@@ -180,18 +180,18 @@
               <div class="stat-row">
                 <div class="stat-item">
                   <span class="label">输入Token</span>
-                  <span class="value">{{ formatNumber(stats.prompt_tokens) }}</span>
+                  <span class="value">{{ stats.prompt_tokens ? formatNumber(stats.prompt_tokens) : 'N/A' }}</span>
                 </div>
                 <div class="stat-item">
                   <span class="label">输出Token</span>
-                  <span class="value">{{ formatNumber(stats.completion_tokens) }}</span>
+                  <span class="value">{{ stats.completion_tokens ? formatNumber(stats.completion_tokens) : 'N/A' }}</span>
                 </div>
               </div>
               <div class="stat-divider"></div>
               <div class="stat-row total-row">
                 <div class="stat-item">
                   <span class="label">总Token</span>
-                  <span class="value highlight">{{ formatNumber(stats.total_tokens) }}</span>
+                  <span class="value highlight">{{ stats.total_tokens ? formatNumber(stats.total_tokens) : 'N/A' }}</span>
                 </div>
               </div>
             </div>
@@ -217,11 +217,11 @@
               <div class="stat-grid-2col">
                 <div class="stat-item-card">
                   <span class="label">总调用</span>
-                  <span class="value">{{ formatNumber(stats.total_calls) }}</span>
+                  <span class="value">{{ stats.total_calls ? formatNumber(stats.total_calls) : 'N/A' }}</span>
                 </div>
                 <div class="stat-item-card">
                   <span class="label">总Token</span>
-                  <span class="value">{{ formatNumber(stats.total_tokens) }}</span>
+                  <span class="value">{{ stats.total_tokens ? formatNumber(stats.total_tokens) : 'N/A' }}</span>
                 </div>
                 <div class="stat-item-card">
                   <span class="label">总成本</span>
@@ -333,7 +333,7 @@
                 <div class="detail-title">
                   <div class="detail-name">{{ selectedModel.name }}</div>
                   <div class="detail-badges">
-                    <span class="detail-badge">{{ formatNumber(selectedModel.stats.total_calls) }} 次调用</span>
+                    <span class="detail-badge">{{ selectedModel.stats.total_calls ? formatNumber(selectedModel.stats.total_calls) : 'N/A' }} 次调用</span>
                   </div>
                 </div>
               </div>
@@ -341,15 +341,15 @@
               <div class="detail-grid">
                 <div class="detail-card filled">
                   <span class="detail-label">总Token消耗</span>
-                  <span class="detail-value">{{ formatNumber(selectedModel.stats.total_tokens) }}</span>
+                  <span class="detail-value">{{ selectedModel.stats.total_tokens ? formatNumber(selectedModel.stats.total_tokens) : 'N/A' }}</span>
                 </div>
                 <div class="detail-card">
                   <span class="detail-label">输入Token</span>
-                  <span class="detail-value">{{ formatNumber(selectedModel.stats.prompt_tokens) }}</span>
+                  <span class="detail-value">{{ selectedModel.stats.prompt_tokens ? formatNumber(selectedModel.stats.prompt_tokens) : 'N/A' }}</span>
                 </div>
                 <div class="detail-card">
                   <span class="detail-label">输出Token</span>
-                  <span class="detail-value">{{ formatNumber(selectedModel.stats.completion_tokens) }}</span>
+                  <span class="detail-value">{{ selectedModel.stats.completion_tokens ? formatNumber(selectedModel.stats.completion_tokens) : 'N/A' }}</span>
                 </div>
                 <div class="detail-card">
                   <span class="detail-label">平均Token</span>
@@ -380,6 +380,9 @@ import { getModelUsageStats,getProviderStats, getModuleStats, getChartData, } fr
 import { showError } from '@/utils/dialog'
 import * as echarts from 'echarts'
 
+// 定义时间范围类型
+type TimeRange = '1h' | '24h' | '7d' | '30d' | 'all'
+
 const loading = ref(false)
 const statsData = ref<Record<string, Record<string, number>> | null>(null)
 const providerStats = ref<Record<string, Record<string, any>>>({})
@@ -388,15 +391,16 @@ const chartData = ref<Record<string, any>>({})
 const selectedModel = ref<{ name: string; stats: any } | null>(null)
 const modelTasks = ref<Record<string, string[]>>({})
 const activeTab = ref<'models' | 'providers' | 'modules' | 'charts'>('models')
-const selectedTimeRange = ref<'1h' | '24h' | '7d' | '30d'>('24h')
+const selectedTimeRange = ref<TimeRange>('24h')
 
 // 时间范围选项
-const timeRanges = [
+const timeRanges: Array<{ value: TimeRange; label: string }> = [
   { value: '1h', label: '1小时' },
   { value: '24h', label: '24小时' },
   { value: '7d', label: '7天' },
-  { value: '30d', label: '30天' }
-] as const
+  { value: '30d', label: '30天' },
+  { value: 'all', label: '全部' }
+]
 
 // Chart refs
 const costByProviderChart = ref<HTMLElement | null>(null)
@@ -505,7 +509,7 @@ const fetchData = async () => {
       
       for (const config of targetConfigs) {
         const contentRes = await getConfigContent(config.path)
-        if (contentRes.success && contentRes.data) {
+        if (contentRes.success && contentRes.data?.content) {
           analyzeModelTasks(contentRes.data.content)
         }
       }
@@ -597,7 +601,9 @@ const analyzeModelTasks = (config: Record<string, any>) => {
       if (key === 'model' && typeof value === 'string') {
         // 找到了一个模型引用，尝试构建任务名
         const taskName = path.length > 0 ? path[path.length - 1] : 'Unknown'
-        addTask(value, taskName)
+        if(taskName) { 
+          addTask(value, taskName)
+        }
       } else if (typeof value === 'object' && value !== null) {
         traverse(value, [...path, key])
       }
@@ -623,7 +629,7 @@ const getTasksForModel = (modelName: string) => {
 }
 
 // 选择时间范围
-const selectTimeRange = (range: '1h' | '24h' | '7d' | '30d') => {
+const selectTimeRange = (range: TimeRange) => {
   selectedTimeRange.value = range
   fetchData()
 }
