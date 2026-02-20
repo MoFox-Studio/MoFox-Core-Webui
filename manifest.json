@@ -1,0 +1,16 @@
+{
+  "name": "MoFox-Core-Webui",
+  "version": "1.0.0",
+  "description": "MoFox-Team官方的WebUI插件",
+  "author": "MoFox Team",
+  "license": "GPL-3.0",
+  "min_core_version": "0.1.0",
+  "entry_point": "plugin.py",
+  "keywords": ["test", "router", "http", "demo"],
+  "categories": ["utility"],
+  "dependencies": {
+    "plugins": [],
+    "components": []
+  },
+  "include": []
+}
