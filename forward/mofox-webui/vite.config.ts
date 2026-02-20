@@ -5,6 +5,7 @@ import { resolve } from 'path'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [vue()],
+  base: "webui/frontend",
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
@@ -22,7 +23,7 @@ export default defineConfig({
         ws: true, // 启用 WebSocket 代理
       },
       // 将 API 请求代理到 Neo-MoFox（开发环境）
-      '/webui': {
+      '/webui/api': {
         target: 'http://127.0.0.1:8000',
         changeOrigin: true,
         ws: true, // 启用 WebSocket 代理

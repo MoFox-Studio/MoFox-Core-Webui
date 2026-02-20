@@ -314,11 +314,14 @@ async function loadGitStatus() {
   loading.value = true
   try {
     const result = await getGitEnvStatus()
-    if (result.success && result.data?.data) {
-      gitStatus.value = result.data.data
+    console.log('[GitSettingsTab] 加载 Git 状态:', result)
+    
+    if (result.success && result.data) {
+      gitStatus.value = result.data as any
+      console.log('[GitSettingsTab] Git 状态已更新:', gitStatus.value)
       
       // 如果不可用，加载安装指南
-      if (!result.data.data.git_available && result.data.data.system_os !== 'Windows') {
+      if (!result.data.git_available && result.data.system_os !== 'Windows') {
         loadInstallGuide()
       }
     }
@@ -346,11 +349,12 @@ async function handleAutoDetect() {
   autoDetecting.value = true
   try {
     const result = await autoDetectGit()
-    if (result.success && result.data?.data?.success) {
-      showSuccess(result.data.data.message || '已检测到 Git')
+    console.log(result)
+    if (result.success && result.data?.success) {
+      showSuccess(result.data.message || '已检测到 Git')
       await loadGitStatus()
     } else {
-      showError(result.data?.data?.error || result.data?.error || result.error || '未检测到 Git')
+      showError(result.data?.error || result.data?.error || result.error || '未检测到 Git')
     }
   } catch (e: any) {
     showError(e.message || '检测失败')
@@ -389,12 +393,12 @@ async function handleInstallGit() {
   installing.value = true
   try {
     const result = await installGit()
-    if (result.success && result.data?.data?.success) {
-      showSuccess(result.data.data.message || 'Git 安装成功')
+    if (result.success && result.data?.success) {
+      showSuccess(result.data.message || 'Git 安装成功')
       // 安装成功后自动检测并设置路径
       await handleAutoDetect()
     } else {
-      showError(result.data?.data?.error || result.data?.error || result.error || '安装失败')
+      showError(result.data?.error || result.data?.error || result.error || '安装失败')
     }
   } catch (e: any) {
     showError(e.message || '安装失败')
@@ -424,13 +428,13 @@ async function handleSetPath() {
   settingPath.value = true
   try {
     const result = await setGitPath(customPath.value)
-    if (result.success && result.data?.data?.success) {
-      showSuccess(result.data.data.message || '路径设置成功')
+    if (result.success && result.data?.success) {
+      showSuccess(result.data.message || '路径设置成功')
       showSetPathModal.value = false
       customPath.value = ''
       await loadGitStatus()
     } else {
-      showError(result.data?.data?.error || result.data?.error || result.error || '设置失败')
+      showError(result.data?.error || result.data?.error || result.error || '设置失败')
     }
   } catch (e: any) {
     showError(e.message || '设置失败')
