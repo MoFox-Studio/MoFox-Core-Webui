@@ -147,7 +147,7 @@
               <div v-show="expandedItems.includes(index)" class="object-item-content">
                 <template v-for="subField in field.item_fields" :key="subField.key">
                   <SchemaFieldEditor
-                    :field="subField"
+                    :field="toPluginSchemaField(subField)"
                     :model-value="item[subField.key]"
                     @update:model-value="(v: unknown) => updateObjectItemField(index, subField.key, v)"
                   />
@@ -180,7 +180,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import type { SchemaField } from '@/api/pluginConfigApi'
+import type { SchemaField, PluginSchemaField } from '@/api/pluginConfig'
 import SchemaFieldEditor from '../SchemaFieldEditor.vue'
 
 const props = defineProps<{
@@ -191,6 +191,35 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'update:modelValue', value: unknown): void
 }>()
+
+/** 将 SchemaField 转换为 PluginSchemaField 格式 */
+function toPluginSchemaField(sf: SchemaField): PluginSchemaField {
+  return {
+    key: sf.key,
+    name: sf.label || sf.key,
+    description: sf.description || '',
+    type: mapInputTypeToType(sf.input_type || sf.type || 'string'),
+    default: sf.default,
+    options: sf.choices?.map(c => ({ value: String(c.value), label: c.label })),
+  }
+}
+
+function mapInputTypeToType(inputType: string): PluginSchemaField['type'] {
+  const map: Record<string, PluginSchemaField['type']> = {
+    text: 'string',
+    number: 'number',
+    switch: 'boolean',
+    list: 'array',
+    json: 'object',
+    textarea: 'textarea',
+    select: 'select',
+    string: 'string',
+    boolean: 'boolean',
+    array: 'array',
+    object: 'object',
+  }
+  return map[inputType] || 'string'
+}
 
 // 列表值
 const listValue = computed(() => {
@@ -287,7 +316,7 @@ function onDragStart(index: number, event: DragEvent) {
   }
 }
 
-function onDragOver(index: number) {
+function onDragOver(_index: number) {
   // 允许放置
 }
 

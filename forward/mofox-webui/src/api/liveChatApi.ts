@@ -10,45 +10,34 @@ import { api, getServerInfo } from './index'
 /** 聊天流信息 */
 export interface StreamInfo {
   stream_id: string
-  platform: string | null
-  user_id: string | null
-  user_nickname: string | null
-  group_id: string | null
-  group_name: string | null
-  last_active_time: number | null
+  platform: string
+  user_id: string
+  group_id: string
+  chat_type: string
+  last_message_time: number | null
+  last_message_content: string
+  unread_count: number
 }
 
 /** 消息信息 */
 export interface MessageInfo {
   message_id: string
   stream_id: string
-  user_id: string | null
-  user_nickname: string | null
-  content: string | null
-  display_message?: string | null
-  timestamp: number | null
-  is_emoji: boolean
-  is_picid: boolean
-  reply_to_id: string | null
-  direction: 'incoming' | 'outgoing'
-  sender_type: 'user' | 'bot' | 'webui'
-  image_data?: string | null  // base64 图片数据 (data:image/...)
-  emoji_data?: string | null  // base64 表情包数据 (data:image/...)
+  platform: string
+  chat_type: string
+  time: number
+  content: string
+  sender_id: string
+  sender_name: string
+  is_sent: boolean
+  is_bot: boolean
+  is_webui: boolean
+  images: Array<{ hash?: string; url?: string }>
+  reply_message_id: string | null
+  metadata: Record<string, any>
 }
 
-/** 聊天流列表响应 */
-interface StreamsResponse {
-  success: boolean
-  streams: StreamInfo[]
-  count: number
-}
-
-/** 消息列表响应 */
-interface MessagesResponse {
-  success: boolean
-  messages: MessageInfo[]
-  count: number
-}
+// 后端直接返回数组，无需响应包装类型
 
 /** 发送消息请求 */
 export interface SendMessageRequest {
@@ -61,8 +50,8 @@ export interface SendMessageRequest {
 /** 发送消息响应 */
 interface SendMessageResponse {
   success: boolean
-  message_id?: string
-  error?: string
+  message: string
+  message_id: string | null
 }
 
 // ==================== API 函数 ====================
@@ -74,12 +63,10 @@ interface SendMessageResponse {
  */
 export async function getStreams(limit: number = 100): Promise<StreamInfo[]> {
   try {
-    const response = await api.get<StreamsResponse>(`live_chat/streams?limit=${limit}`)
+    // 使用系统 api 对象，它会自动添加 X-API-Key header
+    const response = await api.get<StreamInfo[]>(`live_chat/streams?limit=${limit}`)
     if (response.success && response.data) {
-      const data = response.data as unknown as StreamsResponse
-      if (data.success && data.streams) {
-        return data.streams
-      }
+      return response.data as StreamInfo[]
     }
     return []
   } catch (error) {
@@ -97,18 +84,18 @@ export async function getStreams(limit: number = 100): Promise<StreamInfo[]> {
  */
 export async function getMessages(
   streamId: string,
-  hours: number = 24,
-  limit: number = 200
+  limit: number = 100,
+  beforeTime?: number
 ): Promise<MessageInfo[]> {
   try {
-    const response = await api.get<MessagesResponse>(
-      `live_chat/messages/${streamId}?hours=${hours}&limit=${limit}`
-    )
+    let url = `live_chat/messages/${streamId}?limit=${limit}`
+    if (beforeTime !== undefined) {
+      url += `&before_time=${beforeTime}`
+    }
+    // 使用系统 api 对象，它会自动添加 X-API-Key header
+    const response = await api.get<MessageInfo[]>(url)
     if (response.success && response.data) {
-      const data = response.data as unknown as MessagesResponse
-      if (data.success && data.messages) {
-        return data.messages
-      }
+      return response.data as MessageInfo[]
     }
     return []
   } catch (error) {
@@ -131,16 +118,15 @@ export async function sendMessage(request: SendMessageRequest): Promise<{
     const response = await api.post<SendMessageResponse>('live_chat/send', {
       stream_id: request.stream_id,
       content: request.content,
-      message_type: request.message_type || 'text',
-      reply_to_id: request.reply_to_id
+      message_type: request.message_type || 'text'
     })
     
     if (response.success && response.data) {
-      const data = response.data as unknown as SendMessageResponse
+      const data = response.data
       if (data.success) {
-        return { success: true, messageId: data.message_id }
+        return { success: true, messageId: data.message_id || undefined }
       } else {
-        return { success: false, error: data.error || '发送失败' }
+        return { success: false, error: data.message || '发送失败' }
       }
     }
     return { success: false, error: response.error || '请求失败' }
@@ -175,17 +161,17 @@ export function getEmojiUrl(hash: string | null): string {
  * @returns WebSocket URL
  */
 export async function createWebSocketUrl(): Promise<string> {
-  // 使用相对路径，自动通过代理服务器转发（开发环境走Vite代理，生产环境走发现服务器代理）
+  // 使用 Neo-MoFox 的统一路径：/webui/api/live_chat/ws
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  const token = localStorage.getItem('mofox_token') || ''
-  return `${protocol}//${window.location.host}/ws/plugins/webui_backend/live_chat/realtime?token=${encodeURIComponent(token)}`
+  const apiKey = localStorage.getItem('mofox_token') || ''
+  return `${protocol}//${window.location.host}/webui/api/live_chat/ws?api_key=${encodeURIComponent(apiKey)}`
 }
 
 /**
- * 获取 WebSocket URL（隐藏 token 用于日志）
+ * 获取 WebSocket URL（隐藏 api_key 用于日志）
  * @param wsUrl 原始 URL
- * @returns 隐藏 token 后的 URL
+ * @returns 隐藏 api_key 后的 URL
  */
 export function maskWebSocketUrl(wsUrl: string): string {
-  return wsUrl.replace(/token=[^&]+/, 'token=***')
+  return wsUrl.replace(/api_key=[^&]+/, 'api_key=***')
 }

@@ -541,243 +541,6 @@
       </div>
     </div>
 
-    <!-- 模型选择器配置面板 -->
-    <div v-show="activeTab === 'selector'" class="tab-panel">
-      <div class="selector-config">
-        <div class="config-section">
-          <div class="section-header">
-            <div class="section-icon">
-              <Icon icon="lucide:gauge" />
-            </div>
-            <div class="section-info">
-              <h3>负载均衡配置</h3>
-              <p>调整模型选择器的负载均衡策略和惩罚机制</p>
-            </div>
-          </div>
-          
-          <div class="detail-grid">
-            <div class="form-group">
-              <label>
-                严重错误惩罚乘数
-                <span class="field-hint" title="网络错误、服务器错误等严重错误的惩罚倍数">
-                  <Icon icon="lucide:help-circle" />
-                </span>
-              </label>
-              <div class="number-input-wrapper">
-                <button 
-                  class="number-btn" 
-                  @click="updateSelectorConfig('critical_penalty_multiplier', Math.max(0, (modelSelector.critical_penalty_multiplier ?? 5.0) - 0.5))"
-                  :disabled="(modelSelector.critical_penalty_multiplier ?? 5.0) <= 0"
-                >
-                  <Icon icon="lucide:minus" />
-                </button>
-                <input 
-                  type="number" 
-                  class="form-input number-center" 
-                  :value="modelSelector.critical_penalty_multiplier ?? 5.0"
-                  @input="updateSelectorConfig('critical_penalty_multiplier', parseFloat(($event.target as HTMLInputElement).value))"
-                  min="0" max="20" step="0.5"
-                />
-                <button 
-                  class="number-btn" 
-                  @click="updateSelectorConfig('critical_penalty_multiplier', Math.min(20, (modelSelector.critical_penalty_multiplier ?? 5.0) + 0.5))"
-                  :disabled="(modelSelector.critical_penalty_multiplier ?? 5.0) >= 20"
-                >
-                  <Icon icon="lucide:plus" />
-                </button>
-              </div>
-              <p class="field-hint">当模型发生严重错误时，其失败惩罚值会乘以此倍数（推荐: 3.0-10.0）</p>
-            </div>
-
-            <div class="form-group">
-              <label>
-                默认惩罚增量
-                <span class="field-hint" title="普通错误的惩罚增量">
-                  <Icon icon="lucide:help-circle" />
-                </span>
-              </label>
-              <div class="number-input-wrapper">
-                <button 
-                  class="number-btn" 
-                  @click="updateSelectorConfig('default_penalty_increment', Math.max(0, (modelSelector.default_penalty_increment ?? 1.0) - 0.1))"
-                  :disabled="(modelSelector.default_penalty_increment ?? 1.0) <= 0"
-                >
-                  <Icon icon="lucide:minus" />
-                </button>
-                <input 
-                  type="number" 
-                  class="form-input number-center" 
-                  :value="modelSelector.default_penalty_increment ?? 1.0"
-                  @input="updateSelectorConfig('default_penalty_increment', parseFloat(($event.target as HTMLInputElement).value))"
-                  min="0" max="5" step="0.1"
-                />
-                <button 
-                  class="number-btn" 
-                  @click="updateSelectorConfig('default_penalty_increment', Math.min(5, (modelSelector.default_penalty_increment ?? 1.0) + 0.1))"
-                  :disabled="(modelSelector.default_penalty_increment ?? 1.0) >= 5"
-                >
-                  <Icon icon="lucide:plus" />
-                </button>
-              </div>
-              <p class="field-hint">当模型发生一般错误时，其失败惩罚值会增加此数值（推荐: 0.5-2.0）</p>
-            </div>
-
-            <div class="form-group">
-              <label>
-                延迟权重
-                <span class="field-hint" title="模型延迟在负载均衡中的影响权重">
-                  <Icon icon="lucide:help-circle" />
-                </span>
-              </label>
-              <div class="number-input-wrapper">
-                <button 
-                  class="number-btn" 
-                  @click="updateSelectorConfig('latency_weight', Math.max(0, (modelSelector.latency_weight ?? 200.0) - 10))"
-                  :disabled="(modelSelector.latency_weight ?? 200.0) <= 0"
-                >
-                  <Icon icon="lucide:minus" />
-                </button>
-                <input 
-                  type="number" 
-                  class="form-input number-center" 
-                  :value="modelSelector.latency_weight ?? 200.0"
-                  @input="updateSelectorConfig('latency_weight', parseFloat(($event.target as HTMLInputElement).value))"
-                  min="0" max="1000" step="10"
-                />
-                <button 
-                  class="number-btn" 
-                  @click="updateSelectorConfig('latency_weight', Math.min(1000, (modelSelector.latency_weight ?? 200.0) + 10))"
-                  :disabled="(modelSelector.latency_weight ?? 200.0) >= 1000"
-                >
-                  <Icon icon="lucide:plus" />
-                </button>
-              </div>
-              <p class="field-hint">权重越高，选择器越倾向于选择低延迟模型（推荐: 50-500）</p>
-            </div>
-
-            <div class="form-group">
-              <label>
-                失败惩罚权重
-                <span class="field-hint" title="模型失败次数在负载均衡中的影响权重">
-                  <Icon icon="lucide:help-circle" />
-                </span>
-              </label>
-              <div class="number-input-wrapper">
-                <button 
-                  class="number-btn" 
-                  @click="updateSelectorConfig('penalty_weight', Math.max(0, (modelSelector.penalty_weight ?? 300.0) - 10))"
-                  :disabled="(modelSelector.penalty_weight ?? 300.0) <= 0"
-                >
-                  <Icon icon="lucide:minus" />
-                </button>
-                <input 
-                  type="number" 
-                  class="form-input number-center" 
-                  :value="modelSelector.penalty_weight ?? 300.0"
-                  @input="updateSelectorConfig('penalty_weight', parseFloat(($event.target as HTMLInputElement).value))"
-                  min="0" max="1000" step="10"
-                />
-                <button 
-                  class="number-btn" 
-                  @click="updateSelectorConfig('penalty_weight', Math.min(1000, (modelSelector.penalty_weight ?? 300.0) + 10))"
-                  :disabled="(modelSelector.penalty_weight ?? 300.0) >= 1000"
-                >
-                  <Icon icon="lucide:plus" />
-                </button>
-              </div>
-              <p class="field-hint">权重越高，有失败记录的模型越难被选中（推荐: 100-500）</p>
-            </div>
-
-            <div class="form-group">
-              <label>
-                使用惩罚权重
-                <span class="field-hint" title="短期使用频率在负载均衡中的影响权重">
-                  <Icon icon="lucide:help-circle" />
-                </span>
-              </label>
-              <div class="number-input-wrapper">
-                <button 
-                  class="number-btn" 
-                  @click="updateSelectorConfig('usage_penalty_weight', Math.max(0, (modelSelector.usage_penalty_weight ?? 1000.0) - 50))"
-                  :disabled="(modelSelector.usage_penalty_weight ?? 1000.0) <= 0"
-                >
-                  <Icon icon="lucide:minus" />
-                </button>
-                <input 
-                  type="number" 
-                  class="form-input number-center" 
-                  :value="modelSelector.usage_penalty_weight ?? 1000.0"
-                  @input="updateSelectorConfig('usage_penalty_weight', parseFloat(($event.target as HTMLInputElement).value))"
-                  min="0" max="3000" step="50"
-                />
-                <button 
-                  class="number-btn" 
-                  @click="updateSelectorConfig('usage_penalty_weight', Math.min(3000, (modelSelector.usage_penalty_weight ?? 1000.0) + 50))"
-                  :disabled="(modelSelector.usage_penalty_weight ?? 1000.0) >= 3000"
-                >
-                  <Icon icon="lucide:plus" />
-                </button>
-              </div>
-              <p class="field-hint">权重越高，负载均衡越均匀（轮询所有模型）（推荐: 500-2000）</p>
-            </div>
-          </div>
-
-          <!-- 场景预设 -->
-          <div class="preset-section">
-            <h4>快速预设</h4>
-            <p class="section-desc">一键应用常见场景的优化配置</p>
-            <div class="preset-grid">
-              <button class="preset-card" @click="applySelectorPreset('production')">
-                <div class="preset-icon">
-                  <Icon icon="lucide:shield-check" />
-                </div>
-                <div class="preset-info">
-                  <h5>生产环境</h5>
-                  <p>稳定性优先</p>
-                </div>
-              </button>
-              <button class="preset-card" @click="applySelectorPreset('realtime')">
-                <div class="preset-icon">
-                  <Icon icon="lucide:zap" />
-                </div>
-                <div class="preset-info">
-                  <h5>实时交互</h5>
-                  <p>响应速度优先</p>
-                </div>
-              </button>
-              <button class="preset-card" @click="applySelectorPreset('development')">
-                <div class="preset-icon">
-                  <Icon icon="lucide:code" />
-                </div>
-                <div class="preset-info">
-                  <h5>开发测试</h5>
-                  <p>快速试错</p>
-                </div>
-              </button>
-              <button class="preset-card" @click="applySelectorPreset('batch')">
-                <div class="preset-icon">
-                  <Icon icon="lucide:layers" />
-                </div>
-                <div class="preset-info">
-                  <h5>批量处理</h5>
-                  <p>成本优先</p>
-                </div>
-              </button>
-              <button class="preset-card" @click="applySelectorPreset('performance')">
-                <div class="preset-icon">
-                  <Icon icon="lucide:rocket" />
-                </div>
-                <div class="preset-info">
-                  <h5>性能优先</h5>
-                  <p>单模型优化</p>
-                </div>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- 任务配置面板 -->
     <div v-show="activeTab === 'tasks'" class="tab-panel">
       <div class="task-categories">
@@ -795,8 +558,8 @@
       
       <div class="task-list">
         <div 
-          v-for="(task, taskKey) in filteredTasks" 
-          :key="taskKey" 
+          v-for="task in filteredTasks" 
+          :key="task.key" 
           class="task-item"
         >
           <div class="task-header">
@@ -809,31 +572,31 @@
             <div class="control-row">
               <div class="control-group model-select">
                 <label>模型 (可多选)</label>
-                <div class="custom-select" :class="{ open: openTaskModelDropdown === taskKey }">
-                  <div class="select-trigger" @click="toggleTaskModelDropdown(taskKey, $event)">
-                    <span v-if="getTaskModel(taskKey).length === 0" class="placeholder">未配置</span>
+                <div class="custom-select" :class="{ open: openTaskModelDropdown === task.key }">
+                  <div class="select-trigger" @click="toggleTaskModelDropdown(task.key, $event)">
+                    <span v-if="getTaskModel(task.key).length === 0" class="placeholder">未配置</span>
                     <div v-else class="selected-tags">
                       <span 
-                        v-for="model in getTaskModel(taskKey)" 
+                        v-for="model in getTaskModel(task.key)" 
                         :key="model" 
                         class="selected-tag"
                       >
                         {{ model }}
                       </span>
                     </div>
-                    <Icon icon="lucide:chevron-down" class="chevron" :class="{ rotated: openTaskModelDropdown === taskKey }" />
+                    <Icon icon="lucide:chevron-down" class="chevron" :class="{ rotated: openTaskModelDropdown === task.key }" />
                   </div>
                   <Teleport to="body">
                     <Transition name="dropdown-fade">
-                      <div v-if="openTaskModelDropdown === taskKey" class="select-options" :style="dropdownStyle">
+                      <div v-if="openTaskModelDropdown === task.key" class="select-options" :style="dropdownStyle">
                         <div 
                           v-for="m in models" 
                           :key="m.name" 
                           class="select-option"
-                          @click.stop="toggleTaskModelSelection(taskKey, m.name!)"
+                          @click.stop="toggleTaskModelSelection(task.key, m.name!)"
                         >
-                          <div class="checkbox" :class="{ checked: getTaskModel(taskKey).includes(m.name!) }">
-                            <Icon icon="lucide:check" v-if="getTaskModel(taskKey).includes(m.name!)" />
+                          <div class="checkbox" :class="{ checked: getTaskModel(task.key).includes(m.name!) }">
+                            <Icon icon="lucide:check" v-if="getTaskModel(task.key).includes(m.name!)" />
                           </div>
                           <span>{{ m.name }}</span>
                         </div>
@@ -842,7 +605,7 @@
                   </Teleport>
                 </div>
                 <Teleport to="body">
-                  <div v-if="openTaskModelDropdown === taskKey" class="dropdown-overlay" @click="openTaskModelDropdown = null"></div>
+                  <div v-if="openTaskModelDropdown === task.key" class="dropdown-overlay" @click="openTaskModelDropdown = null"></div>
                 </Teleport>
               </div>
               <div class="control-group small">
@@ -850,8 +613,8 @@
                 <input 
                   type="number" 
                   class="form-input"
-                  :value="getTaskTemperature(taskKey)"
-                  @input="updateTaskTemperature(taskKey, parseFloat(($event.target as HTMLInputElement).value))"
+                  :value="getTaskTemperature(task.key)"
+                  @input="updateTaskTemperature(task.key, parseFloat(($event.target as HTMLInputElement).value))"
                   step="0.1" min="0" max="2"
                   placeholder="0.7"
                 />
@@ -861,8 +624,8 @@
                 <input 
                   type="number" 
                   class="form-input"
-                  :value="getTaskMaxTokens(taskKey)"
-                  @input="updateTaskMaxTokens(taskKey, parseInt(($event.target as HTMLInputElement).value))"
+                  :value="getTaskMaxTokens(task.key)"
+                  @input="updateTaskMaxTokens(task.key, parseInt(($event.target as HTMLInputElement).value))"
                   min="1"
                   placeholder="800"
                 />
@@ -872,8 +635,8 @@
                 <input 
                   type="number" 
                   class="form-input"
-                  :value="getTaskConcurrency(taskKey)"
-                  @input="updateTaskConcurrency(taskKey, Number(($event.target as HTMLInputElement).value))"
+                  :value="getTaskConcurrency(task.key)"
+                  @input="updateTaskConcurrency(task.key, Number(($event.target as HTMLInputElement).value))"
                   min="1" max="100"
                   placeholder="1"
                 />
@@ -1482,7 +1245,19 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { StringArrayEditor } from './editors'
 import ExtraParamsEditor from './editors/ExtraParamsEditor.vue'
-import { providerPresets, modelTaskConfigs } from '@/config/configDescriptions'
+import type { TaskSchemaItem } from '@/api/modelConfig'
+
+// 内联的提供商预设模板（原来在 configDescriptions.ts）
+const providerPresets = [
+  { name: 'DeepSeek', icon: 'lucide:brain-circuit', base_url: 'https://api.deepseek.com/v1', client_type: 'openai', description: 'DeepSeek 官方 API' },
+  { name: 'OpenAI', icon: 'simple-icons:openai', base_url: 'https://api.openai.com/v1', client_type: 'openai', description: 'OpenAI 官方 API' },
+  { name: 'SiliconFlow', icon: 'lucide:cpu', base_url: 'https://api.siliconflow.cn/v1', client_type: 'openai', description: '硅基流动，支持多种模型' },
+  { name: 'Google Gemini', icon: 'simple-icons:google', base_url: 'https://generativelanguage.googleapis.com/v1beta', client_type: 'aiohttp_gemini', description: 'Google Gemini API（需要特殊客户端）' },
+  { name: '通义千问', icon: 'lucide:brain', base_url: 'https://dashscope.aliyuncs.com/api/v1', client_type: 'openai', description: '阿里云通义千问' },
+  { name: 'Claude', icon: 'simple-icons:anthropic', base_url: 'https://api.anthropic.com', client_type: 'openai', description: 'Anthropic Claude API' },
+  { name: 'AWS Bedrock', icon: 'simple-icons:amazonaws', base_url: '', client_type: 'bedrock', description: 'AWS Bedrock（支持 Claude、Titan 等模型）' },
+  { name: '自定义', icon: 'lucide:settings', base_url: '', client_type: 'openai', description: '自定义 OpenAI 兼容 API' },
+]
 
 // API 提供商接口
 interface ApiProvider {
@@ -1515,6 +1290,7 @@ interface Model {
 const props = defineProps<{
   parsedData: Record<string, unknown>
   editedValues: Record<string, unknown>
+  tasksSchema?: TaskSchemaItem[]
 }>()
 
 const emit = defineEmits<{
@@ -1522,7 +1298,7 @@ const emit = defineEmits<{
 }>()
 
 // 导航状态
-const activeTab = ref<'providers' | 'models' | 'selector' | 'tasks'>('providers')
+const activeTab = ref<'providers' | 'models' | 'tasks'>('providers')
 const searchQuery = ref('')
 const selectedProvider = ref<number | null>(0)
 const selectedModel = ref<number | null>(null)
@@ -1532,46 +1308,16 @@ const activeTaskCategory = ref('core')
 const tabs = computed(() => [
   { key: 'providers' as const, name: '提供商', icon: 'lucide:cloud', count: apiProviders.value.length },
   { key: 'models' as const, name: '模型', icon: 'lucide:cpu', count: models.value.length },
-  { key: 'selector' as const, name: '选择器', icon: 'lucide:settings-2', count: undefined },
   { key: 'tasks' as const, name: '任务配置', icon: 'lucide:list-checks', count: undefined }
 ])
 
-// 任务分类
+// 任务分类（与后端 _TASK_META 保持一致）
 const taskCategories = [
   { key: 'core', name: '核心功能', icon: 'lucide:star' },
   { key: 'media', name: '多媒体', icon: 'lucide:image' },
   { key: 'memory', name: '记忆系统', icon: 'lucide:brain' },
-  { key: 'lpmm', name: '知识库', icon: 'lucide:database' },
   { key: 'other', name: '其他', icon: 'lucide:more-horizontal' }
 ]
-
-// 任务分类映射
-const taskCategoryMap: Record<string, string> = {
-  'utils': 'core',
-  'utils_small': 'core',
-  'replyer': 'core',
-  'planner': 'core',
-  'emotion': 'core',
-  'mood': 'core',
-  'maizone': 'core',
-  'tool_use': 'core',
-  'anti_injection': 'core',
-  'vlm': 'media',
-  'emoji_vlm': 'media',
-  'utils_video': 'media',
-  'voice': 'media',
-  'embedding': 'memory',
-  'memory_short_term_builder': 'memory',
-  'memory_short_term_decider': 'memory',
-  'memory_long_term_builder': 'memory',
-  'memory_judge': 'memory',
-  'lpmm_entity_extract': 'lpmm',
-  'lpmm_rdf_build': 'lpmm',
-  'lpmm_qa': 'lpmm',
-  'schedule_generator': 'other',
-  'monthly_plan_generator': 'other',
-  'relationship_tracker': 'other'
-}
 
 // 状态
 const showModelAdvanced = ref<Record<number, boolean>>({})
@@ -1686,23 +1432,6 @@ const models = computed(() => {
 })
 
 // 计算模型选择器配置
-const modelSelector = computed(() => {
-  if (props.editedValues && 'model_selector' in props.editedValues) {
-    return props.editedValues['model_selector'] as Record<string, number>
-  }
-  const data = props.parsedData
-  if (data.model_selector && typeof data.model_selector === 'object') {
-    return data.model_selector as Record<string, number>
-  }
-  return {
-    critical_penalty_multiplier: 5.0,
-    default_penalty_increment: 1.0,
-    latency_weight: 200.0,
-    penalty_weight: 300.0,
-    usage_penalty_weight: 1000.0
-  }
-})
-
 // 过滤后的模型列表
 const filteredModels = computed(() => {
   if (!searchQuery.value) return models.value
@@ -1714,16 +1443,10 @@ const filteredModels = computed(() => {
   )
 })
 
-// 过滤后的任务列表
+// 过滤后的任务列表（由后端 tasksSchema prop 驱动）
 const filteredTasks = computed(() => {
-  const filtered: Record<string, { name: string; description: string }> = {}
-  for (const [key, value] of Object.entries(modelTaskConfigs)) {
-    const category = taskCategoryMap[key] || 'other'
-    if (category === activeTaskCategory.value) {
-      filtered[key] = value
-    }
-  }
-  return filtered
+  const schema = props.tasksSchema ?? []
+  return schema.filter(t => t.category === activeTaskCategory.value)
 })
 
 // 方法
@@ -1776,58 +1499,6 @@ function updateProvider(index: number, key: string, value: unknown) {
   const newProviders = [...apiProviders.value]
   newProviders[index] = updatedProvider
   emit('update', 'api_providers', newProviders)
-}
-
-// 更新模型选择器配置
-function updateSelectorConfig(key: string, value: number) {
-  const updatedSelector = { ...modelSelector.value, [key]: value }
-  emit('update', 'model_selector', updatedSelector)
-}
-
-// 应用模型选择器预设配置
-function applySelectorPreset(preset: string) {
-  const presets: Record<string, Record<string, number>> = {
-    production: {
-      critical_penalty_multiplier: 8.0,
-      default_penalty_increment: 2.0,
-      latency_weight: 300.0,
-      penalty_weight: 500.0,
-      usage_penalty_weight: 1000.0
-    },
-    realtime: {
-      critical_penalty_multiplier: 5.0,
-      default_penalty_increment: 1.0,
-      latency_weight: 500.0,
-      penalty_weight: 200.0,
-      usage_penalty_weight: 800.0
-    },
-    development: {
-      critical_penalty_multiplier: 2.0,
-      default_penalty_increment: 0.5,
-      latency_weight: 150.0,
-      penalty_weight: 150.0,
-      usage_penalty_weight: 1200.0
-    },
-    batch: {
-      critical_penalty_multiplier: 5.0,
-      default_penalty_increment: 1.0,
-      latency_weight: 50.0,
-      penalty_weight: 300.0,
-      usage_penalty_weight: 1500.0
-    },
-    performance: {
-      critical_penalty_multiplier: 5.0,
-      default_penalty_increment: 1.0,
-      latency_weight: 200.0,
-      penalty_weight: 300.0,
-      usage_penalty_weight: 300.0
-    }
-  }
-  
-  const presetConfig = presets[preset]
-  if (presetConfig) {
-    emit('update', 'model_selector', presetConfig)
-  }
 }
 
 // 更新提供商的 extra_params 中的某个字段
@@ -2223,7 +1894,7 @@ async function testModelConnection(modelName: string) {
   }
   
   // 导入 API 函数
-  const { testModelConnection: testAPI } = await import('@/api')
+  const { testModelConnection: testAPI } = await import('@/api/modelConfig')
   
   // 标记为测试中
   testingModels.value[modelName] = true
@@ -2336,7 +2007,7 @@ async function fetchAvailableModels() {
   availableModels.value = []
   
   try {
-    const { getAvailableModels } = await import('@/api')
+    const { getAvailableModels } = await import('@/api/modelConfig')
     
     const requestParams = {
       provider_name: provider.name,

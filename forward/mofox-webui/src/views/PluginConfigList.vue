@@ -1,18 +1,17 @@
 <!--
   @file PluginConfigList.vue
   @description 插件配置列表页面
-  
+
   功能说明：
-  1. 显示所有插件的配置文件列表
+  1. 显示所有已加载插件的配置文件列表
   2. 点击配置项跳转到配置编辑页面
   3. 支持刷新列表
-  
+
   数据来源：
-  - getConfigList: 获取所有配置文件
-  - 过滤 type === 'plugin' 的配置
-  
+  - listAllPluginConfigs: 获取所有已加载插件的配置文件
+
   导航：
-  - 点击配置卡片跳转到 /dashboard/plugin-config/:path
+  - 点击配置卡片跳转到 /dashboard/plugin-config/{plugin_name}/{config_name}
 -->
 <template>
   <div class="plugin-config-list">
@@ -88,19 +87,19 @@
       <div v-else class="plugin-grid">
         <div 
           v-for="config in filteredConfigs" 
-          :key="config.path"
+          :key="config.config_path"
           class="plugin-card"
           @click="openPluginConfig(config)"
         >
           <div class="card-content">
-            <div class="plugin-icon-wrapper" :style="{ backgroundColor: getIconColor(config.display_name) }">
+            <div class="plugin-icon-wrapper" :style="{ backgroundColor: getIconColor(config.plugin_name) }">
               <span class="material-symbols-rounded">settings_applications</span>
             </div>
             <div class="plugin-details">
-              <h3 class="plugin-name" :title="config.display_name">{{ config.display_name }}</h3>
-              <div class="plugin-path-container" :title="config.path">
+              <h3 class="plugin-name" :title="config.plugin_name">{{ config.display_name }}</h3>
+              <div class="plugin-path-container" :title="config.config_path">
                 <span class="material-symbols-rounded path-icon">folder</span>
-                <span class="plugin-path-text">{{ getShortPath(config.path) }}</span>
+                <span class="plugin-path-text">{{ getShortPath(config.config_path) }}</span>
               </div>
             </div>
           </div>
@@ -130,16 +129,16 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import {
-  getConfigList,
-  type ConfigFileInfo
-} from '@/api'
+  listAllPluginConfigs,
+  type PluginConfigFileInfo,
+} from '@/api/pluginConfig'
 
 const router = useRouter()
 
 // 状态
 const loading = ref(true)
 const loadError = ref('')
-const pluginConfigs = ref<ConfigFileInfo[]>([])
+const pluginConfigs = ref<PluginConfigFileInfo[]>([])
 const searchQuery = ref('')
 
 // Toast 提示
@@ -149,16 +148,16 @@ const toast = ref({ show: false, message: '', type: 'success' as 'success' | 'er
 const filteredConfigs = computed(() => {
   if (!searchQuery.value) return pluginConfigs.value
   const query = searchQuery.value.toLowerCase()
-  return pluginConfigs.value.filter(config => 
-    config.display_name.toLowerCase().includes(query) || 
-    config.path.toLowerCase().includes(query)
+  return pluginConfigs.value.filter(config =>
+    config.display_name.toLowerCase().includes(query) ||
+    config.plugin_name.toLowerCase().includes(query) ||
+    config.config_name.toLowerCase().includes(query)
   )
 })
 
 // 方法
 function getShortPath(path: string): string {
   if (!path) return ''
-  // 优化路径显示，只显示最后两级
   const parts = path.split(/[/\\]/)
   if (parts.length > 2) {
     return '.../' + parts.slice(-2).join('/')
@@ -182,20 +181,19 @@ function getIconColor(name: string): string {
   return colors[index]
 }
 
-function openPluginConfig(config: ConfigFileInfo) {
-  // 将路径编码后作为参数传递
-  const encodedPath = encodeURIComponent(config.path)
-  router.push(`/dashboard/plugin-config/${encodedPath}`)
+function openPluginConfig(config: PluginConfigFileInfo) {
+  // 路由格式：/dashboard/plugin-config/{plugin_name}/{config_name}
+  const encoded = encodeURIComponent(config.plugin_name) + '/' + encodeURIComponent(config.config_name)
+  router.push(`/dashboard/plugin-config/${encoded}`)
 }
 
 async function refreshPluginList() {
   loading.value = true
   loadError.value = ''
   try {
-    const res = await getConfigList()
-    if (res.success && res.data && res.data.configs) {
-      // 过滤出插件类型的配置
-      pluginConfigs.value = res.data.configs.filter((c: ConfigFileInfo) => c.type === 'plugin')
+    const res = await listAllPluginConfigs()
+    if (res.success && res.data) {
+      pluginConfigs.value = res.data.plugins
     } else {
       loadError.value = res.error || '获取列表失败'
     }

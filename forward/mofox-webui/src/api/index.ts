@@ -39,8 +39,9 @@ const DISCOVERY_SERVER_URL = `http://${window.location.hostname}:${DISCOVERY_SER
 /**
  * 插件 API 基础路径
  * 所有 API 请求都会加上这个前缀
+ * Neo-MoFox 统一使用 /webui 路径
  */
-const PLUGIN_BASE_PATH = '/plugins/webui_backend'
+const PLUGIN_BASE_PATH = '/webui/api'
 
 /**
  * 缓存的服务器信息
@@ -118,10 +119,10 @@ export function clearServerInfoCache() {
  * - 发现服务器接收请求后代理到主程序
  * 
  * 工作原理：
- * 1. 前端访问：http://hostname:12138/
- * 2. API 请求：/plugins/webui_backend/xxx（相对路径）
- * 3. 实际请求：http://hostname:12138/plugins/webui_backend/xxx
- * 4. 发现服务器代理到主程序的 webui_backend 插件
+ * 1. 前端访问：http://hostname:8000/webui/
+ * 2. API 请求：/webui/xxx（相对路径）
+ * 3. 实际请求：http://hostname:8000/webui/xxx
+ * 4. Neo-MoFox 的 WebUI 插件路由处理请求
  * 
  * @returns Promise<string> 空字符串（使用相对路径）
  */
@@ -217,8 +218,8 @@ class ApiClient {
    * 构建完整的 API URL
    * 
    * 组装规则：baseUrl + PLUGIN_BASE_PATH + endpoint
-   * 例如：'' + '/plugins/webui_backend' + '/' + 'auth/login'
-   * 结果：/plugins/webui_backend/auth/login
+   * 例如：'' + '/webui' + '/' + 'auth/login'
+   * 结果：/webui/auth/login
    * 
    * @param endpoint - API 端点路径，如 'auth/login'、'/config/list' 等
    * @returns Promise<string> 完整的 API URL（相对路径或绝对路径）
@@ -798,204 +799,13 @@ export const API_ENDPOINTS = {
     BACKUPS: (pluginName: string) => `plugin_config/${pluginName}/backups`,
     RESTORE: (pluginName: string, backupName: string) => `plugin_config/${pluginName}/restore/${backupName}`,
     VALIDATE: (pluginName: string) => `plugin_config/${pluginName}/validate`
+  },
+  // Core 配置管理（Neo-MoFox Core 层配置）
+  CORE_CONFIG: {
+    SCHEMA: 'core-config/schema',
+    CONFIG: 'core-config/config'
   }
 } as const
-
-// ==================== 类型定义 ====================
-// 以下定义了其他 API 响应的 TypeScript 类型
-// 提供完整的类型安全，IDE 可以自动补全和类型检查
-
-// ==================== 配置管理相关类型 ====================
-
-/** 配置文件信息 */
-export interface ConfigFileInfo {
-  name: string
-  display_name: string
-  path: string
-  type: 'main' | 'model' | 'plugin'
-  plugin_name?: string
-  description?: string
-  last_modified?: string
-}
-
-/** 配置文件列表响应 */
-export interface ConfigListResponse {
-  configs: ConfigFileInfo[]
-  total: number
-}
-
-/** 配置文件内容响应 */
-export interface ConfigContentResponse {
-  success: boolean
-  path: string
-  content?: string
-  parsed?: Record<string, unknown>
-  error?: string
-}
-
-/** 配置字段 */
-export interface ConfigSchemaField {
-  key: string
-  full_key: string
-  type: string
-  value: unknown
-  description?: string
-  items_count?: number
-  readonly?: boolean
-}
-
-/** 配置 Section */
-export interface ConfigSection {
-  name: string
-  display_name: string
-  fields: ConfigSchemaField[]
-}
-
-/** 配置模式响应 */
-export interface ConfigSchemaResponse {
-  success: boolean
-  path: string
-  sections: ConfigSection[]
-  error?: string
-}
-
-/** 保存配置响应 */
-export interface SaveConfigResponse {
-  success: boolean
-  message?: string
-  backup_path?: string
-  error?: string
-}
-
-/** 配置备份信息 */
-export interface ConfigBackupInfo {
-  name: string
-  path: string
-  created_at: string
-  size: number
-}
-
-/** 配置备份列表响应 */
-export interface ConfigBackupsResponse {
-  success: boolean
-  backups: ConfigBackupInfo[]
-  error?: string
-}
-
-/** 验证 TOML 响应 */
-export interface ValidateTomlResponse {
-  success: boolean
-  valid?: boolean
-  message?: string
-  line?: number
-  col?: number
-  error?: string
-}
-
-/**
- * 模型测试响应
- * 测试模型连通性的结果
- */
-export interface ModelTestResponse {
-  /** 是否成功 */
-  success: boolean
-  /** 模型名称 */
-  model_name: string
-  /** 是否连接成功 */
-  connected: boolean
-  /** 响应时间（毫秒） */
-  response_time?: number
-  /** 测试响应文本 */
-  response_text?: string
-  /** 错误信息 */
-  error?: string
-}
-
-/**
- * 模型信息
- * LLM 模型的基本信息
- */
-export interface ModelInfo {
-  /** 模型 ID */
-  id: string
-  /** 模型名称 */
-  name: string
-  /** 创建时间戳 */
-  created?: number
-  /** 所有者（如 "openai"、"anthropic"） */
-  owned_by?: string
-}
-
-/**
- * 获取模型列表请求
- * 用于从 API 提供商获取可用模型
- */
-export interface GetModelsRequest {
-  /** 提供商名称（如 "openai"、"anthropic"） */
-  provider_name: string
-  /** API 基础 URL */
-  base_url: string
-  /** API 密钥 */
-  api_key: string
-  /** 客户端类型（可选） */
-  client_type?: string
-}
-
-/**
- * 获取模型列表响应
- * 返回可用的模型列表
- */
-export interface GetModelsResponse {
-  /** 是否成功 */
-  success: boolean
-  /** 模型列表 */
-  models: ModelInfo[]
-  /** 错误信息 */
-  error?: string
-}
-
-// ==================== 配置管理 API 方法 ====================
-
-/**
- * 获取配置文件列表
- */
-export async function getConfigList() {
-  return api.get<ConfigListResponse>(API_ENDPOINTS.CONFIG.LIST)
-}
-
-/**
- * 获取配置文件内容
- */
-export async function getConfigContent(path: string) {
-  return api.get<ConfigContentResponse>(API_ENDPOINTS.CONFIG.CONTENT(path))
-}
-
-/**
- * 获取配置文件结构（用于可视化编辑）
- */
-export async function getConfigSchema(path: string) {
-  return api.get<ConfigSchemaResponse>(API_ENDPOINTS.CONFIG.SCHEMA(path))
-}
-
-/**
- * 保存配置文件（原始 TOML）
- */
-export async function saveConfig(path: string, content: string, createBackup: boolean = true) {
-  return api.post<SaveConfigResponse>(API_ENDPOINTS.CONFIG.SAVE(path), {
-    content,
-    create_backup: createBackup
-  })
-}
-
-/**
- * 更新配置文件（可视化编辑）
- */
-export async function updateConfig(path: string, updates: Record<string, unknown>, createBackup: boolean = true) {
-  return api.post<SaveConfigResponse>(API_ENDPOINTS.CONFIG.UPDATE(path), {
-    updates,
-    create_backup: createBackup
-  })
-}
 
 // ==================== 插件管理类型定义 ====================
 
@@ -1234,39 +1044,31 @@ export async function batchReloadPlugins(pluginNames: string[]) {
   })
 }
 
-/**
- * 获取配置备份列表
- */
-export async function getConfigBackups(path: string) {
-  return api.get<ConfigBackupsResponse>(API_ENDPOINTS.CONFIG.BACKUPS(path))
+// ==================== 配置文件管理 ====================
+
+/** 配置文件基本信息 */
+export interface ConfigFileInfo {
+  /** 配置文件相对路径，如 "mofox_bot_config.yaml" */
+  path: string
+  /** 配置文件名称 */
+  name: string
+  /** 文件大小（字节） */
+  size?: number
+  /** 最后修改时间（ISO 字符串） */
+  updated_at?: string
 }
 
 /**
- * 从备份恢复配置
+ * 获取配置文件列表
  */
-export async function restoreConfigBackup(path: string, backupName: string) {
-  return api.post<SaveConfigResponse>(`${API_ENDPOINTS.CONFIG.RESTORE(path)}?backup_name=${encodeURIComponent(backupName)}`)
+export async function getConfigList() {
+  return api.get<{ configs: ConfigFileInfo[] }>(API_ENDPOINTS.CONFIG.LIST)
 }
 
 /**
- * 测试模型连通性
+ * 获取配置文件内容
+ * @param path 配置文件路径
  */
-export async function testModelConnection(modelName: string) {
-  return api.post<ModelTestResponse>(API_ENDPOINTS.MODEL.TEST_MODEL, {
-    model_name: modelName
-  })
-}
-
-/**
- * 获取可用模型列表
- */
-export async function getAvailableModels(request: GetModelsRequest) {
-  return api.post<GetModelsResponse>(API_ENDPOINTS.MODEL.GET_MODELS, request)
-}
-
-/**
- * 验证 TOML 内容
- */
-export async function validateToml(content: string) {
-  return api.post<ValidateTomlResponse>(API_ENDPOINTS.CONFIG.VALIDATE, content)
+export async function getConfigContent(path: string) {
+  return api.get<{ content: Record<string, any>; raw?: string }>(API_ENDPOINTS.CONFIG.CONTENT(path))
 }

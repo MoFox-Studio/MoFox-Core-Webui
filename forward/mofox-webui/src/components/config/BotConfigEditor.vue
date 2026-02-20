@@ -91,8 +91,15 @@
           <template v-for="field in getVisibleFields(group)" :key="field.key">
             <!-- 特殊编辑器 -->
             <div v-if="field.specialEditor" class="field-card special-editor-card">
+              <OwnerListEditor
+                v-if="field.specialEditor === 'owner_list'"
+                :value="getFieldValue(field.key)"
+                :title="field.name"
+                :description="field.description"
+                @update="(v: unknown) => emit('update', field.key, v)"
+              />
               <StringArrayEditor
-                v-if="field.specialEditor === 'string_array'"
+                v-else-if="field.specialEditor === 'string_array'"
                 :value="getFieldValue(field.key)"
                 :title="field.name"
                 :description="field.description"
@@ -103,35 +110,6 @@
               />
               <KeyValueEditor
                 v-else-if="field.specialEditor === 'key_value'"
-                :value="getFieldValue(field.key)"
-                :title="field.name"
-                :description="field.description"
-                @update="(v: unknown) => emit('update', field.key, v)"
-              />
-              <MasterUsersEditor 
-                v-else-if="field.specialEditor === 'master_users'"
-                :value="getFieldValue(field.key)"
-                @update="(v: unknown) => emit('update', field.key, v)"
-              />
-              <ExpressionRulesEditor 
-                v-else-if="field.specialEditor === 'expression_rules'"
-                :value="getFieldValue(field.key)"
-                @update="(v: unknown) => emit('update', field.key, v)"
-              />
-              <ReactionRulesEditor 
-                v-else-if="field.specialEditor === 'reaction_rules'"
-                :value="getFieldValue(field.key)"
-                @update="(v: unknown) => emit('update', field.key, v)"
-              />
-              <WebSearchEnginesEditor 
-                v-else-if="field.specialEditor === 'web_search_engines'"
-                :value="getFieldValue(field.key)"
-                :configData="mergedConfigData"
-                @update="(v: unknown) => emit('update', field.key, v)"
-                @updateConfig="(key: string, v: unknown) => emit('update', key, v)"
-              />
-              <ChatListEditor 
-                v-else-if="field.specialEditor === 'chat_list'"
                 :value="getFieldValue(field.key)"
                 :title="field.name"
                 :description="field.description"
@@ -227,6 +205,18 @@
                     rows="3"
                   ></textarea>
 
+                  <!-- Textarea Tall 类型（人格/长文本专用） -->
+                  <textarea 
+                    v-else-if="field.type === 'textarea_tall'"
+                    class="input textarea textarea-tall"
+                    :value="String(getFieldValue(field.key) ?? field.default ?? '')"
+                    :placeholder="field.placeholder"
+                    :disabled="field.readonly"
+                    :readonly="field.readonly"
+                    @input="emit('update', field.key, ($event.target as HTMLTextAreaElement).value)"
+                    rows="7"
+                  ></textarea>
+
                   <!-- Password 类型 -->
                   <div v-else-if="field.type === 'password'" class="password-input">
                     <input 
@@ -249,33 +239,19 @@
                   </div>
 
                   <!-- Number 类型 -->
-                  <template v-else-if="field.type === 'number'">
-                    <div v-if="field.min !== undefined && field.max !== undefined && (field.max - field.min) <= 100" class="slider-input">
-                      <input 
-                        type="range" 
-                        :min="field.min"
-                        :max="field.max"
-                        :step="field.step ?? 1"
-                        :value="getFieldValue(field.key) ?? field.default ?? field.min"
-                        :disabled="field.readonly"
-                        @input="emit('update', field.key, parseFloat(($event.target as HTMLInputElement).value))"
-                      />
-                      <span class="slider-value">{{ getFieldValue(field.key) ?? field.default ?? field.min }}</span>
-                    </div>
-                    <input 
-                      v-else
-                      type="number" 
-                      class="input"
-                      :min="field.min"
-                      :max="field.max"
-                      :step="field.step"
-                      :value="getFieldValue(field.key) ?? field.default ?? ''"
-                      :placeholder="field.placeholder"
-                      :disabled="field.readonly"
-                      :readonly="field.readonly"
-                      @input="emit('update', field.key, parseFloat(($event.target as HTMLInputElement).value) || 0)"
-                    />
-                  </template>
+                  <input
+                    v-else-if="field.type === 'number'"
+                    type="number"
+                    class="input"
+                    :min="field.min"
+                    :max="field.max"
+                    :step="field.step"
+                    :value="getFieldValue(field.key) ?? field.default ?? ''"
+                    :placeholder="field.placeholder"
+                    :disabled="field.readonly"
+                    :readonly="field.readonly"
+                    @input="emit('update', field.key, parseFloat(($event.target as HTMLInputElement).value) || 0)"
+                  />
 
                   <!-- Array 类型 -->
                   <div v-else-if="field.type === 'array'" class="array-input">
@@ -310,88 +286,19 @@
       </div>
     </div>
 
-    <!-- 自定义配置区域（显示未在描述文件中定义的配置），仅在"其他"标签页显示 -->
-    <div v-if="activeTab === 'other' && customSections.length > 0" class="config-content">
-      <div class="config-group custom-section">
-        <div class="group-header" @click="toggleGroup('__custom__')">
-          <div class="group-title">
-            <Icon icon="lucide:file-json" />
-            <h3>未分类配置</h3>
-          </div>
-          <div class="group-meta">
-            <span class="group-hint">配置文件中未注释的配置项</span>
-            <Icon :icon="collapsedGroups['__custom__'] ? 'lucide:chevron-down' : 'lucide:chevron-up'" />
-          </div>
-        </div>
-        <div v-show="!collapsedGroups['__custom__']" class="group-content">
-          <div v-for="section in customSections" :key="section.name" class="custom-subsection">
-            <h4 class="subsection-title">{{ section.display_name }}</h4>
-            <div 
-              v-for="field in section.fields" 
-              :key="field.full_key" 
-              class="field-card"
-              :class="{ inline: field.type === 'boolean' }"
-            >
-              <div class="field-left" v-if="field.type === 'boolean'">
-                <div class="field-header">
-                  <span class="field-name">{{ field.key }}</span>
-                </div>
-                <div v-if="field.description" class="field-description">
-                  {{ field.description }}
-                </div>
-              </div>
-              <template v-else>
-                <div class="field-header">
-                  <span class="field-name">{{ field.key }}</span>
-                  <span class="field-key">{{ field.full_key }}</span>
-                </div>
-                <div v-if="field.description" class="field-description">
-                  {{ field.description }}
-                </div>
-              </template>
-              
-              <div class="field-input" v-if="field.type !== 'boolean'">
-                <FieldEditor 
-                  :field="field"
-                  :value="getFieldValue(field.full_key)"
-                  @update="(v) => emit('update', field.full_key, v)"
-                />
-              </div>
-              <label v-else class="toggle-switch">
-                <input 
-                  type="checkbox" 
-                  :checked="Boolean(getFieldValue(field.full_key))"
-                  @change="emit('update', field.full_key, ($event.target as HTMLInputElement).checked)"
-                />
-                <span class="toggle-slider"></span>
-              </label>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
-import type { ConfigSection } from '@/api'
-import { FieldEditor, StringArrayEditor, KeyValueEditor } from './editors'
-import MasterUsersEditor from './special/MasterUsersEditor.vue'
-import ExpressionRulesEditor from './special/ExpressionRulesEditor.vue'
-import ReactionRulesEditor from './special/ReactionRulesEditor.vue'
-import WebSearchEnginesEditor from './special/WebSearchEnginesEditor.vue'
-import ChatListEditor from './special/ChatListEditor.vue'
-import { botConfigGroups, type ConfigGroupDef, type ConfigFieldDef } from '@/config/configDescriptions'
-
-// 兼容两种配置类型：ConfigGroupDef (手写的配置描述) 和 ConfigSection (后端返回的配置结构)
-type ConfigItem = ConfigGroupDef | ConfigSection
+import { StringArrayEditor, KeyValueEditor, OwnerListEditor } from './editors'
+import type { ConfigGroupSchema as ConfigGroupSchema, ConfigFieldSchema as ConfigFieldSchema } from '@/api/coreConfig'
 
 const props = defineProps<{
-  parsedData: Record<string, unknown>
+  parsedData: Record<string, Record<string, unknown>>
   editedValues: Record<string, unknown>
-  configSchema: ConfigItem[]
+  configSchema: ConfigGroupSchema[]
 }>()
 
 const emit = defineEmits<{
@@ -433,79 +340,26 @@ onUnmounted(() => {
   document.removeEventListener('click', handleOutsideClick)
 })
 
-// 导航栏标签页定义
-interface NavTab {
-  key: string
-  name: string
-  description: string
-  groupKeys: string[]  // 该标签页包含的配置组 key
-}
+// 导航栏标签页：由后端 Schema 动态生成，每个 group 对应一个 tab
+const navTabs = computed(() => {
+  return props.configSchema.map(group => ({
+    key: group.key,
+    name: group.name,
+    description: group.description,
+  }))
+})
 
-const navTabs: NavTab[] = [
-  {
-    key: 'basic',
-    name: '基本信息',
-    description: '配置机器人的基础信息和账号设置',
-    groupKeys: ['inner', 'bot', 'command', 'permission']
+// 状态：activeTab 初始为 schema 第一个 group 的 key，schema 加载后自动对齐
+const activeTab = ref('')
+watch(
+  () => props.configSchema,
+  (schema) => {
+    if (schema.length > 0 && schema[0] && (!activeTab.value || !schema.find(g => g.key === activeTab.value))) {
+      activeTab.value = schema[0].key
+    }
   },
-  {
-    key: 'personality',
-    name: '人格',
-    description: '配置机器人的性格特点和身份设定',
-    groupKeys: ['personality']
-  },
-  {
-    key: 'chat',
-    name: '聊天',
-    description: '配置机器人的聊天行为、私聊和群聊模式',
-    groupKeys: ['chat', 'message_receive', 'kokoro_flow_chatter', 'cross_context', 'affinity_flow', 'proactive_thinking']
-  },
-  {
-    key: 'expression',
-    name: '表达',
-    description: '配置机器人学习和使用表达方式',
-    groupKeys: ['expression', 'reaction']
-  },
-  {
-    key: 'function',
-    name: '功能',
-    description: '配置机器人的各项功能模块',
-    groupKeys: ['tool', 'voice', 'web_search', 'video_analysis', 'planning_system', 'notice', 'plugin_http_system']
-  },
-  {
-    key: 'process',
-    name: '处理',
-    description: '配置回复的后处理和优化',
-    groupKeys: ['response_post_process', 'chinese_typo', 'response_splitter']
-  },
-  {
-    key: 'emotion',
-    name: '情绪',
-    description: '配置机器人的情绪系统和表情包',
-    groupKeys: ['mood', 'emoji']
-  },
-  {
-    key: 'memory',
-    name: '知识库',
-    description: '配置记忆系统和向量数据库',
-    groupKeys: ['memory', 'database', 'lpmm_knowledge']
-  },
-  {
-    key: 'advanced',
-    name: '高级',
-    description: '高级配置选项，包括视频分析、消息总线等',
-    groupKeys: ['video_analysis_expert', 'message_bus', 'custom_prompt', 'dependency_management']
-  },
-  {
-    key: 'other',
-    name: '其他',
-    description: '日志、调试等其他配置',
-    groupKeys: ['log', 'debug']
-  }
-]
-
-// 状态
-const activeTab = ref('basic')
+  { immediate: true }
+)
 const searchQuery = ref('')
 const showAdvanced = ref(false)
 const showPasswords = ref<Record<string, boolean>>({})
@@ -548,61 +402,42 @@ onUnmounted(() => {
   document.removeEventListener('keydown', handleKeydown)
 })
 
-// 合并 parsedData 和 editedValues 的计算属性
+// 合并 parsedData 和 editedValues（供 WebSearchEnginesEditor 等特殊编辑器使用）
 const mergedConfigData = computed(() => {
-  const merged = JSON.parse(JSON.stringify(props.parsedData)) as Record<string, any>
-  
-  // 将 editedValues 中的值合并进去
+  const merged = JSON.parse(JSON.stringify(props.parsedData)) as Record<string, Record<string, any>>
   for (const [fullKey, value] of Object.entries(props.editedValues)) {
-    const keys = fullKey.split('.')
-    let current = merged as Record<string, any>
-    
-    // 遍历到倒数第二个键，创建嵌套对象
-    for (let i = 0; i < keys.length - 1; i++) {
-      const key = keys[i]
-      if (!key) continue
-      if (!current[key] || typeof current[key] !== 'object') {
-        current[key] = {}
-      }
-      current = current[key] as Record<string, any>
-    }
-    
-    // 设置最后一个键的值
-    const lastKey = keys[keys.length - 1]
-    if (lastKey) {
-      current[lastKey] = value
+    const [section, field] = fullKey.split('.', 2)
+    if (section && field) {
+      if (!merged[section]) merged[section] = {}
+      merged[section][field] = value
     }
   }
-  
   return merged
 })
 
 // 获取当前标签页信息
 const currentTabInfo = computed(() => {
-  const tab = navTabs.find(t => t.key === activeTab.value)
-  return tab ?? navTabs[0]
+  return navTabs.value.find(t => t.key === activeTab.value) ?? navTabs.value[0]
 })
 
-// 获取当前标签页的配置组（原始）
-const currentTabGroups = computed(() => {
-  const tab = currentTabInfo.value
-  return botConfigGroups.filter(group => tab?.groupKeys.includes(group.key))
+// 当前 tab 对应的 group（一个 tab = 一个 group）
+const currentGroup = computed((): ConfigGroupSchema | undefined => {
+  return props.configSchema.find(g => g.key === activeTab.value)
 })
 
-// 获取当前标签页的过滤后配置组
-const filteredCurrentTabGroups = computed(() => {
-  let groups = currentTabGroups.value
-  
-  if (!searchQuery.value) {
-    return groups
-  }
-  
+// 为了兼容模板中 currentTabGroups 的用法（数组形式），包装成单元素数组
+const currentTabGroups = computed((): ConfigGroupSchema[] => {
+  const g = currentGroup.value
+  return g ? [g] : []
+})
+
+// 过滤后的配置组
+const filteredCurrentTabGroups = computed((): ConfigGroupSchema[] => {
+  if (!searchQuery.value) return currentTabGroups.value
   const query = searchQuery.value.toLowerCase()
-  return groups.filter(group => {
-    // 检查分组名称
+  return currentTabGroups.value.filter(group => {
     if (group.name.toLowerCase().includes(query)) return true
-    // 检查字段
-    return group.fields.some(field => 
+    return group.fields.some(field =>
       field.name.toLowerCase().includes(query) ||
       field.description.toLowerCase().includes(query) ||
       field.key.toLowerCase().includes(query)
@@ -612,104 +447,46 @@ const filteredCurrentTabGroups = computed(() => {
 
 // 检查当前标签页是否有高级字段
 const hasAdvancedFieldsInCurrentTab = computed(() => {
-  return currentTabGroups.value.some(group => 
+  return currentTabGroups.value.some(group =>
     group.fields.some(field => field.advanced)
   )
 })
 
-// 获取可见字段（考虑高级选项过滤）
-function getVisibleFields(group: ConfigGroupDef): ConfigFieldDef[] {
-  let fields = group.fields
-  
-  // 过滤隐藏字段（由特殊编辑器管理的字段）
-  fields = fields.filter(field => !field.hidden)
-  
-  // 搜索过滤
+// 获取可见字段（考虑高级/搜索过滤）
+function getVisibleFields(group: ConfigGroupSchema): ConfigFieldSchema[] {
+  let fields = group.fields.filter(f => !f.hidden)
+
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()
-    fields = fields.filter(field =>
-      field.name.toLowerCase().includes(query) ||
-      field.description.toLowerCase().includes(query) ||
-      field.key.toLowerCase().includes(query)
+    fields = fields.filter(f =>
+      f.name.toLowerCase().includes(query) ||
+      f.description.toLowerCase().includes(query) ||
+      f.key.toLowerCase().includes(query)
     )
   }
-  
-  // 高级选项过滤
+
   if (!showAdvanced.value) {
-    fields = fields.filter(field => !field.advanced)
+    fields = fields.filter(f => !f.advanced)
   }
-  
+
   return fields
 }
-
-// 自定义配置（未在描述中定义的）- 只处理 ConfigSection 类型
-const customSections = computed((): ConfigSection[] => {
-  const definedKeys = new Set<string>()
-  const objectTypeKeys = new Set<string>() // 对象类型的键，用于匹配嵌套属性
-  
-  botConfigGroups.forEach(group => {
-    group.fields.forEach(field => {
-      definedKeys.add(field.key)
-      // 如果字段类型是 object，记录下来用于匹配子属性
-      if (field.type === 'object') {
-        objectTypeKeys.add(field.key)
-      }
-    })
-  })
-  
-  // 检查一个键是否已被定义（包括作为对象类型的子属性）
-  function isKeyDefined(fullKey: string): boolean {
-    if (definedKeys.has(fullKey)) return true
-    // 检查是否是某个对象类型配置的子属性
-    for (const objKey of objectTypeKeys) {
-      if (fullKey.startsWith(objKey + '.')) {
-        return true
-      }
-    }
-    return false
-  }
-  
-  // 判断是否为 ConfigSection 类型（后端返回的配置结构）
-  function isConfigSection(section: ConfigItem): section is ConfigSection {
-    return 'display_name' in section && section.fields.every(f => 'full_key' in f)
-  }
-  
-  // 只处理 ConfigSection 类型，过滤出未定义的配置节
-  return props.configSchema
-    .filter(isConfigSection)
-    .filter(section => {
-      // 检查是否有任何字段不在定义中
-      return section.fields.some(field => !isKeyDefined(field.full_key))
-    })
-    .map(section => ({
-      ...section,
-      fields: section.fields.filter(field => !isKeyDefined(field.full_key))
-    }))
-})
 
 // 切换分组展开/折叠
 function toggleGroup(key: string) {
   collapsedGroups.value[key] = !collapsedGroups.value[key]
 }
 
-// 获取字段值
+// 获取字段值 (fullKey 格式: "section.field")
 function getFieldValue(fullKey: string): unknown {
-  // 优先返回编辑后的值
   if (fullKey in props.editedValues) {
     return props.editedValues[fullKey]
   }
-  
-  // 否则从原始解析数据中获取
-  const keys = fullKey.split('.')
-  let current: unknown = props.parsedData
-  for (const key of keys) {
-    if (current && typeof current === 'object' && key in (current as Record<string, unknown>)) {
-      current = (current as Record<string, unknown>)[key]
-    } else {
-      return undefined
-    }
+  const [section, field] = fullKey.split('.', 2)
+  if (section && field && props.parsedData[section]) {
+    return props.parsedData[section][field]
   }
-  return current
+  return undefined
 }
 
 // 格式化数组值
@@ -1229,6 +1006,12 @@ function parseArrayValue(value: string): string[] {
   line-height: 1.5;
 }
 
+.input.textarea.textarea-tall {
+  min-height: 160px;
+  line-height: 1.6;
+  font-size: 13px;
+}
+
 select.input {
   cursor: pointer;
 }
@@ -1315,52 +1098,6 @@ select.input:disabled {
 
 .toggle-switch input:checked + .toggle-slider::after {
   transform: translateX(22px);
-}
-
-/* 滑块输入 */
-.slider-input {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.slider-input input[type="range"] {
-  flex: 1;
-  height: 6px;
-  -webkit-appearance: none;
-  appearance: none;
-  background: var(--bg-hover);
-  border-radius: 3px;
-  outline: none;
-}
-
-.slider-input input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 18px;
-  height: 18px;
-  background: var(--primary);
-  border-radius: 50%;
-  cursor: pointer;
-  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.4);
-}
-
-.slider-input input[type="range"]::-moz-range-thumb {
-  width: 18px;
-  height: 18px;
-  background: var(--primary);
-  border-radius: 50%;
-  cursor: pointer;
-  border: none;
-  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.4);
-}
-
-.slider-value {
-  min-width: 48px;
-  text-align: right;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--primary);
 }
 
 /* 数组输入 */

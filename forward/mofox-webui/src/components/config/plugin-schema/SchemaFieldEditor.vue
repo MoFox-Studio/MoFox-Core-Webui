@@ -1,28 +1,28 @@
 <!--
   @file SchemaFieldEditor.vue
-  @description Schema 驱动的字段编辑器组件
-  
+  @description Schema 驱动的字段编辑器组件（新 API）
+
   功能说明：
-  1. 根据 SchemaField 的 input_type 自动渲染对应的输入组件
-  2. 支持验证规则（min/max/pattern 等）
-  3. 支持条件显示（depends_on）
-  4. 支持所有增�?UI 属性（placeholder/hint/icon 等）
+  1. 根据 PluginSchemaField 的 type 自动渲染对应的输入组件
+  2. 支持 boolean -> SwitchEditor
+  3. 支持 number -> NumberEditor（不使用滑块）
+  4. 支持 select -> SelectEditor
+  5. 支持 array -> ListEditor
+  6. 支持 textarea -> TextareaEditor
+  7. 支持 string / object -> TextEditor
 -->
 <template>
-  <div 
+  <div
     class="schema-field-editor"
     :class="{
-      'is-disabled': field.disabled,
-      'is-hidden': field.hidden,
-      'is-required': field.required,
       'has-error': errorMessage,
-      'inline-field': field.input_type === 'switch'
+      'inline-field': field.type === 'boolean',
     }"
   >
     <!-- 开关类型（内联显示，包含 Label）-->
     <SwitchEditor
-      v-if="field.input_type === 'switch'"
-      :field="field"
+      v-if="field.type === 'boolean'"
+      :field="compatField"
       :model-value="modelValue"
       @update:model-value="handleUpdate"
     />
@@ -31,10 +31,8 @@
     <template v-else>
       <!-- 字段头部 -->
       <div class="field-header">
-        <span v-if="field.icon" class="material-symbols-rounded field-icon">{{ field.icon }}</span>
-        <span class="field-label">{{ field.label || field.key }}</span>
-        <span class="field-type-badge">{{ getTypeLabel(field.input_type) }}</span>
-        <span v-if="field.required" class="required-badge">必填</span>
+        <span class="field-label">{{ field.name || field.key }}</span>
+        <span class="field-type-badge">{{ getTypeLabel(field.type) }}</span>
       </div>
 
       <!-- 描述 -->
@@ -45,24 +43,48 @@
 
       <!-- 输入区域 -->
       <div class="field-input-container">
-        <component
-          :is="getEditorComponent(field.input_type)"
-          :field="field"
+        <!-- Select -->
+        <SelectEditor
+          v-if="field.type === 'select'"
+          :field="compatField"
           :model-value="modelValue"
           @update:model-value="handleUpdate"
         />
-      </div>
-
-      <!-- 提示信息 -->
-      <div v-if="field.hint && !field.description" class="field-hint">
-        <span class="material-symbols-rounded">lightbulb</span>
-        {{ field.hint }}
-      </div>
-
-      <!-- 示例 -->
-      <div v-if="field.example" class="field-example">
-        <span class="material-symbols-rounded">code</span>
-        示例: {{ field.example }}
+        <!-- Array / List -->
+        <ListEditor
+          v-else-if="field.type === 'array'"
+          :field="compatField"
+          :model-value="modelValue"
+          @update:model-value="handleUpdate"
+        />
+        <!-- Number -->
+        <NumberEditor
+          v-else-if="field.type === 'number'"
+          :field="compatField"
+          :model-value="modelValue"
+          @update:model-value="handleUpdate"
+        />
+        <!-- Textarea -->
+        <TextareaEditor
+          v-else-if="field.type === 'textarea'"
+          :field="compatField"
+          :model-value="modelValue"
+          @update:model-value="handleUpdate"
+        />
+        <!-- Object -> JSON Editor -->
+        <JsonEditor
+          v-else-if="field.type === 'object'"
+          :field="compatField"
+          :model-value="modelValue"
+          @update:model-value="handleUpdate"
+        />
+        <!-- String / 其他 -> TextEditor -->
+        <TextEditor
+          v-else
+          :field="compatField"
+          :model-value="modelValue"
+          @update:model-value="handleUpdate"
+        />
       </div>
 
       <!-- 错误信息 -->
@@ -75,24 +97,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import type { SchemaField } from '@/api/pluginConfigApi'
+import { ref, computed } from 'vue'
+import type { PluginSchemaField } from '@/api/pluginConfig'
 
 // 导入编辑器组件
 import SwitchEditor from './editors/SwitchEditor.vue'
 import TextEditor from './editors/TextEditor.vue'
-import PasswordEditor from './editors/PasswordEditor.vue'
 import NumberEditor from './editors/NumberEditor.vue'
-import SliderEditor from './editors/SliderEditor.vue'
 import SelectEditor from './editors/SelectEditor.vue'
 import TextareaEditor from './editors/TextareaEditor.vue'
 import ListEditor from './editors/ListEditor.vue'
 import JsonEditor from './editors/JsonEditor.vue'
-import ColorEditor from './editors/ColorEditor.vue'
-import FileEditor from './editors/FileEditor.vue'
 
 const props = defineProps<{
-  field: SchemaField
+  field: PluginSchemaField
   modelValue: unknown
 }>()
 
@@ -102,39 +120,57 @@ const emit = defineEmits<{
 
 const errorMessage = ref('')
 
-// 获取编辑器组件
-function getEditorComponent(inputType: string) {
-  const map: Record<string, any> = {
-    text: TextEditor,
-    password: PasswordEditor,
-    number: NumberEditor,
-    slider: SliderEditor,
-    select: SelectEditor,
-    textarea: TextareaEditor,
-    list: ListEditor,
-    json: JsonEditor,
-    color: ColorEditor,
-    file: FileEditor,
+/**
+ * 将新的 PluginSchemaField 转换为编辑器组件期望的兼容格式
+ * 这样旧的编辑器组件不需要修改
+ */
+const compatField = computed(() => ({
+  key: props.field.key,
+  label: props.field.name || props.field.key,
+  description: props.field.description,
+  input_type: mapTypeToInputType(props.field.type),
+  // select 选项
+  choices: props.field.options?.map(o => ({ value: o.value, label: o.label })) ?? [],
+  // 默认值
+  default: props.field.default,
+  // 以下是旧字段的占位，避免编辑器报错
+  placeholder: '',
+  hint: '',
+  disabled: false,
+  required: false,
+  min: undefined,
+  max: undefined,
+  step: 1,
+  min_items: undefined,
+  max_items: undefined,
+  item_type: 'string',
+}))
+
+function mapTypeToInputType(type: string): string {
+  const map: Record<string, string> = {
+    string: 'text',
+    number: 'number',
+    boolean: 'switch',
+    array: 'list',
+    object: 'json',
+    textarea: 'textarea',
+    select: 'select',
   }
-  return map[inputType] || TextEditor
+  return map[type] || 'text'
 }
 
 // 类型标签
-function getTypeLabel(inputType: string): string {
+function getTypeLabel(type: string): string {
   const labels: Record<string, string> = {
-    text: '文本',
-    password: '密码',
+    string: '文本',
     number: '数字',
-    slider: '滑块',
-    switch: '开关',
+    boolean: '开关',
     select: '选择',
     textarea: '多行文本',
-    list: '列表',
-    json: 'JSON',
-    color: '颜色',
-    file: '路径',
+    array: '列表',
+    object: '对象',
   }
-  return labels[inputType] || inputType
+  return labels[type] || type
 }
 
 // 处理更新
@@ -143,48 +179,10 @@ function handleUpdate(value: unknown) {
   validateValue(value)
 }
 
-// 验证
-function validateValue(value: unknown) {
+// 简单验证
+function validateValue(_value: unknown) {
   errorMessage.value = ''
-  
-  // 必填验证
-  if (props.field.required && (value === '' || value === null || value === undefined)) {
-    errorMessage.value = '此字段为必填项'
-    return
-  }
-  
-  // 数字范围验证
-  if (typeof value === 'number') {
-    if (props.field.min !== undefined && value < props.field.min) {
-      errorMessage.value = `最小值为 ${props.field.min}`
-      return
-    }
-    if (props.field.max !== undefined && value > props.field.max) {
-      errorMessage.value = `最大值为 ${props.field.max}`
-      return
-    }
-  }
-  
-  // 字符串长度验证
-  if (typeof value === 'string') {
-    if (props.field.min_length && value.length < props.field.min_length) {
-      errorMessage.value = `最少 ${props.field.min_length} 个字符`
-      return
-    }
-    if (props.field.max_length && value.length > props.field.max_length) {
-      errorMessage.value = `最多 ${props.field.max_length} 个字符`
-      return
-    }
-    
-    // 正则验证
-    if (props.field.pattern) {
-      const regex = new RegExp(props.field.pattern)
-      if (!regex.test(value)) {
-        errorMessage.value = '格式不正确'
-        return
-      }
-    }
-  }
+  // 可在此扩展验证逻辑
 }
 </script>
 
@@ -247,15 +245,6 @@ function validateValue(value: unknown) {
   background: color-mix(in srgb, var(--md-sys-color-primary) 4%, transparent);
 }
 
-.schema-field-editor.is-disabled {
-  opacity: 0.5;
-  pointer-events: none;
-}
-
-.schema-field-editor.is-hidden {
-  display: none;
-}
-
 .schema-field-editor.has-error {
   border-color: var(--md-sys-color-error);
   background: color-mix(in srgb, var(--md-sys-color-error) 4%, var(--md-sys-color-surface));
@@ -278,14 +267,6 @@ function validateValue(value: unknown) {
   flex-wrap: wrap;
 }
 
-.field-icon {
-  font-size: 22px;
-  color: var(--md-sys-color-primary);
-  padding: 6px;
-  background: var(--md-sys-color-primary-container);
-  border-radius: 10px;
-}
-
 .field-label {
   font-size: 15px;
   font-weight: 600;
@@ -304,16 +285,7 @@ function validateValue(value: unknown) {
   letter-spacing: 0.5px;
 }
 
-.required-badge {
-  font-size: 11px;
-  padding: 3px 8px;
-  background: var(--md-sys-color-error-container);
-  color: var(--md-sys-color-on-error-container);
-  border-radius: 8px;
-  font-weight: 600;
-}
-
-/* 描述和提示 */
+/* 描述 */
 .field-description {
   display: flex;
   align-items: flex-start;
@@ -332,37 +304,6 @@ function validateValue(value: unknown) {
   margin-top: 1px;
   color: var(--md-sys-color-primary);
   opacity: 0.8;
-}
-
-.field-hint {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--md-sys-color-on-surface-variant);
-  opacity: 0.8;
-}
-
-.field-hint .material-symbols-rounded {
-  font-size: 16px;
-  color: #f59e0b;
-}
-
-.field-example {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  font-size: 12px;
-  background: var(--md-sys-color-surface-container-highest);
-  padding: 10px 14px;
-  border-radius: 10px;
-  color: var(--md-sys-color-on-surface-variant);
-}
-
-.field-example .material-symbols-rounded {
-  font-size: 16px;
-  color: var(--md-sys-color-primary);
 }
 
 /* 输入区域 */

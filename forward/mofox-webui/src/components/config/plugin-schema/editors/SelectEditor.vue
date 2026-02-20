@@ -58,7 +58,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
-import type { SchemaField } from '@/api/pluginConfigApi'
+import type { SchemaField } from '@/api/pluginConfig'
 
 const props = defineProps<{
   field: SchemaField
@@ -135,7 +135,7 @@ function closeDropdown() {
   window.removeEventListener('resize', updateDropdownPosition)
 }
 
-function handleBlur(e: FocusEvent) {
+function handleBlur(_e: FocusEvent) {
   // 延迟关闭以允许点击事件触发
   setTimeout(() => {
     closeDropdown()

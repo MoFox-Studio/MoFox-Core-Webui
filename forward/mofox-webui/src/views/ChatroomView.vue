@@ -188,6 +188,18 @@
                     alt="emoji"
                   />
                 </div>
+
+                <!-- 回复按钮（仅用户可发消息时显示，Bot 消息也可引用） -->
+                <div class="message-actions">
+                  <button
+                    v-if="selectedUser"
+                    class="message-reply-btn"
+                    @click.stop="replyMessage(msg)"
+                    title="引用回复"
+                  >
+                    <span class="material-symbols-rounded">reply</span>
+                  </button>
+                </div>
               </div>
             </template>
           </div>
@@ -197,6 +209,20 @@
             <p>还没有消息，发送第一条消息开始对话吧！</p>
           </div>
         </div>
+      </div>
+
+      <!-- 引用回复预览条 -->
+      <div v-if="replyingTo" class="reply-bar">
+        <div class="reply-bar-left">
+          <span class="material-symbols-rounded reply-bar-icon">reply</span>
+          <div class="reply-bar-content">
+            <span class="reply-bar-name">回复 {{ replyingTo.nickname }}</span>
+            <span class="reply-bar-text">{{ replyingTo.content || '[表情/图片]' }}</span>
+          </div>
+        </div>
+        <button class="m3-icon-button reply-bar-close" @click="cancelReply" title="取消引用">
+          <span class="material-symbols-rounded">close</span>
+        </button>
       </div>
 
       <!-- 输入区域 -->
@@ -655,6 +681,8 @@ const pollInterval = 1000  // 1秒轮询一次
 
 // 引用消息缓存
 const quotedMessagesCache: Ref<Map<string, Message>> = ref(new Map())
+// 当前引用的消息
+const replyingTo: Ref<Message | null> = ref(null)
 
 // 对话框状态
 const showCreateUserDialog = ref(false)
@@ -723,13 +751,15 @@ onUnmounted(() => {
 watch(selectedUser, async (newUser, oldUser) => {
   if (newUser) {
     await loadMessages()
-    // 切换用户时重启轮询
+    // 切换用户时重启轮询，并清除引用
     if (oldUser?.user_id !== newUser.user_id) {
+      replyingTo.value = null
       stopPolling()
       startPolling()
     }
   } else {
     messages.value = []
+    replyingTo.value = null
     stopPolling()
   }
 })
@@ -1030,20 +1060,31 @@ async function sendMessage() {
   
   sending.value = true
   try {
-    const response = await api.post<{ request_message?: Message }>('chatroom/send', {
+    const payload: Record<string, unknown> = {
       user_id: selectedUser.value.user_id,
       content: inputMessage.value.trim(),
       message_type: 'text'
-    })
+    }
+    if (replyingTo.value) {
+      payload.reply_to = replyingTo.value.message_id
+    }
+
+    const response = await api.post<{ request_message?: Message }>('chatroom/send', payload)
     
     if (response.success && response.data) {
       // 添加用户消息
       if (response.data.request_message) {
-        messages.value.push(response.data.request_message)
+        const reqMsg = response.data.request_message
+        // 如果有引用，缓存被引用的消息以便显示
+        if (reqMsg.reply_to && replyingTo.value) {
+          quotedMessagesCache.value.set(reqMsg.reply_to, replyingTo.value)
+        }
+        messages.value.push(reqMsg)
       }
       
-      // 清空输入
+      // 清空输入和引用
       inputMessage.value = ''
+      replyingTo.value = null
       
       // 重置输入框高度
       if (messageInput.value) {
@@ -1144,6 +1185,15 @@ async function loadQuotedMessage(messageId: string) {
 
 function getQuotedMessage(messageId: string): Message | null {
   return quotedMessagesCache.value.get(messageId) || null
+}
+
+function replyMessage(msg: Message) {
+  replyingTo.value = msg
+  nextTick(() => messageInput.value?.focus())
+}
+
+function cancelReply() {
+  replyingTo.value = null
 }
 
 function formatTime(timestamp: number): string {
@@ -1669,6 +1719,105 @@ function showToast(message: string, type: 'success' | 'error' = 'success') {
   font-size: 64px;
   margin-bottom: 16px;
   opacity: 0.3;
+}
+
+/* ========== 消息操作按钮 ========== */
+
+.message-content {
+  position: relative;
+}
+
+.message-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+  height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 0.15s, height 0.15s;
+}
+
+.message:hover .message-actions {
+  height: 28px;
+  opacity: 1;
+}
+
+.is-user .message-actions {
+  justify-content: flex-end;
+}
+
+.message-reply-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: none;
+  background: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface-variant);
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.message-reply-btn:hover {
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.message-reply-btn .material-symbols-rounded {
+  font-size: 16px;
+}
+
+/* ========== 引用预览条 ========== */
+
+.reply-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 16px;
+  background-color: var(--md-sys-color-surface-container-high);
+  border-top: 1px solid var(--md-sys-color-outline-variant);
+  border-left: 3px solid var(--md-sys-color-primary);
+}
+
+.reply-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.reply-bar-icon {
+  font-size: 20px;
+  color: var(--md-sys-color-primary);
+  flex-shrink: 0;
+}
+
+.reply-bar-content {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.reply-bar-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--md-sys-color-primary);
+}
+
+.reply-bar-text {
+  font-size: 13px;
+  color: var(--md-sys-color-on-surface-variant);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reply-bar-close {
+  flex-shrink: 0;
 }
 
 /* ========== 输入区域 ========== */

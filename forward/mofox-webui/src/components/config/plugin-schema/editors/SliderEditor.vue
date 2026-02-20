@@ -67,7 +67,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import type { SchemaField } from '@/api/pluginConfigApi'
+import type { SchemaField } from '@/api/pluginConfig'
 
 const props = defineProps<{
   field: SchemaField
@@ -289,6 +289,7 @@ function handleNumberInput(event: Event) {
   border-radius: 18px;
   transition: all 0.2s;
   -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 .value-input::-webkit-outer-spin-button,

@@ -27,18 +27,13 @@
           <span class="material-symbols-rounded">arrow_back</span>
         </button>
         <div class="header-icon-container">
-          <span class="material-symbols-rounded header-icon">
-            {{ configInfo?.type === 'plugin' ? 'extension' : configInfo?.type === 'model' ? 'psychology' : 'settings' }}
-          </span>
+          <span class="material-symbols-rounded header-icon">settings</span>
         </div>
         <div class="header-info">
-          <h1>{{ configInfo?.display_name || '配置编辑器' }}</h1>
+          <h1>{{ routeParams.configName }} 配置</h1>
           <p class="config-path">
             <span class="material-symbols-rounded path-icon">folder</span>
             {{ decodedPath }}
-          </p>
-          <p v-if="configInfo?.description" class="config-description">
-            {{ configInfo.description }}
           </p>
         </div>
       </div>
@@ -82,8 +77,8 @@
       </div>
     </header>
 
-    <!-- 可视化编辑模式 (合并 Schema 增强模式和传统模式) -->
-    <div v-if="editorMode === 'visual'" class="visual-editor" :class="{ 'schema-mode': hasPluginSchema }">
+    <!-- 可视化编辑模式 -->
+    <div v-if="editorMode === 'visual'" class="visual-editor" :class="{ 'schema-mode': configSchema.length > 0 }">
       <div v-if="loading" class="loading-state">
         <span class="material-symbols-rounded spinning">progress_activity</span>
         <p>加载配置中...</p>
@@ -102,14 +97,14 @@
           <div class="nav-tabs" ref="navTabsRef" @wheel="handleNavTabsWheel">
             <button
               v-for="(section, idx) in mergedSections"
-              :key="section.name"
+              :key="section.key"
               class="nav-tab"
               :class="{ active: activeSection === idx, 'has-schema': section.hasSchema }"
               @click="activeSection = idx"
             >
-              <span class="material-symbols-rounded">{{ section.icon || getSectionIcon(section.name) }}</span>
+              <span class="material-symbols-rounded">{{ section.icon }}</span>
               {{ section.display_name }}
-              <span class="field-badge">{{ section.hasSchema ? (section.schemaFields?.length || 0) : section.fields.length }}</span>
+              <span class="field-badge">{{ section.schemaFields?.length ?? 0 }}</span>
               <span v-if="section.hasSchema" class="schema-badge" title="Schema 增强">
                 <span class="material-symbols-rounded">auto_awesome</span>
               </span>
@@ -117,151 +112,17 @@
           </div>
         </div>
 
-        <!-- 配置内容 -->
+        <!-- 配置内容 - 使用 ConfigSection 组件 -->
         <div class="config-content">
-          <div v-if="currentMergedSection" class="config-section">
-            <div class="section-header">
-              <div class="section-title">
-                <span v-if="currentMergedSection.icon" class="material-symbols-rounded section-icon">{{ currentMergedSection.icon }}</span>
-                <h3>{{ currentMergedSection.display_name }}</h3>
-                <span class="section-badge">{{ currentMergedSection.fields.length }} 项配置</span>
-                <span v-if="currentMergedSection.hasSchema" class="schema-indicator">
-                  <span class="material-symbols-rounded">auto_awesome</span>
-                  Schema
-                </span>
-              </div>
-              <p v-if="currentMergedSection.description" class="section-description">
-                {{ currentMergedSection.description }}
-              </p>
-            </div>
-            
-            <div class="fields-list">
-              <!-- Schema 增强字段 -->
-              <template v-if="currentMergedSection.hasSchema && currentMergedSection.schemaFields">
-                <template v-for="field in currentMergedSection.schemaFields" :key="field.key">
-                  <SchemaFieldEditor
-                    v-if="!field.depends_on || checkSchemaFieldVisibility(field)"
-                    :field="field"
-                    :model-value="getSchemaFieldValue(currentMergedSection.name, field.key)"
-                    :all-values="flatConfigValues"
-                    @update:model-value="(v: unknown) => updateSchemaFieldValue(currentMergedSection!.name, field.key, v)"
-                  />
-                </template>
-              </template>
-              
-              <!-- 传统字段 -->
-              <template v-else>
-                <div 
-                  v-for="field in currentMergedSection.fields" 
-                  :key="field.full_key" 
-                  class="m3-card field-card"
-                  :class="{ 
-                    'inline-field': field.type === 'boolean',
-                    'has-description': !!field.description 
-                  }"
-                >
-                  <!-- Boolean 类型 -->
-                  <template v-if="field.type === 'boolean'">
-                    <div class="field-left">
-                      <div class="field-header">
-                        <span class="field-name">{{ field.key }}</span>
-                        <span class="field-type-badge">{{ getTypeLabel(field.type) }}</span>
-                      </div>
-                      <div v-if="field.description" class="field-description">
-                        <span class="material-symbols-rounded desc-icon">info</span>
-                        <span>{{ field.description }}</span>
-                      </div>
-                    </div>
-                    <label class="m3-switch">
-                      <input 
-                        type="checkbox" 
-                        :checked="Boolean(getFieldValue(field.full_key))"
-                        @change="(e: any) => updateFieldValue(field.full_key, e.target.checked)"
-                      >
-                      <span class="m3-switch-track">
-                        <span class="m3-switch-thumb"></span>
-                      </span>
-                    </label>
-                  </template>
-
-                  <!-- 数组对象类型 (如 api_providers) -->
-                  <template v-else-if="field.type === 'array_of_objects'">
-                    <div class="field-header">
-                      <span class="field-name">{{ field.key }}</span>
-                      <span class="field-type-badge">{{ getTypeLabel(field.type) }}</span>
-                    </div>
-                    <div v-if="field.description" class="field-description">
-                      <span class="material-symbols-rounded desc-icon">info</span>
-                      <span>{{ field.description }}</span>
-                    </div>
-                    <div class="array-objects-container">
-                      <div class="array-objects-info">
-                        <span class="material-symbols-rounded">dataset</span>
-                        包含 {{ field.items_count || 0 }} 个项目
-                      </div>
-                      <button 
-                        class="m3-button text small" 
-                        @click="expandArrayField(field)"
-                      >
-                        <span class="material-symbols-rounded">open_in_full</span>
-                        在源码模式中编辑
-                      </button>
-                    </div>
-                  </template>
-
-                  <!-- 其他类型 -->
-                  <template v-else>
-                    <div class="field-header">
-                      <span class="field-name">{{ field.key }}</span>
-                      <span class="field-type-badge">{{ getTypeLabel(field.type) }}</span>
-                    </div>
-                    <div v-if="field.description" class="field-description with-margin">
-                      <span class="material-symbols-rounded desc-icon">info</span>
-                      <span>{{ field.description }}</span>
-                    </div>
-                    
-                    <!-- 数组/列表类型 -->
-                    <div v-if="field.type === 'array'" class="field-input-container">
-                      <div class="array-input-wrapper">
-                        <textarea
-                          class="m3-input array-textarea"
-                          :value="formatArrayValue(getFieldValue(field.full_key))"
-                          @input="(e: any) => updateArrayValue(field.full_key, e.target.value)"
-                          placeholder="每行一个值"
-                          rows="5"
-                        ></textarea>
-                        <div class="input-hint">
-                          <span class="material-symbols-rounded">info</span>
-                          每行输入一个值
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- 数字类型 -->
-                    <div v-else-if="field.type === 'integer' || field.type === 'number'" class="field-input-container">
-                      <input 
-                        type="number"
-                        class="m3-input"
-                        :value="getFieldValue(field.full_key)"
-                        @input="(e: any) => updateFieldValue(field.full_key, parseNumber(e.target.value, field.type))"
-                        :step="field.type === 'number' ? '0.01' : '1'"
-                      >
-                    </div>
-
-                    <!-- 字符串/默认类型 -->
-                    <div v-else class="field-input-container">
-                      <input 
-                        type="text"
-                        class="m3-input"
-                        :value="getFieldValue(field.full_key)"
-                        @input="(e: any) => updateFieldValue(field.full_key, e.target.value)"
-                        :placeholder="`输入 ${field.key}`"
-                      >
-                    </div>
-                  </template>
-                </div>
-              </template>
-            </div>
+          <ConfigSection
+            v-if="currentSchemaSection"
+            :section="currentSchemaSection"
+            :values="editedValues[currentSchemaSection.key] ?? {}"
+            @update="(key, value) => updateFieldValue(currentSchemaSection!.key, key, value)"
+          />
+          <div v-else class="empty-state">
+            <span class="material-symbols-rounded empty-icon">description</span>
+            <p>未选择配置节</p>
           </div>
         </div>
       </template>
@@ -377,79 +238,62 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useThemeStore } from '@/stores/theme'
 import { VueMonacoEditor } from '@guolao/vue-monaco-editor'
-import { SchemaFieldEditor } from '@/components/config/plugin-schema'
-import { 
-  getConfigList,
-  getConfigContent,
-  getConfigSchema,
-  saveConfig, 
-  updateConfig,
-  getConfigBackups, 
-  restoreConfigBackup 
-} from '@/api'
+import ConfigSection from '@/components/config/plugin-schema/ConfigSection.vue'
 import {
-  getPluginSchema,
-  updatePluginConfig as updateSchemaConfig,
-  type SchemaField,
-} from '@/api/pluginConfigApi'
-import type { 
-  ConfigFileInfo, 
-  ConfigSection, 
-  ConfigSchemaField 
-} from '@/api'
+  getPluginConfigRaw,
+  savePluginConfigRaw,
+  getPluginConfigBackups,
+  restorePluginConfigFromBackup,
+  type PluginSchemaSection,
+  type PluginSchemaField,
+} from '@/api/pluginConfig'
 
-// 合并后的配置节类型
-interface MergedSection {
-  name: string
-  display_name: string
-  description?: string
-  icon?: string
-  hasSchema: boolean
-  fields: ConfigSchemaField[]  // 传统字段
-  schemaFields?: SchemaField[] // Schema 字段
-}
+// ==================== 路由 ====================
+// 路由格式：/dashboard/plugin-config/:path，其中 path 为 "{plugin_name}/{config_name}"
 
 const route = useRoute()
 const router = useRouter()
 const themeStore = useThemeStore()
 
-// 路由参数
-const decodedPath = computed(() => decodeURIComponent(route.params.path as string))
+/** 解析 path 参数，返回 pluginName 和 configName */
+const routeParams = computed(() => {
+  const raw = decodeURIComponent(route.params.path as string)
+  const parts = raw.split('/')
+  return {
+    pluginName: parts[0] ?? '',
+    configName: parts[1] ?? 'config',
+    decodedPath: raw,
+  }
+})
 
-// 状态
+const decodedPath = computed(() => routeParams.value.decodedPath)
+
+// ==================== 状态 ====================
 const editorMode = ref<'visual' | 'source'>('visual')
 const loading = ref(false)
 const saving = ref(false)
 const loadError = ref('')
-const configInfo = ref<ConfigFileInfo | null>(null)
 const activeSection = ref(0)
 
 // 数据
-const originalParsed = ref<any>({})
-const editedValues = ref<any>({})
+const editedValues = ref<Record<string, Record<string, unknown>>>({})
+const originalValues = ref<Record<string, Record<string, unknown>>>({})
 const sourceContent = ref('')
 const originalSource = ref('')
-const configSchema = ref<ConfigSection[]>([])
 
-// Schema 增强模式
-const hasPluginSchema = ref(false)
-const pluginName = ref('')
-const pluginSchema = ref<Record<string, SchemaField[]>>({})
+// Schema（来自后端 Pydantic 生成）
+const configSchema = ref<PluginSchemaSection[]>([])
 
 // 备份
 const showBackupsModal = ref(false)
 const backupsLoading = ref(false)
-const backups = ref<any[]>([])
+const backups = ref<{ name: string; size: number; created_at: string; path: string }[]>([])
 
 // 导航标签滚动
 const navTabsRef = ref<HTMLElement | null>(null)
 
 // Toast
-const toast = ref({ 
-  show: false, 
-  message: '', 
-  type: 'success' as 'success' | 'error' 
-})
+const toast = ref({ show: false, message: '', type: 'success' as 'success' | 'error' })
 
 const isDarkMode = computed(() => themeStore.isDark)
 
@@ -463,80 +307,54 @@ const monacoOptions = {
   automaticLayout: true,
   padding: { top: 16, bottom: 16 },
   wordWrap: 'on' as const,
-  tabSize: 2
+  tabSize: 2,
 }
 
-// 合并后的配置节列表（Schema 优先，传统兜底）
-const mergedSections = computed<MergedSection[]>(() => {
-  const sections: MergedSection[] = []
-  const processedNames = new Set<string>()
+// ==================== 计算属性 ====================
 
-  // 首先处理 Schema 定义的配置节
-  if (hasPluginSchema.value && Object.keys(pluginSchema.value).length > 0) {
-    for (const [sectionName, schemaFields] of Object.entries(pluginSchema.value)) {
-      processedNames.add(sectionName)
-      sections.push({
-        name: sectionName,
-        display_name: formatSectionName(sectionName),
-        icon: getSectionIcon(sectionName),
-        hasSchema: true,
-        fields: [],
-        schemaFields: schemaFields,
-      })
-    }
+/** 可视化 sections：优先使用 Schema；若无 Schema，从 editedValues 推断 */
+const mergedSections = computed(() => {
+  if (configSchema.value.length > 0) {
+    return configSchema.value.map(section => ({
+      key: section.key,
+      display_name: section.name || formatSectionName(section.key),
+      description: section.description,
+      icon: getSectionIcon(section.key),
+      hasSchema: true,
+      schemaFields: section.fields,
+    }))
   }
-
-  // 然后处理传统配置节（未被 Schema 覆盖的）
-  for (const section of configSchema.value) {
-    if (!processedNames.has(section.name)) {
-      sections.push({
-        name: section.name,
-        display_name: section.display_name,
-        hasSchema: false,
-        fields: section.fields,
-      })
-    }
-  }
-
-  return sections
+  // 无 Schema 时，根据已解析的 editedValues 构造传统节
+  return Object.keys(editedValues.value).map(sectionKey => ({
+    key: sectionKey,
+    display_name: formatSectionName(sectionKey),
+    description: '',
+    icon: getSectionIcon(sectionKey),
+    hasSchema: false,
+    schemaFields: [] as PluginSchemaField[],
+  }))
 })
 
-// 当前合并配置节
-const currentMergedSection = computed<MergedSection | null>(() => {
-  if (mergedSections.value.length > 0 && activeSection.value < mergedSections.value.length) {
-    return mergedSections.value[activeSection.value] ?? null
-  }
-  return null
-})
-
-// 扁平化配置值（用于条件判断）
-const flatConfigValues = computed(() => {
-  const flat: Record<string, unknown> = {}
-  for (const [sectionName, sectionValues] of Object.entries(editedValues.value)) {
-    if (typeof sectionValues === 'object' && sectionValues !== null) {
-      for (const [key, value] of Object.entries(sectionValues)) {
-        flat[key] = value
-        flat[`${sectionName}.${key}`] = value
-      }
-    }
-  }
-  return flat
-})
+/** 当前原始 Schema Section（供 ConfigSection 组件使用） */
+const currentSchemaSection = computed<PluginSchemaSection | null>(() =>
+  configSchema.value[activeSection.value] ?? null
+)
 
 // 是否有变更
 const hasChanges = computed(() => {
   if (editorMode.value === 'source') {
     return sourceContent.value !== originalSource.value
-  } else {
-    // 混合模式：统一使用 editedValues 检测变更
-    return JSON.stringify(editedValues.value) !== JSON.stringify(originalParsed.value)
   }
+  return JSON.stringify(editedValues.value) !== JSON.stringify(originalValues.value)
 })
 
-// 初始化
+// ==================== 生命周期 ====================
+
 onMounted(() => {
   loadConfig()
 })
+
+// ==================== 行为 ====================
 
 function goBack() {
   if (hasChanges.value) {
@@ -548,68 +366,89 @@ function goBack() {
   }
 }
 
-// 处理导航标签横向滚动（无需按住 Shift）
 function handleNavTabsWheel(e: WheelEvent) {
   if (!navTabsRef.value) return
-  
-  // 只在有垂直滚动时转换为横向滚动
   if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
     e.preventDefault()
-    // 直接修改 scrollLeft，配合 CSS scroll-behavior 实现平滑效果
     navTabsRef.value.scrollLeft += e.deltaY * 0.3
   }
 }
 
-// 切换编辑模式
 function switchMode(mode: 'visual' | 'source') {
   if (hasChanges.value && editorMode.value !== mode) {
-    if (!confirm('切换模式将丢失未保存的修改，是否继续？')) {
-      return
-    }
+    if (!confirm('切换模式将丢失未保存的修改，是否继续？')) return
   }
   editorMode.value = mode
-  if (mode === 'visual') {
-    // 从源码模式切回可视化，需要重新解析
-    loadConfig()
-  }
+  if (mode === 'visual') loadConfig()
 }
 
-// 加载配置
+// ==================== 加载配置 ====================
+
+/** 简易 TOML 解析器（将 TOML 文本转为嵌套对象，支持 [section] 语法） */
+function parseToml(raw: string): Record<string, Record<string, unknown>> {
+  const result: Record<string, Record<string, unknown>> = {}
+  let currentSection = '__root__'
+  result[currentSection] = {}
+  for (const line of raw.split('\n')) {
+    const trimmed = line.trim()
+    if (!trimmed || trimmed.startsWith('#')) continue
+    const sectionMatch = trimmed.match(/^\[([^\]]+)\]$/)
+    if (sectionMatch && sectionMatch[1]) {
+      currentSection = sectionMatch[1].trim()
+      if (!result[currentSection]) result[currentSection] = {}
+      continue
+    }
+    const eqIdx = trimmed.indexOf('=')
+    if (eqIdx === -1) continue
+    const key = trimmed.slice(0, eqIdx).trim()
+    const rawVal = trimmed.slice(eqIdx + 1).trim()
+    result[currentSection]![key] = parseTomlValue(rawVal)
+  }
+  // 移除空的 __root__
+  if (result['__root__'] && Object.keys(result['__root__']).length === 0) {
+    delete result['__root__']
+  }
+  return result
+}
+
+function parseTomlValue(raw: string): unknown {
+  if (raw === 'true') return true
+  if (raw === 'false') return false
+  if (/^-?\d+$/.test(raw)) return parseInt(raw, 10)
+  if (/^-?\d+\.\d+$/.test(raw)) return parseFloat(raw)
+  if (raw.startsWith('"') && raw.endsWith('"')) return raw.slice(1, -1).replace(/\\"/g, '"')
+  if (raw.startsWith("'") && raw.endsWith("'")) return raw.slice(1, -1)
+  if (raw.startsWith('[') && raw.endsWith(']')) {
+    try {
+      return JSON.parse(raw.replace(/'/g, '"'))
+    } catch {
+      return raw
+    }
+  }
+  return raw
+}
+
 async function loadConfig() {
   loading.value = true
   loadError.value = ''
   try {
-    // 并行加载配置列表（获取display_name）和配置内容
-    const [listRes, contentRes] = await Promise.all([
-      getConfigList(),
-      getConfigContent(decodedPath.value)
-    ])
-    
-    // 从配置列表中找到当前文件的信息
-    if (listRes.data?.configs) {
-      const config = listRes.data.configs.find((c: ConfigFileInfo) => c.path === decodedPath.value)
-      if (config) {
-        configInfo.value = config
-      }
+    const { pluginName, configName } = routeParams.value
+    const res = await getPluginConfigRaw(pluginName, configName)
+    if (!res.data?.success) {
+      loadError.value = res.data?.error || res.error || '加载配置失败'
+      return
     }
-    
-    // 处理配置内容
-    console.log(contentRes)
-    if (contentRes.data?.success && contentRes.data?.parsed) {
-      originalParsed.value = contentRes.data.parsed
-      editedValues.value = JSON.parse(JSON.stringify(contentRes.data.parsed))
-      sourceContent.value = contentRes.data.content || ''
-      originalSource.value = contentRes.data.content || ''
-      
-      // 检测是否是插件配置并尝试加载 Schema
-      await checkPluginSchema()
-      
-      // 始终加载传统配置模式（用于没有 Schema 的配置节）
-      await loadConfigSchema()
-    } else {
-      // 显示详细错误信息
-      loadError.value = contentRes.data?.error || contentRes.error || '加载配置失败'
-    }
+    // 原始 TOML 字符串
+    sourceContent.value = res.data.content ?? ''
+    originalSource.value = sourceContent.value
+
+    // 将 TOML 解析为嵌套对象，用于可视化编辑
+    const parsed = parseToml(sourceContent.value)
+    editedValues.value = JSON.parse(JSON.stringify(parsed))
+    originalValues.value = JSON.parse(JSON.stringify(parsed))
+
+    // Schema（来自 Pydantic 类分析）
+    configSchema.value = res.data.config_schema ?? []
   } catch (e: any) {
     loadError.value = e.message || '网络请求失败'
     console.error('加载配置失败:', e)
@@ -618,281 +457,123 @@ async function loadConfig() {
   }
 }
 
-// 检测插件 Schema
-async function checkPluginSchema() {
-  // 从路径提取插件名称 (格式: plugins/{plugin_name}/config.toml)
-  const pathMatch = decodedPath.value.match(/plugins[\/\\]([^\/\\]+)[\/\\]config\.toml$/i)
-  
-  if (!pathMatch || !pathMatch[1]) {
-    hasPluginSchema.value = false
-    pluginSchema.value = {}
-    return
-  }
-  
-  pluginName.value = pathMatch[1]
-  
-  try {
-    const schemaRes = await getPluginSchema(pluginName.value)
-    if (schemaRes.success && schemaRes.data?.schema && Object.keys(schemaRes.data.schema).length > 0) {
-      hasPluginSchema.value = true
-      pluginSchema.value = schemaRes.data.schema
-    } else {
-      hasPluginSchema.value = false
-      pluginSchema.value = {}
-    }
-  } catch (e) {
-    hasPluginSchema.value = false
-    pluginSchema.value = {}
-  }
+// ==================== 字段读写 ====================
+
+/** 写入 section.field 路径的值 */
+function updateFieldValue(sectionKey: string, fieldKey: string, value: unknown) {
+  if (!editedValues.value[sectionKey]) editedValues.value[sectionKey] = {}
+  editedValues.value[sectionKey][fieldKey] = value
 }
 
-// 加载配置模式
-async function loadConfigSchema() {
-  try {
-    const res = await getConfigSchema(decodedPath.value)
-    
-    if (res.data?.success && res.data?.sections) {
-      configSchema.value = res.data.sections
-    } else {
-      console.error('加载配置模式失败:', res.error)
-      // 如果加载模式失败，尝试生成简单的模式
-      generateFallbackSchema(originalParsed.value)
-    }
-  } catch (e) {
-    console.error('加载配置模式失败:', e)
-    generateFallbackSchema(originalParsed.value)
-  }
-}
+// ==================== 保存 ====================
 
-// 生成备用的简单 Schema（当后端接口失败时）
-function generateFallbackSchema(data: any) {
-  const schema: ConfigSection[] = []
-  
-  for (const sectionKey in data) {
-    const section = data[sectionKey]
-    const fields: ConfigSchemaField[] = []
-    
-    if (typeof section === 'object' && !Array.isArray(section)) {
-      for (const key in section) {
-        const value = section[key]
-        let type = 'string'
-        
-        if (typeof value === 'boolean') type = 'boolean'
-        else if (typeof value === 'number') {
-          type = Number.isInteger(value) ? 'integer' : 'number'
-        }
-        else if (Array.isArray(value)) {
-          if (value.length > 0 && typeof value[0] === 'object') {
-            type = 'array_of_objects'
-          } else {
-            type = 'array'
-          }
-        }
-        
-        fields.push({
-          key,
-          full_key: `${sectionKey}.${key}`,
-          type,
-          value,
-          description: undefined
-        })
-      }
-    }
-    
-    schema.push({
-      name: sectionKey,
-      display_name: sectionKey.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-      fields
-    })
-  }
-  
-  configSchema.value = schema
-}
-
-// 获取字段值
-function getFieldValue(fullKey: string): any {
-  const keys = fullKey.split('.')
-  let value: any = editedValues.value
-  
-  for (const key of keys) {
-    if (value && typeof value === 'object' && key in value) {
-      value = value[key]
-    } else {
-      return undefined
-    }
-  }
-  
-  return value
-}
-
-// 更新字段值
-function updateFieldValue(fullKey: string, value: any) {
-  const keys = fullKey.split('.')
-  let current: any = editedValues.value
-  
-  // 遍历到倒数第二层
-  for (let i = 0; i < keys.length - 1; i++) {
-    const key = keys[i]
-    if (!key) continue
-    if (!current[key] || typeof current[key] !== 'object') {
-      current[key] = {}
-    }
-    current = current[key]
-  }
-  
-  // 设置最终值
-  const lastKey = keys[keys.length - 1]
-  if (current && lastKey) {
-    current[lastKey] = value
-  }
-}
-
-// 数组值处理
-function formatArrayValue(val: any): string {
-  if (Array.isArray(val)) {
-    return val.map(v => String(v)).join('\n')
-  }
-  return String(val || '')
-}
-
-function updateArrayValue(fullKey: string, val: string) {
-  const lines = val.split('\n').map(s => s.trim()).filter(s => s)
-  updateFieldValue(fullKey, lines)
-}
-
-// 解析数字
-function parseNumber(val: string, type: string): number {
-  const num = type === 'integer' ? parseInt(val) : parseFloat(val)
-  return isNaN(num) ? 0 : num
-}
-
-// 获取 Schema 字段值
-function getSchemaFieldValue(sectionName: string, key: string): unknown {
-  return editedValues.value[sectionName]?.[key]
-}
-
-// 更新 Schema 字段值
-function updateSchemaFieldValue(sectionName: string, key: string, value: unknown) {
-  if (!editedValues.value[sectionName]) {
-    editedValues.value[sectionName] = {}
-  }
-  editedValues.value[sectionName][key] = value
-}
-
-// 检查 Schema 字段是否应该显示
-function checkSchemaFieldVisibility(field: SchemaField): boolean {
-  if (!field.depends_on) return true
-  
-  const dependValue = flatConfigValues.value[field.depends_on]
-  
-  if (field.depends_value !== undefined) {
-    return dependValue === field.depends_value
-  }
-  
-  return Boolean(dependValue)
-}
-
-// 格式化配置节名称
-function formatSectionName(name: string): string {
-  return name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
-}
-
-// 保存配置
 async function saveCurrentConfig() {
   if (saving.value) return
-  
   saving.value = true
   try {
-    let res
+    const { pluginName, configName } = routeParams.value
+    let content: string
     if (editorMode.value === 'source') {
-      // 源码模式：保存原始TOML
-      res = await saveConfig(decodedPath.value, sourceContent.value, true)
-    } else if (hasPluginSchema.value && pluginName.value) {
-      // 混合模式：使用插件专用 API 保存
-      res = await updateSchemaConfig(pluginName.value, editedValues.value, true)
+      content = sourceContent.value
     } else {
-      // 传统可视化模式：发送更新
-      res = await updateConfig(decodedPath.value, editedValues.value, true)
+      // 可视化模式：将 editedValues 序列化为 TOML 字符串
+      content = serializeToToml(editedValues.value)
     }
-
-    if (res.success) {
+    const res = await savePluginConfigRaw(pluginName, configName, content)
+    if (res.data?.success) {
       showToast('配置已保存', 'success')
-      if (res.data?.backup_path) {
-        console.log('备份已创建:', res.data.backup_path)
-      }
-      // 重新加载配置
       await loadConfig()
     } else {
-      showToast(res.error || '保存失败', 'error')
+      showToast(res.data?.error || res.error || '保存失败', 'error')
     }
   } catch (e: any) {
     showToast(e.message || '保存请求失败', 'error')
-    console.error('保存失败:', e)
   } finally {
     saving.value = false
   }
 }
 
-// 格式化源码
-function formatSource() {
-  // TOML格式化比较复杂，这里简单处理
-  showToast('TOML格式化功能开发中', 'error')
+/** 将嵌套对象序列化为简单 TOML */
+function serializeToToml(data: Record<string, Record<string, unknown>>): string {
+  const lines: string[] = []
+  for (const [section, fields] of Object.entries(data)) {
+    if (section === '__root__') {
+      for (const [key, val] of Object.entries(fields)) {
+        lines.push(`${key} = ${tomlValueStr(val)}`)
+      }
+      if (lines.length > 0) lines.push('')
+      continue
+    }
+    lines.push(`[${section}]`)
+    for (const [key, val] of Object.entries(fields)) {
+      lines.push(`${key} = ${tomlValueStr(val)}`)
+    }
+    lines.push('')
+  }
+  return lines.join('\n')
 }
 
-// 验证源码
+function tomlValueStr(val: unknown): string {
+  if (typeof val === 'boolean') return val ? 'true' : 'false'
+  if (typeof val === 'number') return String(val)
+  if (Array.isArray(val)) return JSON.stringify(val)
+  if (val === null || val === undefined) return '""'
+  return `"${String(val).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
+}
+
+// ==================== 源码工具 ====================
+
+function formatSource() {
+  showToast('TOML 格式化功能开发中', 'error')
+}
+
 async function validateSource() {
   try {
-    // 尝试解析TOML
     const toml = await import('toml')
     toml.parse(sourceContent.value)
-    showToast('TOML格式验证通过', 'success')
+    showToast('TOML 格式验证通过', 'success')
   } catch (e: any) {
-    showToast(`TOML格式错误: ${e.message}`, 'error')
+    showToast(`TOML 格式错误: ${e.message}`, 'error')
   }
 }
 
 function onEditorMount(_editor: any) {
-  console.log('Monaco编辑器已加载')
+  console.log('Monaco 编辑器已加载')
 }
 
-// 展开数组字段到源码模式
-function expandArrayField(_field: ConfigSchemaField) {
-  editorMode.value = 'source'
-  showToast('已切换到源码模式，可以编辑复杂数组对象', 'success')
-}
+// ==================== 备份 ==
 
-// 备份相关
-watch(showBackupsModal, (val) => {
-  if (val) fetchBackups()
-})
+watch(showBackupsModal, (val) => { if (val) fetchBackups() })
 
 async function fetchBackups() {
   backupsLoading.value = true
   try {
-    const res = await getConfigBackups(decodedPath.value)
-    if (res.success && res.data?.backups) {
+    const { pluginName, configName } = routeParams.value
+    const res = await getPluginConfigBackups(pluginName, configName)
+    if (res.data?.success && Array.isArray(res.data.backups)) {
       backups.value = res.data.backups
+    } else {
+      backups.value = []
     }
   } catch (e) {
     console.error('获取备份列表失败:', e)
+    backups.value = []
   } finally {
     backupsLoading.value = false
   }
 }
 
-async function restoreBackup(backup: any) {
-  if (!confirm(`确定要还原到备份版本 "${backup.name}" 吗？当前配置将被覆盖。`)) {
-    return
-  }
-  
+async function restoreBackup(backup: { name: string; size: number; created_at: string; path: string }) {
+  if (!confirm(`确定要还原到备份版本 "${backup.name}" 吗？当前配置将被覆盖。`)) return
   try {
-    const res = await restoreConfigBackup(decodedPath.value, backup.name)
-    if (res.success) {
+    const { pluginName, configName } = routeParams.value
+    const res = await restorePluginConfigFromBackup(pluginName, configName, backup.name)
+    if (res.data?.success) {
       showToast('配置已从备份还原', 'success')
       closeBackupsModal()
       await loadConfig()
     } else {
-      showToast(res.error || '还原失败', 'error')
+      showToast(res.data?.error || res.error || '还原失败', 'error')
     }
   } catch (e: any) {
     showToast(e.message || '还原请求失败', 'error')
@@ -903,7 +584,8 @@ function closeBackupsModal() {
   showBackupsModal.value = false
 }
 
-// 工具函数
+// ==================== 工具函数 ====================
+
 function formatSize(bytes: number): string {
   if (bytes < 1024) return bytes + ' B'
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
@@ -912,44 +594,28 @@ function formatSize(bytes: number): string {
 
 function showToast(msg: string, type: 'success' | 'error' = 'success') {
   toast.value = { show: true, message: msg, type }
-  setTimeout(() => {
-    toast.value.show = false
-  }, 3000)
+  setTimeout(() => { toast.value.show = false }, 3000)
 }
 
-function getTypeLabel(type: string): string {
-  const labels: Record<string, string> = {
-    'string': '文本',
-    'integer': '整数',
-    'number': '数字',
-    'boolean': '开关',
-    'array': '列表',
-    'array_of_objects': '对象数组',
-    'object': '对象'
-  }
-  return labels[type] || type
-}
-
-function getSectionIcon(sectionName: string): string {
+function getSectionIcon(sectionKey: string): string {
   const icons: Record<string, string> = {
-    'database': 'database',
-    'api_providers': 'cloud',
-    'personality': 'psychology',
-    'permission': 'lock',
-    'feature': 'toggle_on',
-    'bot': 'smart_toy',
-    'system': 'settings',
-    'ui': 'palette'
+    database: 'database',
+    api_providers: 'cloud',
+    personality: 'psychology',
+    permission: 'lock',
+    feature: 'toggle_on',
+    bot: 'smart_toy',
+    system: 'settings',
+    ui: 'palette',
   }
-  
-  // 匹配关键词
   for (const [key, icon] of Object.entries(icons)) {
-    if (sectionName.toLowerCase().includes(key)) {
-      return icon
-    }
+    if (sectionKey.toLowerCase().includes(key)) return icon
   }
-  
   return 'folder'
+}
+
+function formatSectionName(name: string): string {
+  return name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
 }
 </script>
 

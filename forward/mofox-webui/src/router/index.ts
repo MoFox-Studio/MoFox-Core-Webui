@@ -25,7 +25,6 @@ const PluginMarketplace = () => import('@/views/PluginMarketplace.vue')
 const PluginMarketplaceDetail = () => import('@/views/PluginMarketplaceDetail.vue')
 
 // 功能页面（懒加载）
-const ExpressionView = () => import('@/views/ExpressionView.vue')
 const RelationshipView = () => import('@/views/RelationshipView.vue')
 const EmojiManager = () => import('@/components/emoji/EmojiManager.vue')
 const ChatroomView = () => import('@/views/ChatroomView.vue')
@@ -119,11 +118,6 @@ const routes: Array<RouteRecordRaw> = [
         props: true
       },
       {
-        path: 'expression',
-        name: 'Expression',
-        component: ExpressionView
-      },
-      {
         path: 'relationship',
         name: 'Relationship',
         component: RelationshipView
@@ -168,7 +162,7 @@ const routes: Array<RouteRecordRaw> = [
 ]
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes
 })
 

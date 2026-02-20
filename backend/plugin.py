@@ -1,129 +1,67 @@
-"""
-WebUI认证插件
-提供WebUI前端登录验证功能
+"""测试路由插件
 
-功能:
-1. 启动固定端口(12138)的发现服务器
-2. 提供主程序IP和端口信息
-3. 提供带有API Key验证的接口
-
-流程:
-前端 → 发现服务器(固定端口12138) → 返回主程序端口和IP
-    → 通过主程序的端口和IP访问插件系统定义的API接口
+一个简单的测试插件，演示如何创建和注册Router组件。
 """
 
-from typing import List
+from src.kernel.logger import get_logger
+from src.core.components.base.plugin import BasePlugin
+from .router import FrontendRouter, CoreConfigRouter, ApiRouter, StatsRouter, SettingRouter, ModelConfigRouter, PluginConfigRouter, LogViewerRouter, RealtimeLogRouter, LiveChatRouter, ChatroomRouter, InitializationRouter, GitEnvRouter, GitUpdateRouter, UIUpdateRouter
+from .adapter import ChatroomAdapter
+from .event_handler import LogEventHandler, LiveChatEventHandler
+from src.core.components.loader import register_plugin
 
-from src.common.logger import get_logger
-from src.plugin_system import BasePlugin, register_plugin
-from src.plugin_system.base.config_types import ConfigField
-
-from .handlers import WebUIShutdownHandler, WebUIStartupHandler, LiveChatEventHandler
-from .routers import (
-    ChatroomRouterComponent,
-    EmojiManagerRouterComponent,
-    ExpressionRouterComponent,
-    GitUpdateRouterComponent,
-    GitEnvRouterComponent,
-    UIUpdateRouterComponent,
-    LiveChatRouterComponent,
-    LogViewerRouterComponent,
-    InitializationRouter,
-    MarketplaceRouterComponent,
-    PluginConfigRouterComponent,
-    RelationshipRouterComponent,
-    WebUIAuthRouter,
-    WebUIConfigRouter,
-    WebUIModelRouter,
-    WebUIModelStatsRouter,
-    WebUIPluginRouter,
-    WebUISettingRouter,
-    WebUIStatsRouter,
-)
-from .adapters import UIChatroomAdapter
-
-logger = get_logger("WebUIAuth.Plugin")
+logger = get_logger("webui_plugin")
 
 
 @register_plugin
-class WebUIAuthPlugin(BasePlugin):
-    """
-    WebUI插件
+class MoFoxCoreWebui(BasePlugin):
+    """Webui插件主类。
 
-    提供:
-    1. 固定端口的发现服务器 (端口12138)
-    2. HTTP接口
+    注册和管理路由,并在初始化的时候帮路由准备好上下文。
     """
 
-    # 插件基本信息
-    plugin_name: str = "webui_backend"
-    plugin_version: str = "1.0.0"
-    plugin_author: str = "MoFox Team"
-    plugin_description: str = "WebUI前端认证插件，提供发现服务和验证接口"
+    plugin_name = "MoFox-Core-Webui"
+    plugin_description = "MoFox-Team官方的WebUI插件"
+    plugin_version = "1.0.0"
 
-    # 插件配置
-    enable_plugin: bool = True
-    dependencies: list[str] = []
-    python_dependencies: list[str] = ["uvicorn", "fastapi", "psutil", "websockets"]
-    config_file_name: str = "config.toml"
+    dependent_components: list[str] = []
 
-    # 配置模式定义
-    config_schema: dict = {
-        "plugin": {
-            "enable": ConfigField(type=bool, default=True, description="是否启用插件"),
-        },
-        "discovery": {
-            "port": ConfigField(type=int, default=12138, description="WebUI发现服务器端口"),
-            "host": ConfigField(type=str, default="0.0.0.0", description="WebUI发现服务器绑定地址"),
-        },
-    }
+    def __init__(self, config=None):
+        """初始化插件。"""
+        super().__init__(config)
+        logger.info(f"插件 {self.plugin_name} 初始化完成")
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        logger.info("WebUI认证插件初始化")
+    def get_components(self) -> list[type]:
+        """返回插件包含的所有组件。
 
-    async def on_plugin_loaded(self):
-        """插件加载完成后的回调"""
-        logger.info("WebUI认证插件已加载")
-        logger.info(
-            f"WebUI发现服务器配置: {self.get_config('discovery.host', '0.0.0.0')}:{self.get_config('discovery.port', 12138)}"
-        )
-
-    def get_plugin_components(self) -> List:
-        """
-        返回插件包含的组件列表
-
-        包括:
-        - WebUIStartupHandler: 启动时启动发现服务器
-        - WebUIShutdownHandler: 关闭时停止发现服务器
-        - WebUIAuthRouter: HTTP认证接口
-        - WebUIStatsRouter: HTTP统计数据接口
-        - ChatroomRouterComponent: 聊天室接口
+        Returns:
+            包含Routers和EventHandlers的组件列表
         """
         return [
-            # 事件处理器
-            (WebUIStartupHandler.get_handler_info(), WebUIStartupHandler),
-            (WebUIShutdownHandler.get_handler_info(), WebUIShutdownHandler),
-            (LiveChatEventHandler.get_handler_info(), LiveChatEventHandler),
-            # HTTP路由组件
-            (WebUIAuthRouter.get_router_info(), WebUIAuthRouter),
-            (WebUIConfigRouter.get_router_info(), WebUIConfigRouter),
-            (WebUIPluginRouter.get_router_info(), WebUIPluginRouter),
-            (WebUIStatsRouter.get_router_info(), WebUIStatsRouter),
-            (WebUIModelStatsRouter.get_router_info(), WebUIModelStatsRouter),
-            (MarketplaceRouterComponent.get_router_info(), MarketplaceRouterComponent),
-            (GitUpdateRouterComponent.get_router_info(), GitUpdateRouterComponent),
-            (LogViewerRouterComponent.get_router_info(), LogViewerRouterComponent),
-            (ExpressionRouterComponent.get_router_info(), ExpressionRouterComponent),
-            (RelationshipRouterComponent.get_router_info(), RelationshipRouterComponent),
-            (EmojiManagerRouterComponent.get_router_info(), EmojiManagerRouterComponent),
-            (ChatroomRouterComponent.get_router_info(), ChatroomRouterComponent),
-            (LiveChatRouterComponent.get_router_info(), LiveChatRouterComponent),
-             (InitializationRouter.get_router_info(),     InitializationRouter),
-            (GitEnvRouterComponent.get_router_info(), GitEnvRouterComponent),
-            (UIUpdateRouterComponent.get_router_info(), UIUpdateRouterComponent),
-            (PluginConfigRouterComponent.get_router_info(), PluginConfigRouterComponent),
-            (UIChatroomAdapter.get_adapter_info(), UIChatroomAdapter),
-            (WebUIModelRouter.get_router_info(),WebUIModelRouter),
-            (WebUISettingRouter.get_router_info(), WebUISettingRouter),
-        ]
+            FrontendRouter, 
+            ApiRouter, 
+            StatsRouter, 
+            SettingRouter,
+            CoreConfigRouter, 
+            ModelConfigRouter, 
+            PluginConfigRouter,
+            LogViewerRouter,
+            RealtimeLogRouter,
+            LiveChatRouter,
+            ChatroomRouter,
+            InitializationRouter,
+            GitEnvRouter,
+            GitUpdateRouter,
+            UIUpdateRouter,
+            ChatroomAdapter,
+            LogEventHandler,
+            LiveChatEventHandler
+            ]
+
+    async def on_plugin_loaded(self) -> None:
+        """插件加载时的钩子。"""
+
+    async def on_plugin_unloaded(self) -> None:
+        """插件卸载时的钩子。"""
+
+

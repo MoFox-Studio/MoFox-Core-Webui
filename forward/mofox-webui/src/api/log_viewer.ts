@@ -16,18 +16,17 @@ export interface LogEntry {
   timestamp: string
   level: string
   logger_name: string
+  alias?: string // Logger 别名/显示名称
+  logger_color?: string // Logger 颜色
   event: string
-  color?: string
-  alias?: string
-  extra?: Record<string, any>
   line_number: number
   file_name: string
 }
 
 export interface LoggerInfo {
-  name: string
-  alias: string
-  color: string
+  display: string // 显示名称
+  name?: string // 内部名称
+  color?: string // 颜色
 }
 
 export interface LogStats {

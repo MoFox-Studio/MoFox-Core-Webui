@@ -150,12 +150,12 @@
             >
               <span class="terminal-time">{{ formatTimestamp(entry.timestamp) }}</span>
               <span class="terminal-level" :class="`level-${entry.level.toLowerCase()}`">
-                [{{ entry.level.padEnd(8, ' ') }}]
+                [{{ entry.level }}]
               </span>
               <span 
                 class="terminal-logger" 
                 v-if="entry.alias || entry.logger_name"
-                :style="entry.color ? { color: entry.color } : {}"
+                :style="entry.logger_color ? { color: entry.logger_color } : {}"
                 :title="entry.alias ? entry.logger_name : ''"
               >
                 [{{ entry.alias || entry.logger_name }}]
@@ -171,7 +171,6 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
-import { getServerInfo } from '@/api/index'
 import type { LogEntry } from '@/api/log_viewer'
 
 // 状态
@@ -328,7 +327,7 @@ const pythonDictToJson = (pythonStr: string): string => {
   return result
 }
 
-// 格式化日志消息（处理 ANSI 转义序列和 JSON）
+// 格式化日志消息（处理 ANSI 转义序列、BBCode 和 JSON）
 const formatLogMessage = (message: string) => {
   if (!message) return ''
   
@@ -349,12 +348,35 @@ const formatLogMessage = (message: string) => {
       
       // 如果成功解析且包含 event 字段，提取并返回
       if (parsed && typeof parsed === 'object' && parsed.event) {
-        return escapeHtml(parsed.event)
+        return formatLogMessage(parsed.event) // 递归处理 event 内容
       }
     } catch (e) {
       console.warn('解析 Python 字典格式失败，将作为普通文本处理:', e)
       // 解析失败，继续作为普通文本处理
     }
+  }
+  
+  // 先处理 BBCode 格式的颜色标记 (如 [#F092B0]text[/#F092B0], [b]text[/b])
+  let processedMessage = message
+  
+  // 处理颜色标记: [#RRGGBB]text[/#RRGGBB] (支持多行)
+  processedMessage = processedMessage.replace(/\[#([0-9A-Fa-f]{6})\]([\s\S]*?)\[\/#\1\]/g, 
+    '<span style="color: #$1;">$2</span>')
+  
+  // 处理粗体标记: [b]text[/b]
+  processedMessage = processedMessage.replace(/\[b\]([\s\S]*?)\[\/b\]/g, '<strong>$1</strong>')
+  
+  // 处理斜体标记: [i]text[/i]
+  processedMessage = processedMessage.replace(/\[i\]([\s\S]*?)\[\/i\]/g, '<em>$1</em>')
+  
+  // 处理下划线标记: [u]text[/u]
+  processedMessage = processedMessage.replace(/\[u\]([\s\S]*?)\[\/u\]/g, '<u>$1</u>')
+  
+  // 如果处理了 BBCode 标记，将换行符转换为 <br> 并返回
+  if (processedMessage !== message) {
+    // 将换行符转换为 <br>，保持消息的可读性
+    processedMessage = processedMessage.replace(/\n/g, '<br>')
+    return processedMessage
   }
   
   // 处理 ANSI 转义序列 - 改进版本，支持更多格式
@@ -469,11 +491,18 @@ const connectWebSocket = async () => {
 
   connecting.value = true
   try {
-    // 使用相对路径，自动通过代理服务器转发（开发环境走Vite代理，生产环境走发现服务器代理）
+    // 获取 API Key
+    const apiKey = localStorage.getItem('mofox_token')
+    if (!apiKey) {
+      console.error('未找到 API Key，请先登录')
+      connecting.value = false
+      return
+    }
+
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const wsUrl = `${protocol}//${window.location.host}/ws/plugins/webui_backend/log_viewer/realtime`
+    const wsUrl = `${protocol}//${window.location.host}/webui/api/realtime_log/realtime?api_key=${encodeURIComponent(apiKey)}`
     
-    console.log('正在连接WebSocket:', wsUrl)
+    console.log('正在连接WebSocket:', wsUrl.replace(apiKey, '****'))
     websocket.value = new WebSocket(wsUrl)
     
     websocket.value.onopen = () => {
@@ -1025,6 +1054,7 @@ onUnmounted(() => {
   white-space: pre-wrap;
   word-break: break-word;
   display: flex;
+  align-items: flex-start;
   gap: 8px;
 }
 
@@ -1042,13 +1072,15 @@ onUnmounted(() => {
   color: #808080;
   flex-shrink: 0;
   font-weight: normal;
+  white-space: nowrap;
 }
 
 /* 日志级别 */
 .terminal-level {
   font-weight: bold;
   flex-shrink: 0;
-  min-width: 90px;
+  min-width: 0px;
+  white-space: nowrap;
 }
 
 .terminal-level.level-debug { color: #808080; }

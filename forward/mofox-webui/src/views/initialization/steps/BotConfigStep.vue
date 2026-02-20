@@ -18,28 +18,6 @@
         @submit.prevent: 阻止表单默认提交行为，使用自定义的 handleSubmit 方法
       -->
       <form class="config-form" :class="{ 'form-loading': isLoadingConfig }" @submit.prevent="handleSubmit">
-        <!-- ========== QQ账号输入框 ========== -->
-        <div class="form-field">
-          <label class="field-label">
-            <span class="material-symbols-rounded">badge</span>
-            QQ 账号
-          </label>
-          <!-- 
-            v-model.number: 自动将输入转换为数字类型
-            type="number": 限制输入为数字，移动端显示数字键盘
-            required: HTML5 必填验证
-          -->
-          <input
-            v-model.number="formData.qq_account"
-            type="number"
-            class="m3-input"
-            placeholder="请输入机器人的QQ账号"
-            :disabled="isLoadingConfig"
-            required
-          />
-          <span class="field-hint">机器人所使用的QQ账号</span>
-        </div>
-        
         <!-- ========== 昵称输入框 ========== -->
         <div class="form-field">
           <label class="field-label">
@@ -143,9 +121,9 @@
         
         <!-- ========== 主人用户配置（可选） ========== -->
         <div class="form-field">
-          <MasterUsersEditor
-            :value="formData.master_users"
-            @update="formData.master_users = $event"
+          <OwnerListEditor
+            :value="formData.owner_list"
+            @update="formData.owner_list = $event"
           />
         </div>
         
@@ -199,7 +177,7 @@
 import { ref, onMounted } from 'vue'
 import { saveBotConfig, getBotConfig, type BotConfigRequest } from '@/api/initialization'
 import { StringArrayEditor } from '@/components/config/editors'
-import MasterUsersEditor from '@/components/config/special/MasterUsersEditor.vue'
+import OwnerListEditor from '@/components/config/editors/OwnerListEditor.vue'
 
 // === 事件定义 ===
 /** 向父组件发送的事件 */
@@ -237,13 +215,12 @@ const isLoadingConfig = ref(true)
  * @property {string} reply_style - 回复风格描述（必填）
  */
 const formData = ref<BotConfigRequest>({
-  qq_account: 0,
   nickname: '',
   alias_names: [],
   personality_core: '',
   identity: '',
   reply_style: '',
-  master_users: []
+  owner_list: []
 })
 
 // === 输入验证和提示 ===
@@ -323,9 +300,6 @@ async function loadExistingConfig() {
       console.log('[BotConfigStep] 加载配置数据:', configData)
       
       // 只在有实际数据时才填充表单（避免覆盖默认值）
-      if (configData.qq_account) {
-        formData.value.qq_account = configData.qq_account
-      }
       if (configData.nickname) {
         formData.value.nickname = configData.nickname
       }
@@ -345,10 +319,10 @@ async function loadExistingConfig() {
         console.log('[BotConfigStep] 别名已加载:', formData.value.alias_names)
       }
       
-      // 加载主人用户配置
-      if (configData.master_users && Array.isArray(configData.master_users)) {
-        formData.value.master_users = configData.master_users
-        console.log('[BotConfigStep] 主人用户已加载:', formData.value.master_users)
+      // 加载所有者列表
+      if (configData.owner_list && Array.isArray(configData.owner_list)) {
+        formData.value.owner_list = configData.owner_list
+        console.log('[BotConfigStep] 所有者列表已加载:', formData.value.owner_list)
       }
       
       console.log('[BotConfigStep] 配置加载完成')

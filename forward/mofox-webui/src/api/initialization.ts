@@ -13,13 +13,12 @@ export interface InitStatusResponse {
  * 机器人配置请求
  */
 export interface BotConfigRequest {
-  qq_account: number
   nickname: string
   alias_names: string[]
   personality_core: string
   identity: string
   reply_style: string
-  master_users?: string[][]  // 主人用户列表，格式为 [[platform, user_id], ...]
+  owner_list: string[]   // Bot所有者列表，格式：["qq:123456", "telegram:789"]
 }
 
 /**

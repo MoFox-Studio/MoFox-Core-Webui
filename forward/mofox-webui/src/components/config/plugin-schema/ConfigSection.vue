@@ -1,23 +1,20 @@
 <!--
   @file ConfigSection.vue
-  @description 配置 Section 组件 - 用于分组显示配置字段
-  
+  @description 配置 Section 组件（新 API）
+
   功能说明:
-  1. 显示 Section 标题、图标
+  1. 显示 Section 标题、描述
   2. 渲染 Section 下的所有字段
   3. 支持展开/折叠
-  4. 处理条件显示逻辑
 -->
 <template>
   <div class="config-section" :class="{ collapsed: isCollapsed }">
     <!-- Section 头部 -->
     <div class="section-header" @click="toggleCollapse">
       <div class="header-left">
-        <span v-if="section.icon" class="section-icon material-symbols-rounded">
-          {{ section.icon }}
-        </span>
+        <span class="section-icon material-symbols-rounded">{{ sectionIcon }}</span>
         <div class="header-text">
-          <h3 class="section-title">{{ section.title || formatTitle(section.name) }}</h3>
+          <h3 class="section-title">{{ section.name || formatTitle(section.key) }}</h3>
           <p v-if="section.description" class="section-description">
             {{ section.description }}
           </p>
@@ -32,17 +29,16 @@
 
     <!-- Section 内容 -->
     <div class="section-content" v-show="!isCollapsed">
-      <template v-for="field in visibleFields" :key="field.key">
+      <template v-for="field in section.fields" :key="field.key">
         <SchemaFieldEditor
           :field="field"
           :model-value="getFieldValue(field.key)"
-          :all-values="flatValues"
           @update:model-value="(v: unknown) => updateField(field.key, v)"
         />
       </template>
 
-      <!-- 空状�?-->
-      <div v-if="visibleFields.length === 0" class="empty-section">
+      <!-- 空状态 -->
+      <div v-if="section.fields.length === 0" class="empty-section">
         <span class="material-symbols-rounded">inbox</span>
         <p>该分组没有可显示的配置项</p>
       </div>
@@ -53,89 +49,55 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import SchemaFieldEditor from './SchemaFieldEditor.vue'
-import { type SchemaField, type SectionMeta, shouldShowField } from '@/api/pluginConfigApi'
+import type { PluginSchemaSection } from '@/api/pluginConfig'
 
 const props = defineProps<{
-  section: SectionMeta
-  fields: SchemaField[]
-  values: Record<string, Record<string, unknown>>
+  section: PluginSchemaSection
+  /** 该 section 的值对象 { fieldName: value } */
+  values: Record<string, unknown>
 }>()
 
 const emit = defineEmits<{
-  (e: 'update', section: string, key: string, value: unknown): void
+  (e: 'update', key: string, value: unknown): void
 }>()
 
-// 折叠状�?
+// 折叠状态
 const isCollapsed = ref(false)
 
-// 扁平化的值（用于条件判断�?
-const flatValues = computed(() => {
-  // 确保响应式更新
-  const values = props.values
-  const flat: Record<string, unknown> = {}
-  
-  if (!values) return flat
-
-  for (const sectionName in values) {
-    const sectionValues = values[sectionName]
-    if (!sectionValues) continue
-    
-    for (const key in sectionValues) {
-      const value = sectionValues[key]
-      flat[key] = value
-      flat[`${sectionName}.${key}`] = value
-    }
-  }  
-  console.log('[ConfigSection flatValues]', {
-    section: props.section.name,
-    flat: flat
-  })
-    return flat
+// section 图标
+const sectionIcon = computed(() => {
+  const icons: Record<string, string> = {
+    database: 'database',
+    api: 'cloud',
+    personality: 'psychology',
+    permission: 'lock',
+    feature: 'toggle_on',
+    bot: 'smart_toy',
+    system: 'settings',
+    ui: 'palette',
+  }
+  const key = props.section.key.toLowerCase()
+  for (const [k, icon] of Object.entries(icons)) {
+    if (key.includes(k)) return icon
+  }
+  return 'folder'
 })
 
-// 可见的字段（根据 depends_on 过滤)
-const visibleFields = computed(() => {
-  return props.fields.filter(field => {
-    if (!field.depends_on) return true
-    return shouldShowField(field, flatValues.value)
-  })
-})
-
-// 获取字段�?
-function getFieldValue(key: string): unknown {
-  return props.values[props.section.name]?.[key]
+// 获取字段值（field.key 格式为 "section.fieldName"，只取 fieldName）
+function getFieldValue(fullKey: string): unknown {
+  const dotIdx = fullKey.indexOf('.')
+  const fieldName = dotIdx === -1 ? fullKey : fullKey.slice(dotIdx + 1)
+  return props.values?.[fieldName]
 }
 
 // 更新字段
-function updateField(key: string, value: unknown) {
-  console.log('[ConfigSection updateField]', { section: props.section.name, key, value })
-  emit('update', props.section.name, key, value)
+function updateField(fullKey: string, value: unknown) {
+  const dotIdx = fullKey.indexOf('.')
+  const fieldName = dotIdx === -1 ? fullKey : fullKey.slice(dotIdx + 1)
+  emit('update', fieldName, value)
 }
 
-// 监听 props.values 变化
-watch(() => props.values, (newVal, oldVal) => {
-  console.log('[ConfigSection values changed]', {
-    section: props.section.name,
-    newValues: newVal,
-    oldValues: oldVal
-  })
-}, { deep: true })
-
-// 组件挂载
-onMounted(() => {
-  console.log('[ConfigSection onMounted]', {
-    section: props.section.name,
-    initialValues: props.values
-  })
-})
-// 检查字段是否应该显示（供模板使用）
-function checkFieldVisibility(field: SchemaField): boolean {
-  if (!field.depends_on) return true
-  const result = shouldShowField(field, flatValues.value)
-  console.log(`[checkFieldVisibility] ${field.key}: ${result}, depends_on: ${field.depends_on}, value: ${flatValues.value[field.depends_on]}`)
-  return result
-}
-// 格式化标�?
+// 格式化标题
 function formatTitle(name: string): string {
   return name
     .replace(/_/g, ' ')
@@ -296,7 +258,7 @@ function toggleCollapse() {
   }
 }
 
-/* 空状�?*/
+/* 空状态 */
 .empty-section {
   display: flex;
   flex-direction: column;

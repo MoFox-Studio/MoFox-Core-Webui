@@ -17,15 +17,15 @@ export default defineConfig({
     proxy: {
       // 将 WebSocket 请求代理到发现服务器（开发环境）
       '/ws': {
-        target: 'http://127.0.0.1:12138',
+        target: 'http://127.0.0.1:8000',
         changeOrigin: true,
         ws: true, // 启用 WebSocket 代理
       },
-      // 将 API 请求代理到发现服务器（开发环境）
-      // 发现服务器会进一步代理到主程序
-      '/plugins': {
-        target: 'http://127.0.0.1:12138',
+      // 将 API 请求代理到 Neo-MoFox（开发环境）
+      '/webui': {
+        target: 'http://127.0.0.1:8000',
         changeOrigin: true,
+        ws: true, // 启用 WebSocket 代理
       },
     },
   },

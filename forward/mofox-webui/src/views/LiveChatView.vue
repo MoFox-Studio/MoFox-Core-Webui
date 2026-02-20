@@ -72,10 +72,10 @@
           <div class="stream-info">
             <div class="stream-header-row">
               <div class="stream-name">
-                {{ stream.group_name || stream.user_nickname || '未知' }}
+                {{ stream.group_id || stream.user_id || '未知' }}
               </div>
-              <span class="last-active" v-if="stream.last_active_time">
-                {{ formatTime(stream.last_active_time) }}
+              <span class="last-active" v-if="stream.last_message_time">
+                {{ formatTime(stream.last_message_time) }}
               </span>
             </div>
             <div class="stream-meta">
@@ -105,7 +105,7 @@
             </span>
           </div>
           <div class="stream-info">
-            <h2>{{ selectedStream.group_name || selectedStream.user_nickname || '未知' }}</h2>
+            <h2>{{ selectedStream.group_id || selectedStream.user_id || '未知' }}</h2>
             <p class="stream-id">{{ selectedStream.stream_id }}</p>
           </div>
         </div>
@@ -150,50 +150,44 @@
             :key="msg.message_id"
             class="message"
             :class="{
-              'is-incoming': msg.direction === 'incoming',
-              'is-outgoing': msg.direction === 'outgoing',
-              'is-bot': msg.sender_type === 'bot',
-              'is-webui': msg.sender_type === 'webui',
+              'is-incoming': !msg.is_sent,
+              'is-outgoing': msg.is_sent,
+              'is-bot': msg.is_bot,
+              'is-webui': msg.is_webui,
             }"
           >
             <!-- 引用消息 -->
             <div 
-              v-if="msg.reply_to_id" 
+              v-if="msg.reply_message_id" 
               class="reply-preview"
-              @click="scrollToMessage(msg.reply_to_id)"
+              @click="scrollToMessage(msg.reply_message_id)"
             >
               <span class="material-symbols-rounded">reply</span>
               <span class="reply-text">
-                {{ getReplyPreview(msg.reply_to_id) }}
+                {{ getReplyPreview(msg.reply_message_id) }}
               </span>
             </div>
             
             <!-- 消息头部 -->
             <div class="message-header">
-              <span class="user-name">{{ msg.user_nickname || '未知用户' }}</span>
-              <span v-if="msg.sender_type === 'bot'" class="sender-badge bot">🤖 Bot</span>
-              <span v-if="msg.sender_type === 'webui'" class="sender-badge webui">📱 WebUI</span>
-              <span class="message-time">{{ formatMessageTime(msg.timestamp) }}</span>
+              <span class="user-name">{{ msg.sender_name || '未知用户' }}</span>
+              <span v-if="msg.is_bot" class="sender-badge bot">🤖 Bot</span>
+              <span v-if="msg.is_webui" class="sender-badge webui">📱 WebUI</span>
+              <span class="message-time">{{ formatMessageTime(msg.time) }}</span>
             </div>
             
             <!-- 消息内容 -->
             <div class="message-content">
               <!-- 图片消息 -->
               <img 
-                v-if="msg.is_picid && msg.image_data" 
-                :src="msg.image_data"
+                v-if="msg.images && msg.images.length > 0" 
+                :src="msg.images[0].url || ''"
                 class="message-image"
-                @click="previewImage(msg.content || '')"
+                @click="previewImage(msg.images[0].hash || '')"
                 loading="lazy"
               />
-              <!-- 表情消息 -->
-              <img 
-                v-else-if="msg.is_emoji && msg.emoji_data" 
-                :src="msg.emoji_data"
-                class="message-emoji"
-              />
               <!-- 文本消息 -->
-              <span v-else class="text-content">{{ msg.content || msg.display_message }}</span>
+              <span v-else class="text-content">{{ msg.content }}</span>
             </div>
           </div>
           
@@ -351,7 +345,7 @@ async function loadHistoryMessages() {
   loadingMessages.value = true
   try {
     const streamId = selectedStream.value.stream_id
-    const messageList = await getMessages(streamId, 24, 200)
+    const messageList = await getMessages(streamId, 200)
     console.log(`加载聊天流 ${streamId} 的历史消息，共 ${messageList.length} 条`)
     messages.value.set(streamId, messageList)
     await nextTick()
@@ -445,7 +439,7 @@ async function connectWebSocket() {
 // 处理 WebSocket 消息
 function handleWebSocketMessage(data: any) {
   if (data.type === 'message') {
-    const msg = data as MessageInfo
+    const msg = data.data as MessageInfo
     const streamId = msg.stream_id
     
     if (!streamId) return
@@ -470,6 +464,9 @@ function handleWebSocketMessage(data: any) {
     }
   } else if (data.type === 'subscribed') {
     console.log('已订阅聊天流:', data.stream_id)
+  } else if (data.type === 'pong') {
+    // 心跳响应
+    console.debug('收到心跳响应')
   }
 }
 

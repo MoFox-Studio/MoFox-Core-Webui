@@ -47,7 +47,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import type { SchemaField } from '@/api/pluginConfigApi'
+import type { SchemaField } from '@/api/pluginConfig'
 
 const props = defineProps<{
   field: SchemaField
@@ -180,6 +180,7 @@ function increase() {
   border: none;
   caret-color: var(--md-sys-color-primary);
   -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 .number-input::-webkit-outer-spin-button,

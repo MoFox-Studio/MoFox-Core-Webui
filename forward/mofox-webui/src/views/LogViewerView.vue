@@ -1,54 +1,41 @@
 <!--
   @file LogViewerView.vue
-  @description 历史日志查看器页面
-  
-  功能说明：
-  1. 查看历史日志文件列表
-  2. 搜索和筛选日志内容
-  3. 按日志级别筛选
-  4. 按模块（logger）筛选
-  5. 高级筛选（时间范围等）
-  
-  布局结构：
-  - 左侧：日志文件列表（名称、大小、修改时间）
-  - 右侧：日志内容显示和工具栏
-  
-  工具栏功能：
-  - 关键词搜索
-  - 级别筛选（debug/info/warning/error/critical）
-  - 模块筛选
-  - 高级筛选（时间范围、行数限制）
+  @description Material Design 3 风格的历史日志查看器
 -->
 <template>
   <div class="log-viewer-view">
-    <!-- 页面标题：图标、标题、说明 -->
-    <header class="page-header">
+    <!-- 页面标题 -->
+    <div class="page-header">
       <div class="header-content">
         <div class="title-group">
-          <div class="header-icon-container">
-            <span class="material-symbols-rounded header-icon">description</span>
-          </div>
-          <div class="header-text">
-            <h1 class="page-title">日志查看器</h1>
-            <p class="page-description">查看、搜索和分析系统日志</p>
-          </div>
+          <span class="material-symbols-rounded title-icon">history</span>
+          <h1 class="page-title">历史日志</h1>
         </div>
+        <p class="page-description">查看和搜索历史日志文件</p>
       </div>
-    </header>
+    </div>
 
     <!-- 主内容区 -->
     <div class="content-wrapper">
-      <div class="log-container">
-        <!-- 左侧：日志文件列表 -->
-        <div class="m3-card file-list-panel">
+      <div class="main-grid">
+        <!-- 左侧：文件列表 -->
+        <div class="file-panel m3-card">
           <div class="panel-header">
-            <h3 class="panel-title">日志文件</h3>
-            <button class="m3-icon-button" @click="loadLogFiles" :disabled="loading" title="刷新列表">
-              <span class="material-symbols-rounded" :class="{ spinning: loading }">refresh</span>
+            <div class="header-title">
+              <span class="material-symbols-rounded">folder_open</span>
+              <h3>日志文件</h3>
+            </div>
+            <button 
+              class="m3-icon-button" 
+              @click="loadLogFiles" 
+              title="刷新列表"
+              :disabled="loadingFiles"
+            >
+              <span class="material-symbols-rounded" :class="{ spinning: loadingFiles }">refresh</span>
             </button>
           </div>
           
-          <div class="file-list">
+          <div class="file-list" v-if="!loadingFiles && logFiles.length > 0">
             <div 
               v-for="file in logFiles" 
               :key="file.name"
@@ -56,262 +43,111 @@
               :class="{ active: selectedFile === file.name }"
               @click="selectFile(file.name)"
             >
-              <span class="material-symbols-rounded file-icon">
-                {{ file.compressed ? 'folder_zip' : 'text_snippet' }}
-              </span>
-              <div class="file-details">
+              <span class="material-symbols-rounded file-icon">description</span>
+              <div class="file-info">
                 <div class="file-name">{{ file.name }}</div>
-                <div class="file-meta">
-                  <span>{{ file.size_human }}</span>
-                  <span>{{ file.mtime_human }}</span>
-                </div>
+                <div class="file-meta">{{ file.size_human }} · {{ file.mtime_human }}</div>
               </div>
             </div>
-            
-            <div v-if="logFiles.length === 0 && !loading" class="empty-state small">
-              <span class="material-symbols-rounded empty-icon">inbox</span>
-              <p>暂无日志文件</p>
-            </div>
+          </div>
+          
+          <div v-else-if="loadingFiles" class="loading-state">
+            <span class="material-symbols-rounded spinning">refresh</span>
+            <p>正在加载文件列表...</p>
+          </div>
+          
+          <div v-else class="empty-state">
+            <span class="material-symbols-rounded">folder_off</span>
+            <p>暂无日志文件</p>
           </div>
         </div>
 
         <!-- 右侧：日志内容 -->
-        <div class="m3-card log-content-panel">
-          <!-- 搜索和筛选工具栏 -->
-          <div class="toolbar">
-            <div class="search-group">
-              <div class="search-input-wrapper">
+        <div class="log-panel m3-card">
+          <!-- 工具栏 -->
+          <div class="toolbar" v-if="selectedFile">
+            <div class="toolbar-left">
+              <span class="material-symbols-rounded">{{ selectedFile.endsWith('.gz') ? 'folder_zip' : 'description' }}</span>
+              <span class="file-title">{{ selectedFile }}</span>
+              <span class="log-count" v-if="stats">{{ totalEntries }} 条记录</span>
+            </div>
+            
+            <div class="toolbar-right">
+              <div class="search-box">
                 <span class="material-symbols-rounded search-icon">search</span>
                 <input 
-                  v-model="searchQuery"
-                  type="text"
+                  v-model="searchQuery" 
+                  @keyup.enter="performSearch" 
                   placeholder="搜索日志内容..."
-                  class="m3-input search-input"
-                  @keyup.enter="searchLogs"
+                  class="search-input"
                 />
-              </div>
-              <button 
-                class="m3-button filled"
-                @click="searchLogs"
-                :disabled="!selectedFile || loading"
-              >
-                搜索
-              </button>
-            </div>
-
-            <div class="filter-group">
-              <!-- Level Dropdown -->
-              <div class="custom-select" :class="{ active: showLevelDropdown }">
-                <div class="select-trigger" @click="showLevelDropdown = !showLevelDropdown; showLoggerDropdown = false">
-                  <span>{{ filterLevel ? filterLevel.toUpperCase() : '所有级别' }}</span>
-                  <span class="material-symbols-rounded select-arrow">arrow_drop_down</span>
-                </div>
-                <Transition name="scale-y">
-                  <div v-if="showLevelDropdown" class="select-options m3-card">
-                    <div 
-                      class="select-option" 
-                      :class="{ selected: filterLevel === '' }"
-                      @click="filterLevel = ''; searchLogs(); showLevelDropdown = false"
-                    >
-                      所有级别
-                    </div>
-                    <div 
-                      v-for="level in ['debug', 'info', 'warning', 'error', 'critical']"
-                      :key="level"
-                      class="select-option"
-                      :class="{ selected: filterLevel === level }"
-                      @click="filterLevel = level; searchLogs(); showLevelDropdown = false"
-                    >
-                      {{ level.toUpperCase() }}
-                    </div>
-                  </div>
-                </Transition>
-                <div v-if="showLevelDropdown" class="dropdown-overlay" @click="showLevelDropdown = false"></div>
-              </div>
-
-              <!-- Logger Dropdown -->
-              <div class="custom-select" :class="{ active: showLoggerDropdown }">
-                <div class="select-trigger" @click="showLoggerDropdown = !showLoggerDropdown; showLevelDropdown = false">
-                  <span>{{ filterLogger ? (loggers.find(l => l.name === filterLogger)?.alias || filterLogger) : '所有模块' }}</span>
-                  <span class="material-symbols-rounded select-arrow">arrow_drop_down</span>
-                </div>
-                <Transition name="scale-y">
-                  <div v-if="showLoggerDropdown" class="select-options m3-card">
-                    <div 
-                      class="select-option" 
-                      :class="{ selected: filterLogger === '' }"
-                      @click="filterLogger = ''; searchLogs(); showLoggerDropdown = false"
-                    >
-                      所有模块
-                    </div>
-                    <div 
-                      v-for="logger in loggers" 
-                      :key="logger.name"
-                      class="select-option"
-                      :class="{ selected: filterLogger === logger.name }"
-                      @click="filterLogger = logger.name; searchLogs(); showLoggerDropdown = false"
-                    >
-                      {{ logger.alias || logger.name }}
-                    </div>
-                  </div>
-                </Transition>
-                <div v-if="showLoggerDropdown" class="dropdown-overlay" @click="showLoggerDropdown = false"></div>
-              </div>
-
-              <button 
-                class="m3-icon-button" 
-                :class="{ active: showAdvancedFilter }"
-                @click="showAdvancedFilter = !showAdvancedFilter" 
-                title="高级筛选"
-              >
-                <span class="material-symbols-rounded">filter_list</span>
-              </button>
-
-              <button class="m3-icon-button" @click="clearFilters" title="清除筛选">
-                <span class="material-symbols-rounded">close</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- 高级筛选面板 -->
-          <Transition name="slide-down">
-            <div v-if="showAdvancedFilter" class="advanced-filter">
-              <div class="filter-row">
-                <label class="filter-label">开始时间</label>
-                <input v-model="filterStartTime" type="datetime-local" class="m3-input filter-input" />
-              </div>
-              <div class="filter-row">
-                <label class="filter-label">结束时间</label>
-                <input v-model="filterEndTime" type="datetime-local" class="m3-input filter-input" />
-              </div>
-              <div class="filter-row checkbox-row">
-                <label class="m3-checkbox-label">
-                  <input v-model="useRegex" type="checkbox" class="m3-checkbox" />
-                  使用正则表达式
-                </label>
-              </div>
-            </div>
-          </Transition>
-
-          <!-- 统计信息 -->
-          <div v-if="stats" class="stats-bar">
-            <div class="stat-item">
-              <span class="stat-label">总计:</span>
-              <span class="stat-value">{{ stats.total }}</span>
-            </div>
-            <div class="stat-item" v-for="(count, level) in stats.by_level" :key="level">
-              <span class="stat-label">{{ level.toUpperCase() }}:</span>
-              <span class="stat-value" :class="'level-' + level.toLowerCase()">{{ count }}</span>
-            </div>
-          </div>
-
-          <!-- 日志条目列表 -->
-          <div class="log-entries" ref="logEntriesContainer">
-            <div v-if="loading" class="loading-state">
-              <span class="material-symbols-rounded spinning loading-icon">progress_activity</span>
-              <p>加载中...</p>
-            </div>
-
-            <!-- 文件日志模式 -->
-            <div v-else-if="!selectedFile" class="empty-state">
-              <span class="material-symbols-rounded empty-icon">find_in_page</span>
-              <p>请选择一个日志文件或启用实时日志</p>
-            </div>
-
-            <div v-else-if="logEntries.length === 0" class="empty-state">
-              <span class="material-symbols-rounded empty-icon">inbox</span>
-              <p>没有找到日志条目</p>
-            </div>
-
-            <div v-else class="entries-list">
-              <div 
-                v-for="entry in logEntries" 
-                :key="entry.file_name + '-' + entry.line_number"
-                class="log-entry"
-                :class="`level-${entry.level.toLowerCase()}`"
-              >
-                <div class="entry-header">
-                  <span class="entry-time">{{ formatTimestamp(entry.timestamp) }}</span>
-                  <span class="entry-level" :class="`level-${entry.level.toLowerCase()}`">
-                    {{ entry.level.toUpperCase() }}
-                  </span>
-                  <span class="entry-logger" :style="{ color: entry.color }">
-                    {{ entry.alias || entry.logger_name }}
-                  </span>
-                  <span class="entry-line">Line {{ entry.line_number }}</span>
-                </div>
-                <div class="entry-message">{{ entry.event }}</div>
-                <div v-if="entry.extra && Object.keys(entry.extra).length > 0" class="entry-extra">
-                  <details>
-                    <summary>额外信息</summary>
-                    <pre>{{ JSON.stringify(entry.extra, null, 2) }}</pre>
-                  </details>
-                </div>
+                <button 
+                  v-if="searchQuery" 
+                  class="m3-icon-button small"
+                  @click="searchQuery = ''; performSearch()"
+                >
+                  <span class="material-symbols-rounded">close</span>
+                </button>
               </div>
             </div>
           </div>
 
-          <!-- 分页控制 -->
-          <div v-if="logEntries.length > 0" class="pagination">
-            <button 
-              class="m3-icon-button small"
-              :disabled="currentPage === 1"
-              @click="goToPage(1)"
-              title="第一页"
-            >
-              <span class="material-symbols-rounded">first_page</span>
-            </button>
-            <button 
-              class="m3-icon-button small"
-              :disabled="currentPage === 1"
-              @click="goToPage(currentPage - 1)"
-              title="上一页"
-            >
-              <span class="material-symbols-rounded">chevron_left</span>
-            </button>
-            
-            <div class="pagination-info">
-              <span>第 {{ currentPage }} / {{ totalPages }} 页</span>
-              <span class="separator">|</span>
-              <span>共 {{ totalEntries }} 条</span>
+          <!-- 日志内容区域 -->
+          <div class="log-content" ref="logContainer">
+            <!-- 欢迎/空状态 -->
+            <div v-if="!selectedFile" class="welcome-screen">
+              <span class="material-symbols-rounded welcome-icon">inbox</span>
+              <h3>请选择日志文件</h3>
+              <p>从左侧列表中选择一个日志文件开始查看</p>
             </div>
 
-            <button 
-              class="m3-icon-button small"
-              :disabled="currentPage === totalPages"
-              @click="goToPage(currentPage + 1)"
-              title="下一页"
-            >
-              <span class="material-symbols-rounded">chevron_right</span>
-            </button>
-            <button 
-              class="m3-icon-button small"
-              :disabled="currentPage === totalPages"
-              @click="goToPage(totalPages)"
-              title="最后一页"
-            >
-              <span class="material-symbols-rounded">last_page</span>
-            </button>
+            <!-- 加载状态 -->
+            <div v-else-if="loadingLogs && logEntries.length === 0" class="loading-state">
+              <span class="material-symbols-rounded spinning">refresh</span>
+              <p>正在加载日志...</p>
+            </div>
 
-            <div class="custom-select small" :class="{ active: showPageSizeDropdown }">
-              <div class="select-trigger" @click="showPageSizeDropdown = !showPageSizeDropdown">
-                <span>{{ pageSize }} 条/页</span>
-                <span class="material-symbols-rounded select-arrow">arrow_drop_down</span>
+            <!-- 日志列表 -->
+            <div v-else class="log-list">
+              <div v-for="(entry, index) in logEntries" :key="index" class="log-entry">
+                <span class="timestamp">{{ formatTime(entry.timestamp) }}</span>
+                <span :class="['level-badge', `level-${entry.level.toLowerCase()}`]">
+                  {{ entry.level }}
+                </span>
+                <span class="logger" :style="{ color: entry.logger_color || 'var(--md-sys-color-tertiary)' }">
+                  {{ entry.logger_name || 'root' }}
+                </span>
+                <span class="message" v-html="highlightMessage(entry.event)"></span>
               </div>
-              <Transition name="scale-y">
-                <div v-if="showPageSizeDropdown" class="select-options m3-card up">
-                  <div 
-                    v-for="size in [50, 100, 200, 500]"
-                    :key="size"
-                    class="select-option"
-                    :class="{ selected: pageSize === size }"
-                    @click="pageSize = size; changePageSize(); showPageSizeDropdown = false"
-                  >
-                    {{ size }} 条/页
-                  </div>
-                </div>
-              </Transition>
-              <div v-if="showPageSizeDropdown" class="dropdown-overlay" @click="showPageSizeDropdown = false"></div>
+
+              <!-- 空结果 -->
+              <div v-if="logEntries.length === 0" class="empty-result">
+                <span class="material-symbols-rounded">search_off</span>
+                <p>没有找到匹配的日志记录</p>
+              </div>
+
+              <!-- 分页 -->
+              <div class="pagination" v-if="totalPages > 1">
+                <button 
+                  class="m3-button text" 
+                  :disabled="currentPage <= 1"
+                  @click="goToPage(currentPage - 1)"
+                >
+                  <span class="material-symbols-rounded">chevron_left</span>
+                  <span>上一页</span>
+                </button>
+                
+                <span class="page-info">第 {{ currentPage }} / {{ totalPages }} 页</span>
+                
+                <button 
+                  class="m3-button text" 
+                  :disabled="currentPage >= totalPages"
+                  @click="goToPage(currentPage + 1)"
+                >
+                  <span>下一页</span>
+                  <span class="material-symbols-rounded">chevron_right</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -321,193 +157,163 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted, nextTick, computed } from 'vue'
 import {
   getLogFiles as apiGetLogFiles,
   searchLogs as apiSearchLogs,
-  getLoggers as apiGetLoggers,
   getLogStats as apiGetLogStats
 } from '@/api/log_viewer'
-import type { LogFile, LogEntry, LoggerInfo, LogStats } from '@/api/log_viewer'
+import type { LogFile, LogEntry, LogStats } from '@/api/log_viewer'
 
 // 状态
-const loading = ref(false)
+const loadingFiles = ref(false)
+const loadingLogs = ref(false)
 const logFiles = ref<LogFile[]>([])
 const selectedFile = ref<string>('')
 const logEntries = ref<LogEntry[]>([])
-const loggers = ref<LoggerInfo[]>([])
 const stats = ref<LogStats | null>(null)
+const logContainer = ref<HTMLElement | null>(null)
 
-// 搜索和筛选
+// 搜索和分页
 const searchQuery = ref('')
-const filterLevel = ref('')
-const filterLogger = ref('')
-const filterStartTime = ref('')
-const filterEndTime = ref('')
-const useRegex = ref(false)
-const showAdvancedFilter = ref(false)
-const showLevelDropdown = ref(false)
-const showLoggerDropdown = ref(false)
-const showPageSizeDropdown = ref(false)
-
-// 分页
 const currentPage = ref(1)
 const pageSize = ref(100)
 const totalEntries = ref(0)
-
 const totalPages = computed(() => Math.ceil(totalEntries.value / pageSize.value))
 
-// 加载日志文件列表
+// API 调用
 const loadLogFiles = async () => {
-  loading.value = true
+  loadingFiles.value = true
   try {
-    const response = await apiGetLogFiles()
-    if (response.success && response.data) {
-      logFiles.value = response.data.files
+    const res = await apiGetLogFiles()
+    // 修复：安全检查 res.files 是否存在
+    if (res && res.success && Array.isArray(res.data?.files)) {
+      logFiles.value = res.data.files.sort((a, b) => b.mtime - a.mtime)
     } else {
-      console.error('获取日志文件列表失败')
+      logFiles.value = []
+      console.warn('Invalid response from getLogFiles API', res)
     }
   } catch (error) {
-    console.error('加载日志文件失败:', error)
+    console.error('Failed to load file list', error)
+    logFiles.value = []
   } finally {
-    loading.value = false
+    loadingFiles.value = false
   }
 }
 
-// 选择日志文件
 const selectFile = async (filename: string) => {
+  if (selectedFile.value === filename) return
   selectedFile.value = filename
   currentPage.value = 1
+  searchQuery.value = ''
+  logEntries.value = []
   
-  // 加载该文件的 logger 列表
-  await loadLoggers()
-  
-  // 加载统计信息
   await loadStats()
-  
-  // 搜索日志
   await performSearch()
 }
 
-// 加载 logger 列表
-const loadLoggers = async () => {
-  if (!selectedFile.value) return
-  
-  try {
-    const response = await apiGetLoggers(selectedFile.value)
-    if (response.success && response.data) {
-      loggers.value = response.data.loggers
-    }
-  } catch (error) {
-    console.error('加载 logger 列表失败:', error)
-  }
-}
-
-// 加载统计信息
 const loadStats = async () => {
   if (!selectedFile.value) return
-  
   try {
-    const response = await apiGetLogStats(selectedFile.value)
-    if (response.success && response.data) {
-      stats.value = response.data
-    }
+    const res = await apiGetLogStats(selectedFile.value)
+    stats.value = res
   } catch (error) {
-    console.error('加载统计信息失败:', error)
+    console.error('Failed to load stats', error)
+    stats.value = null
   }
 }
 
-// 搜索日志
 const performSearch = async () => {
   if (!selectedFile.value) return
   
-  loading.value = true
+  loadingLogs.value = true
   try {
-    const offset = (currentPage.value - 1) * pageSize.value
-    
-    const response = await apiSearchLogs({
+    const res = await apiSearchLogs({
       filename: selectedFile.value,
       query: searchQuery.value,
-      level: filterLevel.value,
-      logger_name: filterLogger.value,
-      start_time: filterStartTime.value,
-      end_time: filterEndTime.value,
       limit: pageSize.value,
-      offset: offset,
-      regex: useRegex.value
+      offset: (currentPage.value - 1) * pageSize.value
     })
     
-    if (response.success && response.data) {
-      logEntries.value = response.data.entries
-      totalEntries.value = response.data.total
-    } else {
-      console.error('搜索日志失败')
+    if (res && res.success) {
+      logEntries.value = res.data?.entries || []
+      totalEntries.value = res.data?.total || 0
+      
+      // 滚动到顶部
+      nextTick(() => {
+        if (logContainer.value) {
+          logContainer.value.scrollTop = 0
+        }
+      })
     }
   } catch (error) {
-    console.error('搜索日志失败:', error)
+    console.error('Search failed', error)
+    logEntries.value = []
+    totalEntries.value = 0
   } finally {
-    loading.value = false
+    loadingLogs.value = false
   }
 }
 
-// 触发搜索
-const searchLogs = () => {
-  currentPage.value = 1
-  performSearch()
-}
-
-// 清除筛选
-const clearFilters = () => {
-  searchQuery.value = ''
-  filterLevel.value = ''
-  filterLogger.value = ''
-  filterStartTime.value = ''
-  filterEndTime.value = ''
-  useRegex.value = false
-  currentPage.value = 1
-  performSearch()
-}
-
-// 分页控制
 const goToPage = (page: number) => {
   if (page < 1 || page > totalPages.value) return
   currentPage.value = page
   performSearch()
 }
 
-const changePageSize = () => {
-  currentPage.value = 1
-  performSearch()
+// 工具函数
+const formatTime = (isoString: string) => {
+  if (!isoString) return '--:--:--'
+  try {
+    const date = new Date(isoString)
+    // 检查日期是否有效
+    if (isNaN(date.getTime())) {
+      // 尝试简单解析 ISO 格式的时间部分 (YYYY-MM-DDTHH:mm:ss.xxx)
+      const match = isoString.match(/T?(\d{2}):(\d{2}):(\d{2})/)
+      if (match) {
+        return `${match[1]}:${match[2]}:${match[3]}`
+      }
+      return '--:--:--'
+    }
+    return date.toLocaleTimeString('zh-CN', { 
+      hour: '2-digit', 
+      minute: '2-digit', 
+      second: '2-digit',
+      hour12: false
+    })
+  } catch {
+    return '--:--:--'
+  }
 }
 
-// 格式化时间戳
-const formatTimestamp = (timestamp: string) => {
-  if (!timestamp) return ''
-  return timestamp.replace('T', ' ').substring(0, 19)
+const highlightMessage = (msg: string) => {
+  if (!msg) return ''
+  if (!searchQuery.value) return msg
+  
+  // 简单的高亮，转义特殊字符
+  const escaped = searchQuery.value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const reg = new RegExp(`(${escaped})`, 'gi')
+  return msg.replace(reg, '<mark class="highlight">$1</mark>')
 }
 
-// 初始化
 onMounted(() => {
   loadLogFiles()
 })
 </script>
 
 <style scoped>
+/* ==================== 基础布局 ==================== */
 .log-viewer-view {
-  height: 100%;
   display: flex;
   flex-direction: column;
+  height: 100%;
   padding: 16px;
   gap: 16px;
-  animation: fadeIn 0.4s cubic-bezier(0.2, 0, 0, 1);
+  padding: 0;
+  overflow: hidden;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* 页面标题 */
+/* ==================== 页面标题 ==================== */
 .page-header {
   display: flex;
   align-items: center;
@@ -520,37 +326,26 @@ onMounted(() => {
 
 .header-content {
   width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  margin: 0;
 }
 
 .title-group {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
+  margin-bottom: 8px;
 }
 
-.header-icon-container {
-  width: 48px;
-  height: 48px;
-  border-radius: 16px;
-  background: var(--md-sys-color-secondary-container);
-  color: var(--md-sys-color-on-secondary-container);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.header-icon {
-  font-size: 24px;
+.title-icon {
+  font-size: 28px;
+  color: var(--md-sys-color-primary);
 }
 
 .page-title {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 400;
   color: var(--md-sys-color-on-surface);
-  margin: 0 0 4px;
+  margin: 0;
 }
 
 .page-description {
@@ -559,47 +354,53 @@ onMounted(() => {
   margin: 0;
 }
 
-/* 主内容区 */
+/* ==================== 主内容区 ==================== */
 .content-wrapper {
   flex: 1;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.log-container {
-  flex: 1;
-  display: grid;
-  grid-template-columns: 280px 1fr;
-  gap: 16px;
-  min-height: 0;
-  overflow: hidden;
-}
-
-/* 文件列表面板 */
-.file-list-panel {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  height: 100%;
   padding: 0;
-  background: var(--md-sys-color-surface-container);
-  border-radius: 32px;
-  border: none;
-  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.main-grid {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 24px;
+  height: 100%;
+  padding: 16px;
+}
+
+/* ==================== 文件面板 ==================== */
+.file-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
   border-bottom: 1px solid var(--md-sys-color-outline-variant);
 }
 
-.panel-title {
-  font-size: 16px;
-  font-weight: 500;
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-title .material-symbols-rounded {
+  font-size: 20px;
+  color: var(--md-sys-color-primary);
+}
+
+.header-title h3 {
+  font: var(--md-sys-typescale-title-medium);
   color: var(--md-sys-color-on-surface);
   margin: 0;
 }
@@ -607,39 +408,40 @@ onMounted(() => {
 .file-list {
   flex: 1;
   overflow-y: auto;
+  margin: -8px;
   padding: 8px;
 }
 
 .file-item {
-  padding: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
   border-radius: 12px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--transition-fast);
   margin-bottom: 4px;
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
 }
 
 .file-item:hover {
-  background: var(--md-sys-color-surface-container-highest);
+  background: var(--md-sys-color-surface-container-high);
 }
 
 .file-item.active {
-  background: var(--md-sys-color-secondary-container);
-  color: var(--md-sys-color-on-secondary-container);
+  background: var(--md-sys-color-primary-container);
 }
 
 .file-icon {
   font-size: 20px;
   color: var(--md-sys-color-on-surface-variant);
+  flex-shrink: 0;
 }
 
 .file-item.active .file-icon {
-  color: var(--md-sys-color-on-secondary-container);
+  color: var(--md-sys-color-primary);
 }
 
-.file-details {
+.file-info {
   flex: 1;
   min-width: 0;
 }
@@ -647,508 +449,308 @@ onMounted(() => {
 .file-name {
   font-size: 14px;
   font-weight: 500;
-  margin-bottom: 4px;
-  word-break: break-all;
+  color: var(--md-sys-color-on-surface);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-item.active .file-name {
+  color: var(--md-sys-color-on-primary-container);
 }
 
 .file-meta {
-  font-size: 11px;
-  opacity: 0.7;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  font-size: 12px;
+  color: var(--md-sys-color-on-surface-variant);
+  margin-top: 2px;
 }
 
-/* 日志内容面板 */
-.log-content-panel {
+.file-item.active .file-meta {
+  color: var(--md-sys-color-on-primary-container);
+  opacity: 0.8;
+}
+
+/* ==================== 日志面板 ==================== */
+.log-panel {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  height: 100%;
-  padding: 0;
-  background: var(--md-sys-color-surface-container);
-  border-radius: 32px;
-  border: none;
-  box-shadow: none;
 }
 
-/* 工具栏 */
 .toolbar {
-  padding: 16px;
-  border-bottom: 1px solid var(--md-sys-color-outline-variant);
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  background: var(--md-sys-color-surface-container-low);
-}
-
-.search-group {
-  display: flex;
-  gap: 8px;
-  flex: 1;
-  min-width: 300px;
-}
-
-.search-input-wrapper {
-  flex: 1;
-  position: relative;
-  height: 40px;
-  background: var(--md-sys-color-surface-container-high);
-  border-radius: 20px;
   display: flex;
   align-items: center;
-  transition: all 0.2s;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+  flex-wrap: wrap;
 }
 
-.search-input-wrapper:hover {
-  background: var(--md-sys-color-surface-container-highest);
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
 }
 
-.search-input-wrapper:focus-within {
-  background: var(--md-sys-color-surface-container-highest);
-  box-shadow: 0 0 0 2px var(--md-sys-color-primary);
+.toolbar-left .material-symbols-rounded {
+  font-size: 20px;
+  color: var(--md-sys-color-primary);
+  flex-shrink: 0;
+}
+
+.file-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.log-count {
+  font-size: 12px;
+  color: var(--md-sys-color-on-surface-variant);
+  padding: 4px 12px;
+  background: var(--md-sys-color-surface-container-high);
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--md-sys-color-surface-container-high);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: 20px;
+  padding: 6px 16px;
+  min-width: 280px;
+  transition: all var(--transition-fast);
+}
+
+.search-box:focus-within {
+  border-color: var(--md-sys-color-primary);
+  background: var(--md-sys-color-surface);
 }
 
 .search-icon {
-  position: absolute;
-  left: 12px;
   font-size: 20px;
   color: var(--md-sys-color-on-surface-variant);
-  pointer-events: none;
 }
 
 .search-input {
-  width: 100%;
-  height: 100%;
-  background: transparent;
+  flex: 1;
   border: none;
-  padding: 0 16px 0 44px;
+  background: transparent;
   font-size: 14px;
   color: var(--md-sys-color-on-surface);
   outline: none;
-  border-radius: 20px;
-  font-family: inherit;
 }
 
 .search-input::placeholder {
   color: var(--md-sys-color-on-surface-variant);
+  opacity: 0.6;
 }
 
-.filter-group {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-/* Custom Dropdown */
-.custom-select {
-  position: relative;
-  height: 40px;
-  min-width: 120px;
-}
-
-.select-trigger {
-  height: 100%;
-  background: var(--md-sys-color-surface-container-high);
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 12px;
-  cursor: pointer;
-  transition: all 0.2s;
-  user-select: none;
-  gap: 8px;
-}
-
-.select-trigger:hover {
-  background: var(--md-sys-color-surface-container-highest);
-}
-
-.custom-select.active .select-trigger {
-  background: var(--md-sys-color-secondary-container);
-  color: var(--md-sys-color-on-secondary-container);
-}
-
-.select-trigger span:first-child {
-  font-size: 14px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.select-arrow {
-  font-size: 20px;
-  color: var(--md-sys-color-on-surface-variant);
-  transition: transform 0.2s;
-}
-
-.custom-select.active .select-arrow {
-  transform: rotate(180deg);
-  color: var(--md-sys-color-on-secondary-container);
-}
-
-.select-options {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  min-width: 100%;
-  max-height: 300px;
+/* ==================== 日志内容 ==================== */
+.log-content {
+  flex: 1;
   overflow-y: auto;
-  background: var(--md-sys-color-surface-container-high);
-  border-radius: 8px;
-  padding: 4px;
-  z-index: 1000;
-  box-shadow: var(--md-sys-elevation-2);
+  margin: -8px;
+  padding: 8px;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+.log-list {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.select-option {
-  padding: 8px 12px;
-  font-size: 14px;
-  color: var(--md-sys-color-on-surface);
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.2s;
-  white-space: nowrap;
-}
-
-.select-option:hover {
-  background: var(--md-sys-color-surface-container-highest);
-}
-
-.select-option.selected {
-  background: var(--md-sys-color-secondary-container);
-  color: var(--md-sys-color-on-secondary-container);
-  font-weight: 500;
-}
-
-.dropdown-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 999;
-  background: transparent;
-}
-
-/* Transitions */
-.scale-y-enter-active,
-.scale-y-leave-active {
-  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
-  transform-origin: top;
-}
-
-.scale-y-enter-from,
-.scale-y-leave-to {
-  opacity: 0;
-  transform: scaleY(0.8);
-}
-
-.custom-select.small {
-  height: 32px;
-  min-width: 110px;
-}
-
-.custom-select.small .select-trigger {
-  font-size: 12px;
-  padding: 0 8px;
-}
-
-.custom-select.small .select-arrow {
-  font-size: 18px;
-}
-
-.select-options.up {
-  top: auto;
-  bottom: calc(100% + 4px);
-  transform-origin: bottom;
-}
-
-/* 高级筛选 */
-.advanced-filter {
-  padding: 16px;
-  border-bottom: 1px solid var(--md-sys-color-outline-variant);
-  background: var(--md-sys-color-surface-container);
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.filter-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.filter-label {
-  font-size: 13px;
-  color: var(--md-sys-color-on-surface-variant);
-  white-space: nowrap;
-}
-
-.filter-input {
-  padding: 8px 12px;
-  font-size: 13px;
-}
-
-.checkbox-row {
-  margin-left: auto;
-}
-
-.m3-checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  color: var(--md-sys-color-on-surface);
-  cursor: pointer;
-}
-
-.m3-checkbox {
-  width: 18px;
-  height: 18px;
-  accent-color: var(--md-sys-color-primary);
-}
-
-/* 统计栏 */
-.stats-bar {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--md-sys-color-outline-variant);
-  background: var(--md-sys-color-surface-container-low);
-  display: flex;
-  gap: 24px;
-  flex-wrap: wrap;
-}
-
-.stat-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-}
-
-.stat-label {
-  color: var(--md-sys-color-on-surface-variant);
-}
-
-.stat-value {
-  font-weight: 600;
-  color: var(--md-sys-color-on-surface);
-}
-
-/* 日志条目列表 */
-.log-entries {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px;
-  background: var(--md-sys-color-surface);
-}
-
-.entries-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
 .log-entry {
-  padding: 12px;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 6px 12px;
   border-radius: 8px;
-  border-left: 4px solid var(--md-sys-color-outline);
-  background: var(--md-sys-color-surface-container-lowest);
-  transition: all 0.2s;
-  font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  transition: background var(--transition-fast);
 }
 
 .log-entry:hover {
-  background: var(--md-sys-color-surface-container-low);
+  background: var(--md-sys-color-surface-container-high);
 }
 
-/* 日志级别颜色 */
-.log-entry.level-debug { border-left-color: #909090; }
-.log-entry.level-info { border-left-color: #2196F3; }
-.log-entry.level-warning { border-left-color: #FFC107; }
-.log-entry.level-error { border-left-color: #F44336; }
-.log-entry.level-critical { border-left-color: #D32F2F; }
-
-.entry-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 8px;
-  font-size: 12px;
-  flex-wrap: wrap;
-}
-
-.entry-time {
+.timestamp {
   color: var(--md-sys-color-on-surface-variant);
+  font-size: 12px;
+  flex-shrink: 0;
+  font-weight: 500;
 }
 
-.entry-level {
+.level-badge {
+  font-size: 11px;
+  font-weight: 600;
   padding: 2px 8px;
   border-radius: 4px;
-  font-weight: 600;
-  font-size: 11px;
-  color: white;
+  flex-shrink: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-.entry-level.level-debug { background: #909090; }
-.entry-level.level-info { background: #2196F3; }
-.entry-level.level-warning { background: #FFC107; color: black; }
-.entry-level.level-error { background: #F44336; }
-.entry-level.level-critical { background: #D32F2F; }
-
-.entry-logger {
-  font-weight: 600;
-  font-family: 'Roboto Mono', monospace;
-
+.level-debug {
+  background: rgba(128, 128, 128, 0.1);
+  color: #808080;
 }
 
-.entry-line {
-  color: var(--md-sys-color-on-surface-variant);
-  margin-left: auto;
+.level-info {
+  background: rgba(33, 150, 243, 0.1);
+  color: #2196F3;
 }
 
-.entry-message {
+.level-warning {
+  background: rgba(255, 152, 0, 0.1);
+  color: #FF9800;
+}
+
+.level-error {
+  background: rgba(244, 67, 54, 0.1);
+  color: #F44336;
+}
+
+.level-critical {
+  background: #B00020;
+  color: #FFFFFF;
+}
+
+.logger {
+  font-size: 12px;
+  font-weight: 500;
+  flex-shrink: 0;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.message {
   color: var(--md-sys-color-on-surface);
-  font-size: 13px;
-  line-height: 1.6;
   word-break: break-word;
-  white-space: pre-wrap;
-  font-family: 'Roboto Mono', monospace;
+  flex: 1;
 }
 
-.entry-extra {
-  margin-top: 8px;
-  font-size: 12px;
+.message :deep(mark.highlight) {
+  background: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-weight: 600;
 }
 
-.entry-extra summary {
-  color: var(--md-sys-color-primary);
-  cursor: pointer;
-  user-select: none;
-}
-
-.entry-extra pre {
-  margin-top: 8px;
-  padding: 12px;
-  background: var(--md-sys-color-surface-container-high);
-  border-radius: 8px;
-  overflow-x: auto;
-  color: var(--md-sys-color-on-surface-variant);
-}
-
-/* 分页 */
-.pagination {
-  padding: 12px 16px;
-  border-top: 1px solid var(--md-sys-color-outline-variant);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background: var(--md-sys-color-surface-container-low);
-}
-
-.pagination-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 16px;
-  font-size: 13px;
-  color: var(--md-sys-color-on-surface-variant);
-}
-
-.separator {
-  color: var(--md-sys-color-outline);
-}
-
-.select-wrapper.small .filter-select {
-  padding: 6px 28px 6px 12px;
-  font-size: 12px;
-}
-
-/* 空状态 */
+/* ==================== 状态页面 ==================== */
+.welcome-screen,
+.loading-state,
 .empty-state,
-.loading-state {
+.empty-result {
+  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 60px 20px;
+  gap: 16px;
   color: var(--md-sys-color-on-surface-variant);
-  height: 100%;
+  text-align: center;
 }
 
-.empty-state.small {
-  padding: 32px 16px;
+.welcome-icon,
+.loading-state .material-symbols-rounded,
+.empty-state .material-symbols-rounded,
+.empty-result .material-symbols-rounded {
+  font-size: 64px;
+  opacity: 0.3;
 }
 
-.empty-icon,
-.loading-icon {
-  font-size: 48px;
-  margin-bottom: 12px;
-  opacity: 0.5;
+.welcome-screen h3,
+.loading-state p,
+.empty-state p,
+.empty-result p {
+  margin: 0;
+  font-size: 16px;
+}
+
+.welcome-screen p {
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+/* ==================== 分页 ==================== */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.page-info {
+  font-size: 14px;
+  color: var(--md-sys-color-on-surface-variant);
+  min-width: 120px;
+  text-align: center;
+}
+
+/* ==================== 动画 ==================== */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .spinning {
   animation: spin 1s linear infinite;
 }
 
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+/* ==================== 滚动条美化 ==================== */
+.file-list::-webkit-scrollbar,
+.log-content::-webkit-scrollbar {
+  width: 8px;
 }
 
-.slide-down-enter-active,
-.slide-down-leave-active {
-  transition: all 0.3s ease;
-  overflow: hidden;
+.file-list::-webkit-scrollbar-track,
+.log-content::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-.slide-down-enter-from,
-.slide-down-leave-to {
-  max-height: 0;
-  opacity: 0;
+.file-list::-webkit-scrollbar-thumb,
+.log-content::-webkit-scrollbar-thumb {
+  background: var(--md-sys-color-outline-variant);
+  border-radius: 4px;
 }
 
-.slide-down-enter-to,
-.slide-down-leave-from {
-  max-height: 200px;
-  opacity: 1;
+.file-list::-webkit-scrollbar-thumb:hover,
+.log-content::-webkit-scrollbar-thumb:hover {
+  background: var(--md-sys-color-outline);
 }
 
-/* 响应式 */
+/* ==================== 响应式 ==================== */
 @media (max-width: 1024px) {
-  .log-container {
+  .main-grid {
     grid-template-columns: 1fr;
-    grid-template-rows: 300px 1fr;
-  }
-}
-
-@media (max-width: 768px) {
-  .toolbar {
-    flex-direction: column;
   }
   
-  .search-group {
-    width: 100%;
-    min-width: auto;
-  }
-  
-  .filter-group {
-    width: 100%;
-    flex-wrap: wrap;
-  }
-  
-  .select-wrapper {
-    flex: 1;
-  }
-  
-  .filter-select {
-    width: 100%;
+  .file-panel {
+    max-height: 300px;
   }
 }
 </style>

@@ -44,21 +44,21 @@ export interface GitInstallGuide {
  * 获取 Git 环境状态
  */
 export function getGitEnvStatus() {
-  return api.get<GitEnvStatus>('git_env/status')
+  return api.get<{ success: boolean; data: GitEnvStatus; error?: string }>('git_env/status')
 }
 
 /**
  * 安装 Git
  */
 export function installGit() {
-  return api.post<GitInstallResult>('git_env/install')
+  return api.post<{ success: boolean; data: GitInstallResult; error?: string }>('git_env/install')
 }
 
 /**
  * 设置自定义 Git 路径
  */
 export function setGitPath(path: string) {
-  return api.post<GitSetPathResult>('git_env/set-path', { path })
+  return api.post<{ success: boolean; data: GitSetPathResult; error?: string }>('git_env/set-path', { path })
 }
 
 /**
@@ -66,7 +66,7 @@ export function setGitPath(path: string) {
  * 清除当前配置并重新自动检测系统中的 Git
  */
 export function autoDetectGit() {
-  return api.post<GitSetPathResult>('git_env/auto-detect')
+  return api.post<{ success: boolean; data: GitSetPathResult; error?: string }>('git_env/auto-detect')
 }
 
 /**

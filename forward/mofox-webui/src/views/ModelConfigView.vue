@@ -76,6 +76,7 @@
         <ModelConfigEditor 
           :parsed-data="originalParsed"
           :edited-values="editedValues"
+          :tasks-schema="tasksSchema"
           @update="updateFieldValue"
         />
       </template>
@@ -174,17 +175,17 @@ import { ref, computed, onMounted, watch, shallowRef } from 'vue'
 import { VueMonacoEditor } from '@guolao/vue-monaco-editor'
 import type { editor } from 'monaco-editor'
 import {
-  getConfigList,
-  getConfigContent,
-  getConfigSchema,
-  saveConfig,
-  updateConfig,
-  getConfigBackups,
-  restoreConfigBackup,
-  type ConfigFileInfo,
-  type ConfigSection,
-  type ConfigBackupInfo
-} from '@/api'
+  getModelConfig,
+  saveModelConfig,
+  getModelConfigRaw,
+  saveModelConfigRaw,
+  getModelConfigBackups,
+  restoreModelConfigBackup,
+  getModelTasksSchema,
+  type ModelConfigData,
+  type ModelConfigBackupInfo,
+  type TaskSchemaItem,
+} from '@/api/modelConfig'
 import ModelConfigEditor from '@/components/config/ModelConfigEditor.vue'
 
 // Monaco Editor 配置
@@ -197,6 +198,9 @@ const monacoOptions: editor.IStandaloneEditorConstructionOptions = {
   automaticLayout: true,
   tabSize: 2,
   wordWrap: 'on',
+  lineHeight: 24,
+  fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace",
+  padding: { top: 16, bottom: 16 },
   folding: true,
   lineDecorationsWidth: 10,
   lineNumbersMinChars: 3,
@@ -218,9 +222,9 @@ const editorMode = ref<'visual' | 'source'>('visual')
 const isDarkMode = ref(true)
 
 // 配置数据
-const configPath = ref('')
-const configSchema = ref<ConfigSection[]>([])
+const modelConfigData = ref<ModelConfigData | null>(null)
 const editedValues = ref<Record<string, unknown>>({})
+// originalParsed 传给 ModelConfigEditor，用结构化数据包装
 const originalParsed = ref<Record<string, unknown>>({})
 
 // 源码编辑状态
@@ -228,9 +232,12 @@ const sourceContent = ref('')
 const originalContent = ref('')
 const validationError = ref('')
 
+// 任务 Schema（由后端提供，含中文名和分类）
+const tasksSchema = ref<TaskSchemaItem[]>([])
+
 // 备份相关
 const showBackupsModal = ref(false)
-const backups = ref<ConfigBackupInfo[]>([])
+const backups = ref<ModelConfigBackupInfo[]>([])
 const backupsLoading = ref(false)
 const restoringBackup = ref('')
 
@@ -265,96 +272,120 @@ function formatSource() {
 async function loadConfig() {
   loading.value = true
   loadError.value = ''
-  
+
   try {
-    // 获取配置列表，找到model类型的配置
-    const listRes = await getConfigList()
-    if (!listRes.success || !listRes.data) {
-      loadError.value = '获取配置列表失败'
-      return
+    // 并行加载结构化配置、原始 TOML 和任务 Schema
+    const [configRes, rawRes, schemaRes] = await Promise.all([
+      getModelConfig(),
+      getModelConfigRaw(),
+      getModelTasksSchema().catch(() => []),
+    ])
+
+    tasksSchema.value = schemaRes as TaskSchemaItem[]
+
+    modelConfigData.value = configRes
+
+    // 将 model_tasks 转换为 ModelConfigEditor 期望的 model_task_config 格式
+    const taskConfig: Record<string, Record<string, unknown>> = {}
+    const tasks = configRes.model_tasks as Record<string, unknown>
+    for (const [taskKey, taskData] of Object.entries(tasks)) {
+      if (taskData && typeof taskData === 'object') {
+        taskConfig[taskKey] = taskData as Record<string, unknown>
+      }
     }
-    
-    const modelConfig = listRes.data.configs.find((c: ConfigFileInfo) => c.type === 'model')
-    if (!modelConfig) {
-      loadError.value = '未找到模型配置文件'
-      return
+
+    originalParsed.value = {
+      api_providers: configRes.api_providers,
+      models: configRes.models,
+      model_task_config: taskConfig,
     }
-    
-    configPath.value = modelConfig.path
-    
-    // 加载配置内容
-    const contentRes = await getConfigContent(modelConfig.path)
-    if (contentRes.success && contentRes.data && contentRes.data.success) {
-      sourceContent.value = contentRes.data.content || ''
-      originalContent.value = contentRes.data.content || ''
-      originalParsed.value = contentRes.data.parsed || {}
-    } else {
-      loadError.value = contentRes.data?.error || contentRes.error || '加载配置内容失败'
-      return
-    }
-    
-    // 加载配置结构
-    const schemaRes = await getConfigSchema(modelConfig.path)
-    if (schemaRes.success && schemaRes.data && schemaRes.data.success) {
-      configSchema.value = schemaRes.data.sections
-    }
+
+    sourceContent.value = rawRes.content
+    originalContent.value = rawRes.content
   } catch (e) {
-    loadError.value = '加载配置时发生错误'
+    loadError.value = e instanceof Error ? e.message : '加载配置时发生错误'
     console.error(e)
   } finally {
     loading.value = false
   }
 }
 
-function updateFieldValue(fullKey: string, value: unknown) {
-  editedValues.value[fullKey] = value
+function updateFieldValue(key: string, value: unknown) {
+  // 支持两种格式：
+  // 1. 顶级 key：'api_providers' | 'models' | 'model_selector'
+  // 2. 点路径：'model_task_config.{taskKey}.{field}'
+  if (key.startsWith('model_task_config.')) {
+    const parts = key.split('.')
+    // parts[0]='model_task_config', parts[1]=taskKey, parts[2]=field
+    const taskKey = parts[1]
+    const field = parts.slice(2).join('.')
+    const currentTaskConfig = (originalParsed.value['model_task_config'] as Record<string, Record<string, unknown>>) || {}
+    const currentTask = currentTaskConfig[taskKey] || {}
+    originalParsed.value = {
+      ...originalParsed.value,
+      model_task_config: {
+        ...currentTaskConfig,
+        [taskKey]: { ...currentTask, [field]: value },
+      },
+    }
+  } else {
+    originalParsed.value = { ...originalParsed.value, [key]: value }
+  }
+  editedValues.value[key] = value
+}
+
+/** 将 originalParsed 格式转换回后端 ModelConfigData */
+function buildSavePayload(): import('@/api/modelConfig').ModelConfigData {
+  const parsed = originalParsed.value
+  const taskConfig = (parsed['model_task_config'] as Record<string, Record<string, unknown>>) || {}
+
+  // 转换 model_task_config → model_tasks
+  const modelTasks: Record<string, unknown> = {}
+  for (const [taskKey, taskData] of Object.entries(taskConfig)) {
+    modelTasks[taskKey] = taskData
+  }
+
+  return {
+    api_providers: (parsed['api_providers'] || []) as import('@/api/modelConfig').APIProviderData[],
+    models: (parsed['models'] || []) as import('@/api/modelConfig').ModelInfoData[],
+    model_tasks: modelTasks as import('@/api/modelConfig').ModelTasksData,
+  }
 }
 
 async function saveCurrentConfig() {
-  if (!configPath.value) return
-  
   saving.value = true
   try {
     if (editorMode.value === 'source') {
-      const res = await saveConfig(configPath.value, sourceContent.value)
-      if (res.success && res.data && res.data.success) {
-        originalContent.value = sourceContent.value
-        showToast('配置已保存', 'success')
-        await loadConfig()
-      } else {
-        showToast(res.data?.error || res.error || '保存失败', 'error')
-      }
+      // 源码模式：直接保存原始 TOML
+      await saveModelConfigRaw(sourceContent.value)
+      originalContent.value = sourceContent.value
+      showToast('配置已保存', 'success')
+      await loadConfig()
     } else {
+      // 可视化模式
       if (Object.keys(editedValues.value).length === 0) {
         showToast('没有需要保存的更改', 'error')
         return
       }
-      
-      const res = await updateConfig(configPath.value, editedValues.value)
-      if (res.success && res.data && res.data.success) {
-        editedValues.value = {}
-        showToast('配置已保存', 'success')
-        await loadConfig()
-      } else {
-        showToast(res.data?.error || res.error || '保存失败', 'error')
-      }
+
+      const payload = buildSavePayload()
+      await saveModelConfig(payload)
+      editedValues.value = {}
+      showToast('配置已保存', 'success')
+      await loadConfig()
     }
-  } catch {
-    showToast('保存配置失败', 'error')
+  } catch (e) {
+    showToast(e instanceof Error ? e.message : '保存配置失败', 'error')
   } finally {
     saving.value = false
   }
 }
 
 async function loadBackups() {
-  if (!configPath.value) return
-  
   backupsLoading.value = true
   try {
-    const res = await getConfigBackups(configPath.value)
-    if (res.success && res.data && res.data.success) {
-      backups.value = res.data.backups
-    }
+    const res = await getModelConfigBackups()
+    backups.value = res.backups
   } catch {
     showToast('加载备份列表失败', 'error')
   } finally {
@@ -363,24 +394,18 @@ async function loadBackups() {
 }
 
 async function restoreBackup(backupName: string) {
-  if (!configPath.value) return
-  
   if (!confirm(`确定要从备份 "${backupName}" 恢复配置吗？当前配置将被覆盖。`)) {
     return
   }
-  
+
   restoringBackup.value = backupName
   try {
-    const res = await restoreConfigBackup(configPath.value, backupName)
-    if (res.success && res.data && res.data.success) {
-      showToast('配置已恢复', 'success')
-      showBackupsModal.value = false
-      await loadConfig()
-    } else {
-      showToast(res.data?.error || res.error || '恢复失败', 'error')
-    }
-  } catch {
-    showToast('恢复备份失败', 'error')
+    await restoreModelConfigBackup(backupName)
+    showToast('配置已恢复', 'success')
+    showBackupsModal.value = false
+    await loadConfig()
+  } catch (e) {
+    showToast(e instanceof Error ? e.message : '恢复备份失败', 'error')
   } finally {
     restoringBackup.value = ''
   }

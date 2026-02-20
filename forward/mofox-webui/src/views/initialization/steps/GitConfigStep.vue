@@ -8,7 +8,7 @@
         </h2>
         <p class="step-description">配置 Git 以启用系统自动更新功能</p>
       </div>
-      
+
       <form class="config-form" @submit.prevent="handleSubmit">
         <!-- Git 路径 -->
         <div class="form-field">
@@ -22,7 +22,6 @@
               type="text"
               class="m3-input"
               placeholder="例如：C:\Program Files\Git\bin\git.exe"
-              required
             />
             <button
               type="button"
@@ -30,13 +29,13 @@
               @click="autoDetectGit"
               :disabled="detecting"
             >
-              <span class="material-symbols-rounded">{{detecting ? 'progress_activity' : 'search'}}</span>
+              <span class="material-symbols-rounded">{{ detecting ? 'progress_activity' : 'search' }}</span>
               <span>自动检测</span>
             </button>
           </div>
           <span class="field-hint">Git 程序的完整路径，用于执行更新操作</span>
         </div>
-        
+
         <!-- 检测结果提示 -->
         <div v-if="detectMessage" :class="['detect-message', detectSuccess ? 'success' : 'error']">
           <span class="material-symbols-rounded">
@@ -44,7 +43,7 @@
           </span>
           <span>{{ detectMessage }}</span>
         </div>
-        
+
         <!-- 信息卡片 -->
         <div class="info-card">
           <div class="info-icon">
@@ -60,7 +59,7 @@
             </p>
           </div>
         </div>
-        
+
         <!-- 按钮组 -->
         <div class="button-group">
           <button type="button" class="m3-button outlined" @click="$emit('skip')" :disabled="loading">
@@ -91,36 +90,19 @@ const detecting = ref(false)
 const detectMessage = ref('')
 const detectSuccess = ref(false)
 
-// 表单数据
 const formData = ref<GitConfigRequest>({
   git_path: ''
 })
 
-// 加载现有配置
 async function loadExistingConfig() {
   try {
-    console.log('[GitConfigStep] 正在加载现有配置...')
     const result = await getGitConfig()
-    console.log('[GitConfigStep] API响应:', result)
-    
-    // 后端返回的数据在 result.data.data 中（双层嵌套）
     const configData = (result.data as any)?.data
-    
-    if (result.success && configData) {
-      console.log('[GitConfigStep] 加载配置数据:', configData)
-      
-      // 只在有实际数据时才填充表单
-      if (configData.git_path) {
-        formData.value.git_path = configData.git_path
-        console.log('[GitConfigStep] Git路径已加载:', formData.value.git_path)
-      }
-      
-      console.log('[GitConfigStep] 配置加载完成')
-    } else {
-      console.log('[GitConfigStep] 无现有配置数据')
+    if (result.success && configData?.git_path) {
+      formData.value.git_path = configData.git_path
     }
   } catch (error) {
-    console.error('[GitConfigStep] 加载Git配置失败:', error)
+    console.error('[GitConfigStep] 加载 Git 配置失败:', error)
   }
 }
 
@@ -128,14 +110,12 @@ onMounted(() => {
   loadExistingConfig()
 })
 
-// 自动检测 Git
 async function autoDetectGit() {
   detecting.value = true
   detectMessage.value = ''
-  
+
   try {
     const result = await detectGitPath()
-    
     if (result.success && result.data?.found && result.data.path) {
       formData.value.git_path = result.data.path
       detectMessage.value = '✓ 已找到 Git'
@@ -145,7 +125,6 @@ async function autoDetectGit() {
       detectSuccess.value = false
     }
   } catch (error) {
-    console.error('检测 Git 失败:', error)
     detectMessage.value = '检测失败，请手动输入路径'
     detectSuccess.value = false
   } finally {
@@ -153,20 +132,16 @@ async function autoDetectGit() {
   }
 }
 
-// 提交表单
 async function handleSubmit() {
   loading.value = true
-  
   try {
     const result = await saveGitConfig(formData.value)
-    
     if (result.success) {
       emit('next')
     } else {
       alert('保存失败：' + (result.error || '未知错误'))
     }
   } catch (error) {
-    console.error('保存 Git 配置失败:', error)
     alert('保存失败，请检查网络连接')
   } finally {
     loading.value = false
