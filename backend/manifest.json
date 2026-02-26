@@ -12,5 +12,10 @@
     "plugins": [],
     "components": []
   },
+  "python_dependencies": [
+    "psutil",
+    "httpx",
+    "uvicorn"
+  ],
   "include": []
 }
