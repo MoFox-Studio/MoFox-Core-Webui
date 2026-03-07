@@ -69,7 +69,6 @@ class ChatroomAdapter(BaseAdapter):
         logger.info("ChatroomAdapter 已加载，等待 WebUI 接入")
 
     async def on_adapter_unloaded(self) -> None:
-        logger.info("ChatroomAdapter 正在关闭...")
         # 清空两个队列
         for q in (self._pending_responses,):
             while not q.empty():
@@ -78,7 +77,6 @@ class ChatroomAdapter(BaseAdapter):
                 except asyncio.QueueEmpty:
                     break
         self._message_cache.clear()
-        logger.info("ChatroomAdapter 已关闭")
 
     # ------------------------------------------------------------------ #
     #  消息入方向：WebUI → Core                                          #
