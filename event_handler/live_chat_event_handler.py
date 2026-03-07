@@ -8,6 +8,7 @@ import time
 
 from src.core.components.base.event_handler import BaseEventHandler
 from src.core.components.types import EventType
+from src.kernel.event import EventDecision
 from src.kernel.logger import get_logger
 
 logger = get_logger("live_chat_event_handler", display="实时消息处理器")
@@ -28,54 +29,48 @@ class LiveChatEventHandler(BaseEventHandler):
     init_subscribe = [EventType.ON_MESSAGE_RECEIVED, EventType.ON_MESSAGE_SENT]
 
     async def execute(
-        self, kwargs: dict[str, Any] | None
-    ) -> tuple[bool, bool, str | None]:
-        """处理消息事件。
+        self, event_name: str, params: dict[str, Any]
+    ) -> tuple["EventDecision", dict[str, Any]]:
+        """处理消息事件，遵循最新 EventBus 协议。
 
         Args:
-            kwargs: 事件参数字典，包含 message 对象
-                   ON_MESSAGE_RECEIVED: {
+            event_name: 触发本处理器的事件名称
+            params: 事件参数字典，包含 message 对象
+                   ON_MESSAGE_RECEIVED / ON_MESSAGE_SENT: {
                        'message': Message,
                        'envelope': MessageEnvelope,
-                       'adapter_signature': str
-                   }
-                   ON_MESSAGE_SENT: {
-                       'message': Message,
-                       'envelope': MessageEnvelope,
-                       'adapter_signature': str
+                       'adapter_signature': str,
+                       'event_type': EventType
                    }
 
         Returns:
-            tuple[bool, bool, str | None]: (是否成功, 是否拦截, 消息)
+            tuple[EventDecision, dict]: 事件决策与传递给下一个处理器的参数
         """
-        if kwargs is None:
-            return False, False, "无事件参数"
+        # 兼容老代码传入 None
+        if params is None:
+            return EventDecision.PASS, params
 
         try:
-            message = kwargs.get("message")
+            message = params.get("message")
             if not message:
-                return False, False, "缺少消息对象"
+                return EventDecision.PASS, params
 
-            # 获取事件类型（从订阅中判断）
-            event_type = kwargs.get("event_type")
-            is_sent = event_type == EventType.ON_MESSAGE_SENT
+            # 判断是否为发送事件
+            is_sent = event_name == EventType.ON_MESSAGE_SENT or params.get("event_type") == EventType.ON_MESSAGE_SENT
 
-            # 构建消息数据
+            # 构建消息数据并广播
             message_data = await self._build_message_data(message, is_sent)
-
-            # 广播到 WebSocket 客户端
             await self._broadcast_message(message_data)
 
             logger.debug(
-                f"{'[发送]' if is_sent else '[接收]'} "
-                f"消息已推送: {message.message_id}"
+                f"{'[发送]' if is_sent else '[接收]'} 消息已推送: {message.message_id}"
             )
-
-            return True, False, None
+            return EventDecision.SUCCESS, params
 
         except Exception as e:
             logger.error(f"处理消息事件失败: {e}", exc_info=True)
-            return False, False, str(e)
+            # 不阻断其他处理器，仅忽略本次处理
+            return EventDecision.PASS, params
 
     async def _build_message_data(
         self, message: Any, is_sent: bool
