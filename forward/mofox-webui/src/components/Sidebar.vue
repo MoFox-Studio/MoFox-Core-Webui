@@ -272,10 +272,10 @@ const menuItems: MenuItem[] = [
     icon: 'psychology_alt',
     key: 'ai-management',
     children: [
-      { name: '关系管理', path: '/dashboard/relationship', icon: 'group' },
+      //{ name: '关系管理', path: '/dashboard/relationship', icon: 'group' },
       { name: '插件管理', path: '/dashboard/plugin-manage', icon: 'deployed_code' },
-      { name: '插件市场', path: '/dashboard/marketplace', icon: 'storefront' },
-      { name: '表情管理', path: '/dashboard/emoji-manager', icon: 'insert_emoticon' },
+      //{ name: '插件市场', path: '/dashboard/marketplace', icon: 'storefront' },
+      //{ name: '表情管理', path: '/dashboard/emoji-manager', icon: 'insert_emoticon' },
     ]
   },
   { 

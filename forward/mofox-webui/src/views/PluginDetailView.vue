@@ -20,7 +20,8 @@
 <template>
   <div class="plugin-detail-view">
     <!-- 返回按钮和标题：显示插件名称和状态控制 -->
-    <header class="page-header">
+    <div class="plugin-header-group">
+      <header class="page-header">
       <button class="m3-button text" @click="goBack">
         <span class="material-symbols-rounded">arrow_back</span>
         返回
@@ -84,6 +85,21 @@
       </div>
     </header>
 
+      <!-- Tab 导航 -->
+      <div v-if="currentPlugin" class="m3-tabs">
+        <button 
+          v-for="tab in tabs" 
+          :key="tab.value"
+          class="m3-tab-item"
+          :class="{ active: activeTab === tab.value }"
+          @click="activeTab = tab.value as 'overview' | 'components' | 'config'"
+        >
+          <span class="material-symbols-rounded">{{ tab.icon }}</span>
+          {{ tab.label }}
+        </button>
+      </div>
+    </div>
+
     <!-- 加载状态 -->
     <div v-if="detailLoading" class="loading-state">
       <span class="material-symbols-rounded spinning loading-icon">progress_activity</span>
@@ -99,19 +115,7 @@
 
     <!-- 插件详情内容 -->
     <div v-else-if="currentPlugin" class="detail-content">
-      <!-- Tab 导航 -->
-      <div class="m3-tabs">
-        <button 
-          v-for="tab in tabs" 
-          :key="tab.value"
-          class="m3-tab-item"
-          :class="{ active: activeTab === tab.value }"
-          @click="activeTab = tab.value as 'overview' | 'components' | 'config'"
-        >
-          <span class="material-symbols-rounded">{{ tab.icon }}</span>
-          {{ tab.label }}
-        </button>
-      </div>
+
 
       <!-- Tab 内容 -->
       <div class="tab-content">
@@ -502,17 +506,17 @@ function goBack() {
 }
 
 function goToConfig() {
-  // 使用配置文件的完整路径跳转
+  // 使用路径参数跳转到配置编辑器
   if (currentPlugin.value?.name) {
-    const configPath = `plugins/${currentPlugin.value.name}/config.toml`
+    const configPath = `${currentPlugin.value.name}`
     console.log('[PluginDetail] 跳转到配置编辑器:', configPath)
     router.push({
       name: 'PluginConfigView',
       params: { path: configPath }
     })
   } else {
-    console.warn('[PluginDetail] 配置文件路径不存在')
-    showToast('配置文件路径不存在', 'error')
+    console.warn('[PluginDetail] 插件名称不存在')
+    showToast('插件名称不存在', 'error')
   }
 }
 
@@ -535,12 +539,22 @@ onMounted(() => {
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* 页面头部组 */
+.plugin-header-group {
+  display: flex;
+  flex-direction: column;
+  background: var(--md-sys-color-surface);
+  border: 1px solid rgba(0, 0, 0, 1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
 /* 页面头部 */
 .page-header {
   display: flex;
   align-items: center;
   gap: 20px;
-  padding: 0 8px;
+  padding: 16px;
   flex-wrap: wrap;
 }
 
@@ -607,9 +621,9 @@ onMounted(() => {
 /* Tab 导航 */
 .m3-tabs {
   display: flex;
+  background: transparent;
   gap: 8px;
-  border-bottom: 1px solid var(--md-sys-color-outline-variant);
-  padding-bottom: 0;
+  padding: 0 16px;
 }
 
 .m3-tab-item {

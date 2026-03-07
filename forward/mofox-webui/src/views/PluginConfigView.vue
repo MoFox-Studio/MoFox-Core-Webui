@@ -817,7 +817,8 @@ function formatSectionName(name: string): string {
 /* 配置导航栏 */
 .config-nav-bar {
   padding: 16px 24px 0;
-  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+  border: 1px solid rgba(0, 0, 0, 1);
+  border-radius: 8px 8px 0 0;
   background: var(--md-sys-color-surface-container);
 }
 
