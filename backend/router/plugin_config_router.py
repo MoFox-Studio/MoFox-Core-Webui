@@ -288,17 +288,39 @@ def _extract_schema_field(
             pass
 
     # 读取 Pydantic 原生约束
-    constraints = field_info.metadata[0].__dict__ if field_info.metadata else {}
     pydantic_constraints = {
-        "min": constraints.get("ge"),
-        "max": constraints.get("le"),
-        "gt": constraints.get("gt"),
-        "lt": constraints.get("lt"),
-        "min_length": constraints.get("min_length"),
-        "max_length": constraints.get("max_length"),
-        "pattern": constraints.get("pattern"),
+        "min": None,
+        "max": None,
+        "gt": None,
+        "lt": None,
+        "min_length": None,
+        "max_length": None,
+        "pattern": None,
         "default": default_value,
     }
+    
+    # 遍历 metadata 提取约束（Pydantic v2 的约束对象结构）
+    if field_info.metadata:
+        for constraint in field_info.metadata:
+            constraint_type = type(constraint).__name__
+            try:
+                if constraint_type == "Ge" and hasattr(constraint, "ge"):
+                    pydantic_constraints["min"] = constraint.ge
+                elif constraint_type == "Le" and hasattr(constraint, "le"):
+                    pydantic_constraints["max"] = constraint.le
+                elif constraint_type == "Gt" and hasattr(constraint, "gt"):
+                    pydantic_constraints["gt"] = constraint.gt
+                elif constraint_type == "Lt" and hasattr(constraint, "lt"):
+                    pydantic_constraints["lt"] = constraint.lt
+                elif constraint_type == "MinLen" and hasattr(constraint, "min_length"):
+                    pydantic_constraints["min_length"] = constraint.min_length
+                elif constraint_type == "MaxLen" and hasattr(constraint, "max_length"):
+                    pydantic_constraints["max_length"] = constraint.max_length
+                elif hasattr(constraint, "pattern"):
+                    pydantic_constraints["pattern"] = constraint.pattern
+            except Exception as e:
+                logger.debug(f"提取约束 {constraint_type} 失败: {e}")
+                continue
 
     # 读取自定义 UI 属性（从 json_schema_extra）
     ui_attrs = field_info.json_schema_extra or {}
