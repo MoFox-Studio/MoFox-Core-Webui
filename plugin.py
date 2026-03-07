@@ -5,7 +5,7 @@
 
 from src.kernel.logger import get_logger
 from src.core.components.base.plugin import BasePlugin
-from .router import FrontendRouter, CoreConfigRouter, ApiRouter, StatsRouter, SettingRouter, ModelConfigRouter, PluginConfigRouter, LogViewerRouter, RealtimeLogRouter, LiveChatRouter, ChatroomRouter, InitializationRouter, GitEnvRouter, GitUpdateRouter, UIUpdateRouter
+from .router import FrontendRouter, CoreConfigRouter, ApiRouter, StatsRouter, SettingRouter, ModelConfigRouter, PluginConfigRouter, PluginManageRouter, LogViewerRouter, RealtimeLogRouter, LiveChatRouter, ChatroomRouter, InitializationRouter, GitEnvRouter, GitUpdateRouter, UIUpdateRouter
 from .adapter import ChatroomAdapter
 from .event_handler import LogEventHandler, LiveChatEventHandler
 from src.core.components.loader import register_plugin
@@ -45,6 +45,7 @@ class MoFoxCoreWebui(BasePlugin):
             CoreConfigRouter, 
             ModelConfigRouter, 
             PluginConfigRouter,
+            PluginManageRouter,
             LogViewerRouter,
             RealtimeLogRouter,
             LiveChatRouter,
