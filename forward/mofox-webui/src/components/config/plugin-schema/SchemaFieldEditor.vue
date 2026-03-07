@@ -31,7 +31,10 @@
     <template v-else>
       <!-- 字段头部 -->
       <div class="field-header">
-        <span class="field-label">{{ field.name || field.key }}</span>
+        <div class="header-left">
+          <span v-if="fieldIcon" class="field-icon material-symbols-rounded">{{ fieldIcon }}</span>
+          <span class="field-label">{{ field.name || field.key }}</span>
+        </div>
         <span class="field-type-badge">{{ getTypeLabel(field.type) }}</span>
       </div>
 
@@ -43,37 +46,37 @@
 
       <!-- 输入区域 -->
       <div class="field-input-container">
-        <!-- Select -->
+        <!-- Select（使用 compatField.input_type 判断）-->
         <SelectEditor
-          v-if="field.type === 'select'"
+          v-if="compatField.input_type === 'select'"
           :field="compatField"
           :model-value="modelValue"
           @update:model-value="handleUpdate"
         />
         <!-- Array / List -->
         <ListEditor
-          v-else-if="field.type === 'array'"
+          v-else-if="compatField.input_type === 'list'"
           :field="compatField"
           :model-value="modelValue"
           @update:model-value="handleUpdate"
         />
         <!-- Number -->
         <NumberEditor
-          v-else-if="field.type === 'number'"
+          v-else-if="compatField.input_type === 'number' || compatField.input_type === 'slider'"
           :field="compatField"
           :model-value="modelValue"
           @update:model-value="handleUpdate"
         />
         <!-- Textarea -->
         <TextareaEditor
-          v-else-if="field.type === 'textarea'"
+          v-else-if="compatField.input_type === 'textarea'"
           :field="compatField"
           :model-value="modelValue"
           @update:model-value="handleUpdate"
         />
         <!-- Object -> JSON Editor -->
         <JsonEditor
-          v-else-if="field.type === 'object'"
+          v-else-if="compatField.input_type === 'json'"
           :field="compatField"
           :model-value="modelValue"
           @update:model-value="handleUpdate"
@@ -97,8 +100,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import type { PluginSchemaField } from '@/api/pluginConfig'
+import { getFieldIcon } from '@/utils/tagIconMapper'
 
 // 导入编辑器组件
 import SwitchEditor from './editors/SwitchEditor.vue'
@@ -118,7 +122,24 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: unknown): void
 }>()
 
+// 调试日志
+watch(() => props.field, (field) => {
+  console.log('[SchemaFieldEditor] 收到字段:', {
+    key: field.key,
+    name: field.name,
+    type: field.type,
+    input_type: field.input_type,
+    choices: field.choices,
+    default: field.default
+  })
+}, { immediate: true })
+
 const errorMessage = ref('')
+
+// 字段图标（基于 tag）
+const fieldIcon = computed(() => {
+  return getFieldIcon(props.field)
+})
 
 /**
  * 将新的 PluginSchemaField 转换为编辑器组件期望的兼容格式
@@ -128,22 +149,23 @@ const compatField = computed(() => ({
   key: props.field.key,
   label: props.field.name || props.field.key,
   description: props.field.description,
-  input_type: mapTypeToInputType(props.field.type),
-  // select 选项
-  choices: props.field.options?.map(o => ({ value: o.value, label: o.label })) ?? [],
+  // 使用 input_type 字段而不是从 type 推断！
+  input_type: props.field.input_type || mapTypeToInputType(props.field.type),
+  // select 选项：优先使用 choices，fallback 到 options
+  choices: props.field.choices ?? props.field.options?.map(o => ({ value: o.value, label: o.label })) ?? [],
   // 默认值
   default: props.field.default,
   // 以下是旧字段的占位，避免编辑器报错
-  placeholder: '',
-  hint: '',
-  disabled: false,
+  placeholder: props.field.placeholder || '',
+  hint: props.field.hint || '',
+  disabled: props.field.disabled ?? false,
   required: false,
-  min: undefined,
-  max: undefined,
-  step: 1,
-  min_items: undefined,
-  max_items: undefined,
-  item_type: 'string',
+  min: props.field.min,
+  max: props.field.max,
+  step: props.field.step ?? 1,
+  min_items: props.field.min_items,
+  max_items: props.field.max_items,
+  item_type: props.field.item_type || 'string',
 }))
 
 function mapTypeToInputType(type: string): string {
@@ -263,8 +285,21 @@ function validateValue(_value: unknown) {
 .field-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.field-icon {
+  font-size: 20px;
+  color: var(--md-sys-color-primary);
+  flex-shrink: 0;
 }
 
 .field-label {

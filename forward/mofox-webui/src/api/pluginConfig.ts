@@ -58,7 +58,10 @@ export interface SchemaField {
   item_fields?: SchemaField[]
   max_length?: number
   rows?: number
+  /** 已废弃：使用 tag 替代 */
   icon?: string
+  /** 语义标签（用于前端映射到图标）*/
+  tag?: string
 }
 
 /** 配置字段 Schema */
@@ -69,12 +72,36 @@ export interface PluginSchemaField {
   name: string
   /** 描述 */
   description: string
-  /** 字段类型 */
+  /** 字段基础类型 */
   type: 'string' | 'number' | 'boolean' | 'array' | 'object' | 'textarea' | 'select'
+  /** 控件类型（优先使用此字段） */
+  input_type?: 'text' | 'password' | 'textarea' | 'number' | 'slider' | 'switch' | 'select' | 'list' | 'json' | 'color' | 'file'
   /** 默认值 */
   default?: unknown
-  /** select 类型的选项 */
+  /** select 类型的选项（后端返回 choices 字段） */
+  choices?: { value: unknown; label: string }[]
+  /** select 类型的选项（兼容旧格式） */
   options?: { value: string; label: string }[]
+  /** 占位符文本 */
+  placeholder?: string
+  /** 帮助提示文本 */
+  hint?: string
+  /** 是否禁用 */
+  disabled?: boolean
+  /** 数字最小值 */
+  min?: number
+  /** 数字最大值 */
+  max?: number
+  /** 数字步进值 */
+  step?: number
+  /** 列表最少项数 */
+  min_items?: number
+  /** 列表最多项数 */
+  max_items?: number
+  /** 列表项类型 */
+  item_type?: 'str' | 'number' | 'boolean' | 'object'
+  /** 语义标签（用于前端映射到图标）*/
+  tag?: string
 }
 
 /** 配置节 Schema */
@@ -87,6 +114,8 @@ export interface PluginSchemaSection {
   description: string
   /** 字段列表 */
   fields: PluginSchemaField[]
+  /** 语义标签（用于前端映射到图标）*/
+  tag?: string
 }
 
 /** 单个插件配置文件信息 */

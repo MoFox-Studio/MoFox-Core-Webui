@@ -47,9 +47,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import SchemaFieldEditor from './SchemaFieldEditor.vue'
 import type { PluginSchemaSection } from '@/api/pluginConfig'
+import { getSectionIcon } from '@/utils/tagIconMapper'
 
 const props = defineProps<{
   section: PluginSchemaSection
@@ -64,23 +65,9 @@ const emit = defineEmits<{
 // 折叠状态
 const isCollapsed = ref(false)
 
-// section 图标
+// section 图标（使用 tag 映射系统）
 const sectionIcon = computed(() => {
-  const icons: Record<string, string> = {
-    database: 'database',
-    api: 'cloud',
-    personality: 'psychology',
-    permission: 'lock',
-    feature: 'toggle_on',
-    bot: 'smart_toy',
-    system: 'settings',
-    ui: 'palette',
-  }
-  const key = props.section.key.toLowerCase()
-  for (const [k, icon] of Object.entries(icons)) {
-    if (key.includes(k)) return icon
-  }
-  return 'folder'
+  return getSectionIcon(props.section, 'folder')
 })
 
 // 获取字段值（field.key 格式为 "section.fieldName"，只取 fieldName）
