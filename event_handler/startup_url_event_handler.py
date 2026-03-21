@@ -71,10 +71,6 @@ class StartupUrlEventHandler(BaseEventHandler):
 
     def _log_accessible_urls(self, urls: list[str], host: str, port: int) -> None:
         """以用户友好的方式输出可访问 URL 列表。"""
-        logger.info("=" * 60)
-        logger.info(f"WebUI 服务已启动 (监听: {host}:{port})")
-        logger.info("=" * 60)
-
         # 分类 URL
         local_urls: list[str] = []
         lan_urls: list[str] = []
@@ -86,25 +82,41 @@ class StartupUrlEventHandler(BaseEventHandler):
             else:
                 lan_urls.append(url)
 
+        # 构建面板内容
+        content_lines: list[str] = []
+        content_lines.append(f"[dim]监听地址:[/dim] [cyan]{host}:{port}[/cyan]\n")
+
         # 输出本机访问地址
         if local_urls:
-            logger.info("【本机访问】在本机浏览器中打开以下任一地址:")
+            content_lines.append("[bold yellow]🖥️  本机访问[/bold yellow]")
+            content_lines.append("[dim]在本机浏览器中打开以下任一地址:[/dim]")
             for url in local_urls:
-                logger.info(f"  -> {url}")
+                content_lines.append(f"  [green]▶[/green] [link={url}]{url}[/link]")
+            content_lines.append("")
 
         # 输出局域网访问地址并高亮推荐
         if lan_urls:
-            logger.info("【局域网访问】在同一局域网的其他设备浏览器中打开:")
+            content_lines.append("[bold cyan]🌐 局域网访问[/bold cyan]")
+            content_lines.append("[dim]在同一局域网的其他设备浏览器中打开:[/dim]")
             for idx, url in enumerate(lan_urls):
                 # 优先推荐第一个局域网私有地址（通常是主网卡地址）
                 if idx == 0 and self._is_private_ip_url(url):
-                    logger.info(f"  * {url}  <- 推荐")
+                    content_lines.append(
+                        f"  [green]★[/green] [link={url}]{url}[/link] [bold green]← 推荐[/bold green]"
+                    )
                 else:
-                    logger.info(f"  -> {url}")
+                    content_lines.append(f"  [green]▶[/green] [link={url}]{url}[/link]")
+            content_lines.append("")
 
-        logger.info("=" * 60)
-        logger.info("提示: 如需远程访问，请配置反向代理或使用内网穿透")
-        logger.info("=" * 60)
+        # 添加提示信息
+        content_lines.append("[dim italic]💡 提示: 如需远程访问，请配置反向代理或使用内网穿透[/dim italic]")
+
+        # 使用 logger.print_panel 输出美观的面板
+        logger.print_panel(
+            "\n".join(content_lines),
+            title="[bold white]✨ WebUI 服务已启动[/bold white]",
+            border_style="green",
+        )
 
     def _is_private_ip_url(self, url: str) -> bool:
         """判断 URL 是否包含局域网私有 IP 地址。"""
