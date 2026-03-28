@@ -139,8 +139,8 @@
             :class="{
               'message': msg.user_id !== 'system',
               'system-banner': msg.user_id === 'system',
-              'is-bot': msg.user_id === 'mofox_bot',
-              'is-user': msg.user_id !== 'mofox_bot' && msg.user_id !== 'system'
+              'is-bot': msg.user_id === 'bot',
+              'is-user': msg.user_id !== 'bot' && msg.user_id !== 'system'
             }"
           >
             <!-- 系统消息横幅 -->
@@ -157,7 +157,7 @@
             <template v-else>
               <div class="message-avatar">
                 <span class="material-symbols-rounded">
-                  {{ msg.user_id === 'mofox_bot' ? 'smart_toy' : 'account_circle' }}
+                  {{ msg.user_id === 'bot' ? 'smart_toy' : 'account_circle' }}
                 </span>
               </div>
               <div class="message-content">

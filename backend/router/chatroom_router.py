@@ -366,31 +366,84 @@ class ChatroomRouter(BaseRouter):
         ):
             """获取历史消息"""
             try:
-                from src.kernel.db import QueryBuilder
-                from src.core.models.sql_alchemy import Messages
+                from src.kernel.db import get_session_factory
+                from src.core.models.sql_alchemy import Messages, PersonInfo
+                from sqlalchemy import select
 
-                query = QueryBuilder(Messages).filter(chat_info_platform=PLATFORM).order_by("-time").limit(limit)
-                if user_id:
-                    query = QueryBuilder(Messages).filter(chat_info_platform=PLATFORM, user_id=user_id).order_by("-time").limit(limit)
-
-                messages = await query.all(as_dict=True)
+                # 构建 JOIN 查询
+                session_factory = await get_session_factory()
+                async with session_factory() as session:
+                    # 构建查询语句
+                    stmt = (
+                        select(Messages, PersonInfo.user_id, PersonInfo.nickname)
+                        .outerjoin(PersonInfo, Messages.person_id == PersonInfo.person_id)
+                        .where(Messages.platform == PLATFORM)
+                        .order_by(Messages.time.desc())
+                        .limit(limit)
+                    )
+                    
+                    # 如果指定了 user_id，添加过滤条件
+                    if user_id:
+                        stmt = stmt.where(PersonInfo.user_id == user_id)
+                    
+                    result_proxy = await session.execute(stmt)
+                    rows = result_proxy.all()
+                
                 result = []
-                for msg in messages:
-                    # 根据数据库字段判断消息类型
-                    message_type = "text"
-                    if msg.get("is_emoji"):
-                        message_type = "emoji"
-                    elif msg.get("is_picid"):
-                        message_type = "image"
+                for row in rows:
+                    msg, db_user_id, db_nickname = row
+                    
+                    # 获取消息类型
+                    message_type = msg.message_type or "text"
+                    
+                    # 获取用户信息（如果是 bot，特殊处理）
+                    if msg.person_id == "bot":
+                        display_user_id = "bot"
+                        display_nickname = "Bot"
+                    else:
+                        display_user_id = db_user_id or msg.person_id or ""
+                        display_nickname = db_nickname or "Unknown"
+                    
+                    # 获取内容和处理特殊类型
+                    content = str(msg.processed_plain_text or msg.content or "")
+                    emojis = []
+                    images = []
+                    
+                    # 根据消息类型处理内容
+                    if message_type == "emoji" and msg.content:
+                        # 表情消息，content 可能是 base64 或列表
+                        try:
+                            import json
+                            emoji_data = json.loads(msg.content) if isinstance(msg.content, str) else msg.content
+                            if isinstance(emoji_data, list):
+                                emojis = emoji_data
+                            else:
+                                emojis = [str(emoji_data)]
+                        except:
+                            # 如果不是 JSON，直接作为单个表情
+                            emojis = [str(msg.content)]
+                    elif message_type == "image" and msg.content:
+                        # 图片消息
+                        try:
+                            import json
+                            image_data = json.loads(msg.content) if isinstance(msg.content, str) else msg.content
+                            if isinstance(image_data, list):
+                                images = image_data
+                            else:
+                                images = [str(image_data)]
+                        except:
+                            images = [str(msg.content)]
                     
                     result.append(MessageResponse(
-                        message_id=str(msg.get("message_id", "")),
-                        user_id=str(msg.get("user_id", "")),
-                        nickname=str(msg.get("user_nickname", "")),
-                        content=str(msg.get("processed_plain_text", "")),
-                        timestamp=float(msg.get("time", 0.0)),
+                        message_id=str(msg.message_id or ""),
+                        user_id=str(display_user_id),
+                        nickname=str(display_nickname),
+                        content=content,
+                        timestamp=float(msg.time or 0.0),
                         message_type=message_type,
-                        reply_to=str(msg.get("reply_to", "")) if msg.get("reply_to") else None,
+                        reply_to=str(msg.reply_to) if msg.reply_to else None,
+                        emojis=emojis,
+                        images=images,
                     ))
                 return {"messages": result}
 
@@ -404,47 +457,76 @@ class ChatroomRouter(BaseRouter):
 
         @self.app.get("/messages/{message_id}")
         async def get_message(message_id: str, _ = VerifiedDep):
-            """根据 message_id 获取单条消息（先查缓存，再查 DB）"""
+            """根据 message_id 获取单条消息（查 DB）"""
             try:
-                # 先查适配器缓存
-                adapter = _get_adapter()
-                cached = adapter.get_cached_message(message_id)
-                if cached:
-                    return {"message": MessageResponse(
-                        message_id=str(cached.get("message_id", "")),
-                        user_id=str(cached.get("user_id", "")),
-                        nickname=str(cached.get("nickname", "")),
-                        content=str(cached.get("content", "")),
-                        timestamp=float(cached.get("timestamp", 0.0)),
-                        message_type=str(cached.get("message_type", "text")),
-                        reply_to=cached.get("reply_to"),
-                        emojis=cached.get("emojis", []),
-                    ).model_dump()}
+                # 查 DB，JOIN PersonInfo 获取用户信息
+                from src.kernel.db import get_session_factory
+                from src.core.models.sql_alchemy import Messages, PersonInfo
+                from sqlalchemy import select
 
-                # 查 DB
-                from src.kernel.db import QueryBuilder
-                from src.core.models.sql_alchemy import Messages
-
-                query = QueryBuilder(Messages).filter(message_id=message_id)
-                msg = await query.first(as_dict=True)
-                if not msg:
+                session_factory = await get_session_factory()
+                async with session_factory() as session:
+                    stmt = (
+                        select(Messages, PersonInfo.user_id, PersonInfo.nickname)
+                        .outerjoin(PersonInfo, Messages.person_id == PersonInfo.person_id)
+                        .where(Messages.message_id == message_id)
+                    )
+                    result_proxy = await session.execute(stmt)
+                    row = result_proxy.first()
+                
+                if not row:
                     raise HTTPException(status_code=404, detail=f"消息 {message_id} 不存在")
+                
+                msg, db_user_id, db_nickname = row
 
-                # 根据数据库字段判断消息类型
-                message_type = "text"
-                if msg.get("is_emoji"):
-                    message_type = "emoji"
-                elif msg.get("is_picid"):
-                    message_type = "image"
+                # 获取消息类型
+                message_type = msg.message_type or "text"
+                
+                # 获取用户信息（如果是 bot，特殊处理）
+                if msg.person_id == "bot":
+                    display_user_id = "bot"
+                    display_nickname = "Bot"
+                else:
+                    display_user_id = db_user_id or msg.person_id or ""
+                    display_nickname = db_nickname or "Unknown"
+                
+                # 获取内容和处理特殊类型
+                content = str(msg.processed_plain_text or msg.content or "")
+                emojis = []
+                images = []
+                
+                # 根据消息类型处理内容
+                if message_type == "emoji" and msg.content:
+                    try:
+                        import json
+                        emoji_data = json.loads(msg.content) if isinstance(msg.content, str) else msg.content
+                        if isinstance(emoji_data, list):
+                            emojis = emoji_data
+                        else:
+                            emojis = [str(emoji_data)]
+                    except:
+                        emojis = [str(msg.content)]
+                elif message_type == "image" and msg.content:
+                    try:
+                        import json
+                        image_data = json.loads(msg.content) if isinstance(msg.content, str) else msg.content
+                        if isinstance(image_data, list):
+                            images = image_data
+                        else:
+                            images = [str(image_data)]
+                    except:
+                        images = [str(msg.content)]
 
                 return {"message": MessageResponse(
-                    message_id=str(msg.get("message_id", "")),
-                    user_id=str(msg.get("user_id", "")),
-                    nickname=str(msg.get("user_nickname", "")),
-                    content=str(msg.get("processed_plain_text", "")),
-                    timestamp=float(msg.get("time", 0.0)),
+                    message_id=str(msg.message_id or ""),
+                    user_id=str(display_user_id),
+                    nickname=str(display_nickname),
+                    content=content,
+                    timestamp=float(msg.time or 0.0),
                     message_type=message_type,
-                    reply_to=str(msg.get("reply_to", "")) if msg.get("reply_to") else None,
+                    reply_to=str(msg.reply_to) if msg.reply_to else None,
+                    emojis=emojis,
+                    images=images,
                 ).model_dump()}
 
             except HTTPException:
