@@ -369,21 +369,28 @@ class ChatroomRouter(BaseRouter):
                 from src.kernel.db import QueryBuilder
                 from src.core.models.sql_alchemy import Messages
 
-                query = QueryBuilder(Messages).filter(platform=PLATFORM).order_by("-time").limit(limit)
+                query = QueryBuilder(Messages).filter(chat_info_platform=PLATFORM).order_by("-time").limit(limit)
                 if user_id:
-                    query = QueryBuilder(Messages).filter(platform=PLATFORM, sender_id=user_id).order_by("-time").limit(limit)
+                    query = QueryBuilder(Messages).filter(chat_info_platform=PLATFORM, user_id=user_id).order_by("-time").limit(limit)
 
                 messages = await query.all(as_dict=True)
                 result = []
                 for msg in messages:
+                    # 根据数据库字段判断消息类型
+                    message_type = "text"
+                    if msg.get("is_emoji"):
+                        message_type = "emoji"
+                    elif msg.get("is_picid"):
+                        message_type = "image"
+                    
                     result.append(MessageResponse(
                         message_id=str(msg.get("message_id", "")),
-                        user_id=str(msg.get("sender_id", "")),
-                        nickname=str(msg.get("sender_name", "")),
-                        content=str(msg.get("content", "")),
+                        user_id=str(msg.get("user_id", "")),
+                        nickname=str(msg.get("user_nickname", "")),
+                        content=str(msg.get("processed_plain_text", "")),
                         timestamp=float(msg.get("time", 0.0)),
-                        message_type=str(msg.get("chat_type", "text")),
-                        reply_to=None,
+                        message_type=message_type,
+                        reply_to=str(msg.get("reply_to", "")) if msg.get("reply_to") else None,
                     ))
                 return {"messages": result}
 
@@ -423,14 +430,21 @@ class ChatroomRouter(BaseRouter):
                 if not msg:
                     raise HTTPException(status_code=404, detail=f"消息 {message_id} 不存在")
 
+                # 根据数据库字段判断消息类型
+                message_type = "text"
+                if msg.get("is_emoji"):
+                    message_type = "emoji"
+                elif msg.get("is_picid"):
+                    message_type = "image"
+
                 return {"message": MessageResponse(
                     message_id=str(msg.get("message_id", "")),
-                    user_id=str(msg.get("sender_id", "")),
-                    nickname=str(msg.get("sender_name", "")),
-                    content=str(msg.get("content", "")),
+                    user_id=str(msg.get("user_id", "")),
+                    nickname=str(msg.get("user_nickname", "")),
+                    content=str(msg.get("processed_plain_text", "")),
                     timestamp=float(msg.get("time", 0.0)),
-                    message_type="text",
-                    reply_to=None,
+                    message_type=message_type,
+                    reply_to=str(msg.get("reply_to", "")) if msg.get("reply_to") else None,
                 ).model_dump()}
 
             except HTTPException:
