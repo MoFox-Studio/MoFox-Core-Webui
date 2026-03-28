@@ -249,9 +249,12 @@ class ChatroomRouter(BaseRouter):
                     from src.kernel.db import CRUDBase
                     from src.core.models.sql_alchemy import Messages, ChatStreams
 
-                    # 查询该用户的所有 ChatStream 记录
+                    # 构建正确的 person_id
+                    person_id = storage._build_person_id(user_id)
+
+                    # 查询该用户的所有 ChatStream 记录（使用 person_id）
                     stream_records = await CRUDBase(ChatStreams).get_multi(
-                        platform=PLATFORM, user_id=user_id
+                        platform=PLATFORM, person_id=person_id
                     )
                     for stream_record in stream_records:
                         # 删除该流下的所有消息
@@ -300,8 +303,12 @@ class ChatroomRouter(BaseRouter):
                     from src.kernel.db import CRUDBase
                     from src.core.models.sql_alchemy import Messages, ChatStreams
 
+                    # 构建正确的 person_id
+                    person_id = storage._build_person_id(user_id)
+
+                    # 查询该用户的所有 ChatStream 记录（使用 person_id）
                     stream_records = await CRUDBase(ChatStreams).get_multi(
-                        platform=PLATFORM, user_id=user_id
+                        platform=PLATFORM, person_id=person_id
                     )
                     for stream_record in stream_records:
                         msg_records = await CRUDBase(Messages).get_multi(
