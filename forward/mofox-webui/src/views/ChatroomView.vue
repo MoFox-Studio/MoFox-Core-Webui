@@ -707,7 +707,7 @@ const newUser = ref({
   impression: '',
   short_impression: '',
   avatar: '',
-  attitude: null as number | null,
+  attitude: 50,  // 默认值50，与后端一致
   memory_points: [] as MemoryPoint[]
 })
 
@@ -864,7 +864,7 @@ async function createUser() {
         impression: '',
         short_impression: '',
         avatar: '',
-        attitude: null,
+        attitude: 50,  // 默认值50
         memory_points: []
       }
       await loadUsers()
