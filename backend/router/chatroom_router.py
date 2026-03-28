@@ -389,6 +389,9 @@ class ChatroomRouter(BaseRouter):
                     result_proxy = await session.execute(stmt)
                     rows = result_proxy.all()
                 
+                # 反转顺序，让旧消息在前
+                rows = list(reversed(rows))
+                
                 result = []
                 for row in rows:
                     msg, db_user_id, db_nickname = row

@@ -218,14 +218,14 @@ class ChatroomAdapter(BaseAdapter):
             else:
                 msg_type = "text"
 
-            # 以原始消息 message_id 作为 Bot 回复的 reply_to
-            raw = metadata.get("raw", {})
-            reply_to = raw.get("message_id") if raw else None
+            # Bot 回复不需要设置 reply_to（避免前端显示引用框）
+            # 如果需要引用功能，应该由 Bot 生成消息时主动指定
+            reply_to = None
 
             response_msg: dict[str, Any] = {
                 "message_id": message_info.get("message_id") or str(uuid.uuid4()),
-                "user_id": "mofox_bot",
-                "nickname": "MoFox Bot",
+                "user_id": "bot",  # 统一使用 "bot" 作为 Bot 的 user_id
+                "nickname": "Bot",  # 统一昵称为 "Bot"
                 "content": text_content,
                 "images": image_urls,
                 "emojis": emoji_list,
