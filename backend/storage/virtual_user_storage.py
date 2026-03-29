@@ -19,6 +19,7 @@ JSON 文件结构:
 
 from __future__ import annotations
 
+import hashlib
 import json
 import time
 from typing import Any
@@ -88,7 +89,17 @@ class VirtualUserStorage(BaseJSONStorage):
 
     @staticmethod
     def _build_person_id(user_id: str) -> str:
-        return f"{PLATFORM}:{user_id}"
+        """生成标准格式的 person_id（SHA256 哈希）
+        
+        使用 platform_user_id 格式进行哈希，与 Neo-MoFox 核心标准一致。
+        
+        Args:
+            user_id: 用户 ID
+            
+        Returns:
+            SHA256 哈希后的 person_id（64字符）
+        """
+        return hashlib.sha256(f"{PLATFORM}_{user_id}".encode()).hexdigest()
 
     @staticmethod
     def _serialize_points(memory_points: list[dict[str, Any]] | None) -> str | None:

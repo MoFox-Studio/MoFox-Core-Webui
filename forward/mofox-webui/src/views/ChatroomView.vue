@@ -797,7 +797,9 @@ async function loadMessages() {
   
   loading.value = true
   try {
-    const response = await api.get<{ messages: Message[] }>('chatroom/messages?limit=100')
+    const response = await api.get<{ messages: Message[] }>(
+      `chatroom/messages?user_id=${selectedUser.value.user_id}&limit=100`
+    )
     
     if (response.success && response.data) {
       messages.value = response.data.messages || []
