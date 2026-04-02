@@ -132,41 +132,12 @@
       </div>
     </div>
 
-    <!-- 源码编辑模式 (Monaco Editor) -->
+    <!-- 源码编辑模式 (CodeMirror) -->
     <div v-else class="source-editor">
-      <div class="source-toolbar">
-        <div class="toolbar-left">
-          <span class="material-symbols-rounded">description</span>
-          <span class="file-path">{{ decodedPath }}</span>
-        </div>
-        <div class="toolbar-actions">
-          <button 
-            class="m3-button text small" 
-            @click="formatSource"
-            :disabled="!sourceContent"
-          >
-            <span class="material-symbols-rounded">format_align_left</span>
-            格式化
-          </button>
-          <button 
-            class="m3-button text small" 
-            @click="validateSource"
-            :disabled="!sourceContent"
-          >
-            <span class="material-symbols-rounded">check_circle</span>
-            验证
-          </button>
-        </div>
-      </div>
-      <div class="monaco-container">
-        <vue-monaco-editor
-          v-model:value="sourceContent"
-          language="ini"
-          :theme="isDarkMode ? 'vs-dark' : 'vs'"
-          :options="monacoOptions"
-          @mount="onEditorMount"
-        />
-      </div>
+      <TomlEditor
+        v-model="sourceContent"
+        :file-path="`plugins/${routeParams.pluginName}/${routeParams.configName}.toml`"
+      />
     </div>
 
     <!-- 备份管理弹窗 -->
@@ -237,7 +208,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useThemeStore } from '@/stores/theme'
-import { VueMonacoEditor } from '@guolao/vue-monaco-editor'
+import TomlEditor from '@/components/config/TomlEditor.vue'
 import ConfigSection from '@/components/config/plugin-schema/ConfigSection.vue'
 import {
   getPluginConfigRaw,
@@ -296,19 +267,6 @@ const navTabsRef = ref<HTMLElement | null>(null)
 const toast = ref({ show: false, message: '', type: 'success' as 'success' | 'error' })
 
 const isDarkMode = computed(() => themeStore.isDark)
-
-// Monaco 配置
-const monacoOptions = {
-  minimap: { enabled: false },
-  fontSize: 14,
-  lineHeight: 24,
-  fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace",
-  scrollBeyondLastLine: false,
-  automaticLayout: true,
-  padding: { top: 16, bottom: 16 },
-  wordWrap: 'on' as const,
-  tabSize: 2,
-}
 
 // ==================== 计算属性 ====================
 
@@ -519,26 +477,6 @@ function tomlValueStr(val: unknown): string {
   if (Array.isArray(val)) return JSON.stringify(val)
   if (val === null || val === undefined) return '""'
   return `"${String(val).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
-}
-
-// ==================== 源码工具 ====================
-
-function formatSource() {
-  showToast('TOML 格式化功能开发中', 'error')
-}
-
-async function validateSource() {
-  try {
-    const toml = await import('toml')
-    toml.parse(sourceContent.value)
-    showToast('TOML 格式验证通过', 'success')
-  } catch (e: any) {
-    showToast(`TOML 格式错误: ${e.message}`, 'error')
-  }
-}
-
-function onEditorMount(_editor: any) {
-  console.log('Monaco 编辑器已加载')
 }
 
 // ==================== 备份 ==

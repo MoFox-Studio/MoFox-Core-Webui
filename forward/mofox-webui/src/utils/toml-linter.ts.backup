@@ -1,0 +1,401 @@
+/**
+ * TOML 语法验证器（浏览器端）
+ * 结合基础语法检查和 toml 库完整解析
+ */
+
+import type { Diagnostic } from '@codemirror/lint'
+import type { Text } from '@codemirror/state'
+import TOML from 'toml'
+
+/**
+ * TOML 语法检查（用于 CodeMirror Lint）
+ * @param doc - CodeMirror 文档对象
+ * @returns 诊断信息数组
+ */
+export function lintTOML(doc: Text): Diagnostic[] {
+  const diagnostics: Diagnostic[] = []
+  const text = doc.toString()
+
+  try {
+    // ═══ 阶段 1: 基础语法检查 ═══
+    const lines = text.split('\n')
+
+    lines.forEach((line, lineIndex) => {
+      const trimmed = line.trim()
+
+      // 检查未闭合的方括号
+      if (trimmed.startsWith('[') && !trimmed.includes(']')) {
+        const lineStart = doc.line(lineIndex + 1).from
+        const lineEnd = doc.line(lineIndex + 1).to
+        diagnostics.push({
+          from: lineStart,
+          to: lineEnd,
+          severity: 'error',
+          message: '未闭合的方括号：缺少 ]',
+        })
+      }
+
+      // 检查未闭合的引号
+      const singleQuotes = (trimmed.match(/'/g) || []).length
+      const doubleQuotes = (trimmed.match(/"/g) || []).length
+
+      if (singleQuotes % 2 !== 0) {
+        const lineStart = doc.line(lineIndex + 1).from
+        const lineEnd = doc.line(lineIndex + 1).to
+        diagnostics.push({
+          from: lineStart,
+          to: lineEnd,
+          severity: 'error',
+          message: "未闭合的单引号：缺少 '",
+        })
+      }
+
+      if (doubleQuotes % 2 !== 0 && !trimmed.includes('"""')) {
+        const lineStart = doc.line(lineIndex + 1).from
+        const lineEnd = doc.line(lineIndex + 1).to
+        diagnostics.push({
+          from: lineStart,
+          to: lineEnd,
+          severity: 'error',
+          message: '未闭合的双引号：缺少 "',
+        })
+      }
+
+      // 检查键值对格式（基础）
+      if (
+        trimmed &&
+        !trimmed.startsWith('#') &&
+        !trimmed.startsWith('[') &&
+        !trimmed.includes('=') &&
+        trimmed.length > 0
+      ) {
+        const lineStart = doc.line(lineIndex + 1).from
+        const lineEnd = doc.line(lineIndex + 1).to
+        diagnostics.push({
+          from: lineStart,
+          to: lineEnd,
+          severity: 'warning',
+          message: '可能缺少 = 符号，或这不是有效的 TOML 行',
+        })
+      }
+
+      // 检查重复的 = 号
+      const equalCount = (trimmed.match(/=/g) || []).length
+      if (equalCount > 1 && !trimmed.includes('==')) {
+        const lineStart = doc.line(lineIndex + 1).from
+        const lineEnd = doc.line(lineIndex + 1).to
+        diagnostics.push({
+          from: lineStart,
+          to: lineEnd,
+          severity: 'error',
+          message: '一行中包含多个 = 符号',
+        })
+      }
+    })
+
+    // 检查括号匹配
+    const bracketStack: Array<{ char: string; pos: number }> = []
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i]
+      if (char === '[') {
+        bracketStack.push({ char, pos: i })
+      } else if (char === ']') {
+        if (bracketStack.length === 0) {
+          diagnostics.push({
+            from: i,
+            to: i + 1,
+            severity: 'error',
+            message: '多余的 ] 括号，缺少对应的 [',
+          })
+        } else {
+          bracketStack.pop()
+        }
+      }
+    }
+
+    // 未闭合的括号
+    bracketStack.forEach((bracket) => {
+      diagnostics.push({
+        from: bracket.pos,
+        to: bracket.pos + 1,
+        severity: 'error',
+        message: '未闭合的 [ 括号，缺少对应的 ]',
+      })
+    })
+
+    // ═══ 阶段 2: 完整 TOML 解析验证 ═══
+    // 只有在基础检查没有发现致命错误时才进行完整解析
+    const hasCriticalErrors = diagnostics.some((d) => d.severity === 'error')
+
+    if (!hasCriticalErrors) {
+      try {
+        TOML.parse(text)
+      } catch (error: any) {
+        // 解析失败，提取错误信息
+        const errorMessage = error.message || 'TOML 解析错误'
+        const { line, column } = extractLineAndColumn(errorMessage)
+
+        let from = 0
+        let to = doc.length
+
+        // 如果有行号，定位到具体行
+        if (line && line > 0 && line <= doc.lines) {
+          try {
+            const targetLine = doc.line(line)
+            from = targetLine.from
+            to = targetLine.to
+
+            // 如果有列号，进一步精确定位错误字符
+            if (column && column > 0) {
+              const columnPos = targetLine.from + column - 1
+              if (columnPos >= targetLine.from && columnPos <= targetLine.to) {
+                from = columnPos
+                // 高亮当前字符及其后的几个字符（或到行尾）
+                to = Math.min(columnPos + 5, targetLine.to)
+              }
+            }
+          } catch (e) {
+            // 行号无效，使用整个文档
+            console.warn(`无效的行号: ${line}`, e)
+          }
+        }
+
+        // 翻译错误信息为中文
+        const translatedError = translateTOMLError(errorMessage)
+
+        diagnostics.push({
+          from,
+          to,
+          severity: 'error',
+          message: `TOML 解析错误: ${translatedError}`,
+        })
+      }
+    }
+  } catch (error: any) {
+    // 如果检查过程中出错
+    diagnostics.push({
+      from: 0,
+      to: doc.length,
+      severity: 'error',
+      message: `语法检查异常: ${error.message}`,
+    })
+  }
+
+  return diagnostics
+}
+
+/**
+ * 从错误信息中提取行号和列号
+ * @param errorMessage - 错误信息
+ * @returns 行号和列号
+ */
+function extractLineAndColumn(errorMessage: string): { line: number | null; column: number | null } {
+  // 匹配常见的行号格式
+  const patterns = [
+    /row\s+(\d+)/i, // row 7
+    /line\s+(\d+)/i, // line 7
+    /at\s+line\s+(\d+)/i, // at line 7
+    /第\s*(\d+)\s*行/, // 第 7 行
+    /(\d+)\s*行/, // 7 行
+    /pos\s+(\d+)/i, // pos 124
+  ]
+
+  for (const pattern of patterns) {
+    const match = errorMessage.match(pattern)
+    if (match && match[1]) {
+      return { line: parseInt(match[1]), column: null }
+    }
+  }
+
+  // 匹配行列格式 (row 7, col 21) 或 (line 7:21)
+  const lineColPattern = /(?:row|line)\s+(\d+).*?(?:col|column|:)\s*(\d+)/i
+  const lineColMatch = errorMessage.match(lineColPattern)
+  if (lineColMatch && lineColMatch[1] && lineColMatch[2]) {
+    return {
+      line: parseInt(lineColMatch[1]),
+      column: parseInt(lineColMatch[2]),
+    }
+  }
+
+  return { line: null, column: null }
+}
+
+/**
+ * TOML 错误信息翻译映射表
+ * 基于 @iarna/toml 和 toml 库的真实错误信息
+ * 每个条目格式：[英文前缀, 中文翻译]
+ * 顺序很重要：更具体的错误应该放在前面
+ */
+const TOML_ERROR_PATTERNS: Array<[string, string]> = [
+  // 字符串相关错误
+  ['Unterminated multi-line string at', '未闭合的多行字符串'],
+  ['Unterminated string at', '未闭合的字符串'],
+  ['Expected a value', '期望一个值'],
+
+  // 键重复错误
+  ["Can't redefine an existing key at", '不能重新定义已存在的键'],
+  ["Can't redefine existing key at", '不能重新定义已存在的键'],
+  ['Duplicate key', '重复的键'],
+
+  // 转义序列错误
+  ['Unknown escape character:', '未知的转义字符:'],
+  ['Invalid escape sequence', '无效的转义序列'],
+
+  // 意外字符错误（按优先级排序）
+  [
+    'Unexpected character, expected only whitespace or comments till end of line at',
+    '意外的字符，此处应只有空白或注释直到行尾',
+  ],
+  [
+    'Unexpected character, expecting string, number, datetime, boolean, inline array or inline table at',
+    '意外的字符，期望字符串、数字、日期时间、布尔值、内联数组或内联表',
+  ],
+  ['Unexpected character', '意外的字符'],
+  ['Unexpected token', '意外的标记'],
+
+  // 日期时间解析错误
+  ['Expected digit while parsing year part of a date at', '解析日期年份部分时期望数字'],
+  ['Invalid Datetime', '无效的日期时间格式'],
+  ['Invalid date', '无效的日期'],
+
+  // 数字错误
+  ['Invalid number at', '无效的数字'],
+  ['Invalid integer', '无效的整数'],
+  ['Invalid float', '无效的浮点数'],
+
+  // 数组相关错误
+  ['Inline lists must be a single type, not a mix of', '内联列表必须是单一类型，不能混合'],
+  [
+    'Invalid character, expected whitespace, comma (,) or close bracket (]) at',
+    '无效的字符，期望空白、逗号 (,) 或右方括号 (])',
+  ],
+  ['Unterminated inline array at', '未闭合的内联数组'],
+  ['Array mismatch', '数组类型不匹配'],
+
+  // 键值对相关错误
+  ['Key ended without value at', '键在没有值的情况下结束'],
+  ['Key without value at', '键缺少值'],
+  ['Invalid character, expected "=" at', '无效的字符，期望 "="'],
+  ['Expected an equals sign', '期望等号'],
+
+  // Unicode 错误
+  [
+    'Invalid unicode, character in range 0xD800 - 0xDFFF is reserved at',
+    '无效的 Unicode，0xD800 - 0xDFFF 范围内的字符是保留的',
+  ],
+  ['Invalid Unicode', '无效的 Unicode'],
+
+  // 未知字符错误
+  ['Unknown character', '未知字符'],
+  ['Parse error', '解析错误'],
+]
+
+/**
+ * 翻译 TOML 错误信息为中文
+ * 使用精确前缀匹配，避免误翻译
+ * 只翻译错误类型，不包含位置信息
+ * @param errorMessage - 原始英文错误信息
+ * @returns 中文化的错误信息（不含位置）
+ */
+function translateTOMLError(errorMessage: string): string {
+  // 提取错误信息的主要部分（去掉代码片段）
+  const mainError = errorMessage.split('\n')[0] || ''
+
+  // 尝试匹配错误模式
+  for (const [pattern, translation] of TOML_ERROR_PATTERNS) {
+    if (mainError.includes(pattern)) {
+      // 只返回翻译后的错误类型，不包含位置信息
+      return translation
+    }
+  }
+
+  // 如果没有匹配到任何模式，移除位置信息后返回原始错误
+  const translated = mainError
+    .replace(/at row \d+, col \d+, pos \d+:/g, '') // 移除行列位置
+    .replace(/at pos \d+/g, '')
+    .replace(/at row \d+/g, '')
+    .replace(/at line \d+/g, '')
+    .replace(/col \d+/g, '')
+    .replace(/column \d+/g, '')
+    .trim()
+
+  return translated || '未知 TOML 错误'
+}
+
+/**
+ * 格式化 TOML 内容
+ * @param content - 原始 TOML 内容
+ * @returns 格式化后的 TOML 内容
+ */
+export function formatTOML(content: string): string {
+  try {
+    // 解析并重新序列化
+    const parsed = TOML.parse(content)
+    return stringifyTOML(parsed)
+  } catch (error) {
+    // 如果解析失败，返回原内容
+    throw new Error('无法格式化：TOML 内容包含语法错误')
+  }
+}
+
+/**
+ * 将对象序列化为 TOML 字符串
+ * @param obj - 要序列化的对象
+ * @param indent - 缩进级别
+ * @returns TOML 字符串
+ */
+function stringifyTOML(obj: any, indent = 0): string {
+  const lines: string[] = []
+  const indentStr = '  '.repeat(indent)
+
+  for (const [key, value] of Object.entries(obj)) {
+    if (value === null || value === undefined) {
+      continue
+    }
+
+    if (typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date)) {
+      // 嵌套对象，作为 section
+      if (indent === 0) {
+        lines.push(`[${key}]`)
+        lines.push(stringifyTOML(value, indent + 1))
+      } else {
+        lines.push(`${indentStr}[${key}]`)
+        lines.push(stringifyTOML(value, indent + 1))
+      }
+    } else {
+      // 普通值
+      lines.push(`${indentStr}${key} = ${tomlValueString(value)}`)
+    }
+  }
+
+  return lines.join('\n')
+}
+
+/**
+ * 将值转换为 TOML 字符串表示
+ * @param value - 值
+ * @returns TOML 字符串
+ */
+function tomlValueString(value: any): string {
+  if (typeof value === 'string') {
+    // 字符串需要引号
+    return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`
+  } else if (typeof value === 'boolean') {
+    return value.toString()
+  } else if (typeof value === 'number') {
+    return value.toString()
+  } else if (Array.isArray(value)) {
+    // 数组
+    const items = value.map((v) => tomlValueString(v)).join(', ')
+    return `[${items}]`
+  } else if (value instanceof Date) {
+    return value.toISOString()
+  } else if (typeof value === 'object') {
+    // 内联表
+    const pairs = Object.entries(value)
+      .map(([k, v]) => `${k} = ${tomlValueString(v)}`)
+      .join(', ')
+    return `{ ${pairs} }`
+  }
+  return String(value)
+}

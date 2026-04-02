@@ -82,29 +82,12 @@
       </template>
     </div>
 
-    <!-- 源码编辑模式 (Monaco Editor) -->
+    <!-- 源码编辑模式 (CodeMirror) -->
     <div v-else class="source-editor">
-      <div class="source-toolbar">
-        <span class="file-path">
-          <span class="material-symbols-rounded">description</span>
-          {{ configPath }}
-        </span>
-        <div class="toolbar-actions">
-          <button class="m3-button text small" @click="formatSource">
-            <span class="material-symbols-rounded">format_align_left</span>
-            格式化
-          </button>
-        </div>
-      </div>
-      <div class="monaco-container">
-        <vue-monaco-editor
-          v-model:value="sourceContent"
-          :language="'ini'"
-          :theme="isDarkMode ? 'vs-dark' : 'vs'"
-          :options="monacoOptions"
-          @mount="onEditorMount"
-        />
-      </div>
+      <TomlEditor
+        v-model="sourceContent"
+        file-path="config/model.toml"
+      />
       <div v-if="validationError" class="validation-error">
         <span class="material-symbols-rounded">warning</span>
         {{ validationError }}
@@ -171,9 +154,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, shallowRef } from 'vue'
-import { VueMonacoEditor } from '@guolao/vue-monaco-editor'
-import type { editor } from 'monaco-editor'
+import { ref, computed, onMounted, watch } from 'vue'
+import TomlEditor from '@/components/config/TomlEditor.vue'
 import {
   getModelConfig,
   saveModelConfig,
@@ -188,38 +170,11 @@ import {
 } from '@/api/modelConfig'
 import ModelConfigEditor from '@/components/config/ModelConfigEditor.vue'
 
-// Monaco Editor 配置
-const monacoOptions: editor.IStandaloneEditorConstructionOptions = {
-  minimap: { enabled: true },
-  fontSize: 14,
-  lineNumbers: 'on',
-  roundedSelection: true,
-  scrollBeyondLastLine: false,
-  automaticLayout: true,
-  tabSize: 2,
-  wordWrap: 'on',
-  lineHeight: 24,
-  fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace",
-  padding: { top: 16, bottom: 16 },
-  folding: true,
-  lineDecorationsWidth: 10,
-  lineNumbersMinChars: 3,
-  renderLineHighlight: 'all',
-  scrollbar: {
-    verticalScrollbarSize: 10,
-    horizontalScrollbarSize: 10
-  }
-}
-
-// Editor 实例
-const editorInstance = shallowRef<editor.IStandaloneCodeEditor | null>(null)
-
 // 状态
 const loading = ref(true)
 const saving = ref(false)
 const loadError = ref('')
 const editorMode = ref<'visual' | 'source'>('visual')
-const isDarkMode = ref(true)
 
 // 配置数据
 const modelConfigData = ref<ModelConfigData | null>(null)
@@ -259,15 +214,6 @@ function formatSize(bytes: number): string {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }
 
-function onEditorMount(editor: editor.IStandaloneCodeEditor) {
-  editorInstance.value = editor
-}
-
-function formatSource() {
-  if (editorInstance.value) {
-    editorInstance.value.getAction('editor.action.formatDocument')?.run()
-  }
-}
 
 async function loadConfig() {
   loading.value = true
@@ -426,7 +372,6 @@ watch(showBackupsModal, (show) => {
 
 onMounted(() => {
   loadConfig()
-  isDarkMode.value = window.matchMedia('(prefers-color-scheme: dark)').matches
 })
 </script>
 

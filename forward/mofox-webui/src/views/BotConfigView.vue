@@ -99,21 +99,10 @@
 
     <!-- 源码编辑器 -->
     <div v-show="editorMode === 'source'" class="editor-area source-editor-wrap">
-      <div class="source-toolbar">
-        <span class="material-symbols-rounded">description</span>
-        <span class="source-path">config/core.toml</span>
-        <div class="source-toolbar-actions">
-          <button class="m3-icon-button small" @click="formatSource" title="格式化">
-            <span class="material-symbols-rounded">format_align_left</span>
-          </button>
-        </div>
-      </div>
-        <vue-monaco-editor
-          v-model:value="sourceContent"
-          :language="'ini'"
-          :theme="isDarkMode ? 'vs-dark' : 'vs'"
-          :options="monacoOptions"
-        />
+      <TomlEditor
+        v-model="sourceContent"
+        file-path="config/core.toml"
+      />
     </div>
 
     <!-- 备份管理 Modal -->
@@ -180,8 +169,8 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { VueMonacoEditor } from '@guolao/vue-monaco-editor'
 import BotConfigEditor from '@/components/config/BotConfigEditor.vue'
+import TomlEditor from '@/components/config/TomlEditor.vue'
 import { showConfirm } from '@/utils/dialog'
 import { 
   getCoreConfigSchema,
@@ -213,37 +202,12 @@ const editedValues = ref<Record<string, unknown>>({})
 // 源码编辑
 const sourceContent = ref('')
 const originalSource = ref('')
-let monacoEditorInstance: any = null
-
-const monacoOptions = {
-  minimap: { enabled: true },
-  fontSize: 14,
-  lineNumbers: 'on',
-  roundedSelection: true,
-  scrollBeyondLastLine: false,
-  automaticLayout: true,
-  tabSize: 2,
-  wordWrap: 'on',
-  lineHeight: 24,
-  fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace",
-  padding: { top: 16, bottom: 16 },
-  folding: true,
-  lineDecorationsWidth: 10,
-  lineNumbersMinChars: 3,
-  renderLineHighlight: 'all',
-  scrollbar: {
-    verticalScrollbarSize: 10,
-    horizontalScrollbarSize: 10
-  }
-}
 
 // 备份管理
 const showBackupsModal = ref(false)
 const backupsLoading = ref(false)
 const backups = ref<ConfigBackupInfo[]>([])
 const restoring = ref('')
-
-const isDarkMode = ref(true)
 
 // Toast
 const toast = ref({ visible: false, message: '', type: 'success' as 'success' | 'error' })
@@ -261,7 +225,6 @@ const hasChanges = computed(() => {
 
 onMounted(async () => {
   await loadConfig()
-  isDarkMode.value = window.matchMedia('(prefers-color-scheme: dark)').matches
 })
 
 // ==================== 加载配置 ====================
@@ -350,15 +313,7 @@ async function switchToSource() {
   }
 }
 
-function onEditorMount(editor: any) {
-  monacoEditorInstance = editor
-}
 
-function formatSource() {
-  if (monacoEditorInstance) {
-    monacoEditorInstance.getAction('editor.action.formatDocument')?.run()
-  }
-}
 
 // ==================== 保存 ====================
 
