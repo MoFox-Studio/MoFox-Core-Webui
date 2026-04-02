@@ -16,6 +16,7 @@ import { createPinia } from 'pinia'  // Pinia 状态管理库
 import router from './router'         // 路由配置
 import App from './App.vue'           // 根组件
 import './style.css'                  // 全局样式表
+import 'material-symbols/rounded.css' // Material Symbols 图标字体（本地）
 
 // ==================== 应用初始化 ====================
 

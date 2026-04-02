@@ -181,7 +181,7 @@
               <!-- 图片消息 -->
               <img 
                 v-if="msg.images && msg.images.length > 0" 
-                :src="msg.images[0].url || ''"
+                :src="getImageUrl(msg.images[0])"
                 class="message-image"
                 @click="previewImage(msg.images[0].hash || '')"
                 loading="lazy"
@@ -536,6 +536,38 @@ function getReplyPreview(messageId: string): string {
     return `${msg.user_nickname}: ${msg.content?.slice(0, 30)}...`
   }
   return '查看原消息'
+}
+
+// 转换图片URL（支持base64）
+function getImageUrl(imageData: any): string {
+  if (!imageData) return ''
+  
+  // 如果已经是完整的URL或data URL，直接返回
+  if (imageData.url) {
+    const url = imageData.url
+    if (url.startsWith('http') || url.startsWith('data:')) {
+      return url
+    }
+    // 如果是base64文本，添加data URL前缀
+    if (url.match(/^[A-Za-z0-9+/=]+$/)) {
+      return `data:image/png;base64,${url}`
+    }
+    return url
+  }
+  
+  // 如果直接就是base64字符串
+  if (typeof imageData === 'string') {
+    if (imageData.startsWith('data:')) {
+      return imageData
+    }
+    // 检查是否为base64格式
+    if (imageData.match(/^[A-Za-z0-9+/=]+$/)) {
+      return `data:image/png;base64,${imageData}`
+    }
+    return imageData
+  }
+  
+  return ''
 }
 
 // 预览图片
